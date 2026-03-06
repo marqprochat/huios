@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html class="light" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1F3A5F",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#0f172a",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body { font-family: 'Public Sans', sans-serif; }
+        .material-symbols-outlined { font-size: 24px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark ::webkit-scrollbar-thumb { background: #334155; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased">
+<div class="flex flex-col h-screen overflow-hidden">
+<header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 z-30">
+<div class="max-w-[1600px] mx-auto px-4 lg:px-6">
+<div class="h-16 flex items-center justify-between gap-4">
+<div class="flex items-center gap-3 min-w-max">
+<div class="bg-primary rounded-lg p-2 text-white flex items-center justify-center">
+<span class="material-symbols-outlined">auto_stories</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-sm font-bold leading-tight uppercase tracking-wider text-primary">Huios Seminário</h1>
+<p class="text-xs text-slate-500 dark:text-slate-400">Teológico</p>
+</div>
+</div>
+<div class="flex-1 max-w-xl mx-4 hidden md:block">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+<input class="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-xl pl-10 text-sm focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-slate-100" placeholder="Pesquisar no sistema..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-2 lg:gap-4">
+<button class="relative p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2.5 h-2.5 bg-primary rounded-full border-2 border-white dark:border-slate-900"></span>
+</button>
+<button class="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hidden sm:flex">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
+<div class="flex items-center gap-3 pl-1">
+<div class="text-right hidden sm:block">
+<p class="text-xs font-bold">Coordenação</p>
+<p class="text-[10px] text-slate-500">Admin Huios</p>
+</div>
+<div class="w-10 h-10 rounded-full border-2 border-primary/20 overflow-hidden bg-slate-200 flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Foto de perfil do administrador sorrindo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5e9xI3gkjkhcOQIAKqZ8VssGdBUl_1ZHD2nWtXj5hmlq9d-LCv344zCPOMSignZzG80B5OOHO-rjgS4RDhIPZ2tSnDVQBkXx_1wv7iGWeKEDSPLKoU02jIXHSDXT973bn28C15p4GrCUnk8Ki2fIk5BkeY0HmMcwINx92snPhZCG-i9U3uhxXM5IrGHWU5SFFR50rd7-2x8s7Zgqgq0Nb1kbLmqPHKjuDVElzh-LpjEYCSdHNCY-lJem1gE0R_lOvVplq3zVq-25w"/>
+</div>
+<button class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+<span class="material-symbols-outlined text-xl">logout</span>
+</button>
+</div>
+<button class="md:hidden p-2 rounded-lg bg-slate-100 text-slate-600">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</div>
+<nav class="hidden md:flex items-center gap-1 pb-1 overflow-x-auto">
+<a class="flex items-center gap-2 px-4 py-3 border-b-2 border-primary text-primary font-bold text-sm whitespace-nowrap" href="#">
+<span class="material-symbols-outlined fill-1 text-[20px]">grid_view</span>
+<span>Painel</span>
+</a>
+<a class="flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-white transition-colors font-medium text-sm whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-[20px]">group</span>
+<span>Alunos</span>
+</a>
+<a class="flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-white transition-colors font-medium text-sm whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-[20px]">school</span>
+<span>Professores</span>
+</a>
+<a class="flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-white transition-colors font-medium text-sm whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-[20px]">shield_person</span>
+<span>Monitores</span>
+</a>
+<a class="flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-white transition-colors font-medium text-sm whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-[20px]">book</span>
+<span>Disciplinas</span>
+</a>
+<a class="flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-white transition-colors font-medium text-sm whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-[20px]">diversity_3</span>
+<span>Turmas</span>
+</a>
+<a class="flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-white transition-colors font-medium text-sm whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-[20px]">assignment</span>
+<span>Matrículas</span>
+</a>
+<a class="flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-white transition-colors font-medium text-sm whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span>Configurações</span>
+</a>
+</nav>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto">
+<div class="max-w-[1600px] mx-auto p-4 lg:p-8 space-y-8">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h2 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Gestão Acadêmica</h2>
+<p class="text-slate-500 dark:text-slate-400">Visão geral do Huios Seminário Teológico</p>
+</div>
+<div class="flex flex-wrap gap-2">
+<button class="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">person_add</span>
+                            Novo Aluno
+                        </button>
+<button class="bg-primary/10 text-primary px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-primary/20 transition-all">
+<span class="material-symbols-outlined text-sm">assignment_add</span>
+                            Novo Professor
+                        </button>
+<button class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 transition-all">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center gap-4">
+<div class="w-12 h-12 bg-primary/5 text-primary rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined">group</span>
+</div>
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Total de Alunos</p>
+<h3 class="text-2xl font-black">482</h3>
+<p class="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">trending_up</span> +5% desde o último mês
+                            </p>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center gap-4">
+<div class="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined">school</span>
+</div>
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Professores Ativos</p>
+<h3 class="text-2xl font-black">34</h3>
+<p class="text-[10px] text-slate-400 font-bold">Equipe docente estável</p>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center gap-4">
+<div class="w-12 h-12 bg-primary/5 text-primary rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined">menu_book</span>
+</div>
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Disciplinas em Curso</p>
+<h3 class="text-2xl font-black">18</h3>
+<p class="text-[10px] text-slate-400 font-bold">Semestre 2024.1</p>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center gap-4">
+<div class="w-12 h-12 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined">how_to_reg</span>
+</div>
+<div>
+<p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Novas Matrículas</p>
+<h3 class="text-2xl font-black">+24</h3>
+<p class="text-[10px] text-emerald-500 font-bold">Mês atual</p>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">warning</span>
+                                Pendências Acadêmicas
+                            </h3>
+<button class="text-xs font-bold text-primary hover:underline">Ver todas</button>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse min-w-[600px]">
+<thead class="bg-slate-50 dark:bg-slate-800/50">
+<tr>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Aluno</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Tipo de Pendência</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Prazo</th>
+<th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Ação</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold">RS</div>
+<span class="text-sm font-medium">Ricardo Silva</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-bold px-2 py-1 rounded-full">Documentos Faltantes</span>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500">12 Abr</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:opacity-80">
+<span class="material-symbols-outlined text-xl">mail</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold">ML</div>
+<span class="text-sm font-medium">Maria Luíza</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px] font-bold px-2 py-1 rounded-full">Assinaturas Pendentes</span>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500">08 Abr</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:opacity-80">
+<span class="material-symbols-outlined text-xl">mail</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold">FC</div>
+<span class="text-sm font-medium">Felipe Costa</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-bold px-2 py-1 rounded-full">Histórico Escolar</span>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500">20 Abr</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:opacity-80">
+<span class="material-symbols-outlined text-xl">mail</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">event</span>
+                                Próximos Eventos
+                            </h3>
+<button class="text-xs font-bold text-primary hover:underline">Calendário</button>
+</div>
+<div class="space-y-3">
+<div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex gap-4">
+<div class="bg-primary/10 text-primary w-12 h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+<span class="text-xs font-black">15</span>
+<span class="text-[10px] uppercase">Abr</span>
+</div>
+<div>
+<h4 class="text-sm font-bold">Aula Magna: Eclesiologia</h4>
+<p class="text-xs text-slate-500 flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span> 19:30 - Auditório A
+                                    </p>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex gap-4">
+<div class="bg-slate-100 dark:bg-slate-800 text-slate-500 w-12 h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+<span class="text-xs font-black">18</span>
+<span class="text-[10px] uppercase">Abr</span>
+</div>
+<div>
+<h4 class="text-sm font-bold">Seminário de Hermenêutica</h4>
+<p class="text-xs text-slate-500 flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span> 14:00 - Online (Zoom)
+                                    </p>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex gap-4">
+<div class="bg-slate-100 dark:bg-slate-800 text-slate-500 w-12 h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+<span class="text-xs font-black">22</span>
+<span class="text-[10px] uppercase">Abr</span>
+</div>
+<div>
+<h4 class="text-sm font-bold">Conselho de Professores</h4>
+<p class="text-xs text-slate-500 flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span> 09:00 - Reitoria
+                                    </p>
+</div>
+</div>
+</div>
+<div class="mt-6 bg-primary rounded-2xl p-6 text-white overflow-hidden relative group">
+<div class="relative z-10">
+<h4 class="font-black text-lg">Suporte Acadêmico</h4>
+<p class="text-xs opacity-90 mt-2 mb-4">Precisa de ajuda com o sistema ou orientações pedagógicas?</p>
+<button class="bg-white text-primary px-4 py-2 rounded-xl text-xs font-black shadow-lg hover:bg-slate-100 transition-colors">Entrar em contato</button>
+</div>
+<span class="material-symbols-outlined absolute -bottom-4 -right-4 text-white/10 text-9xl group-hover:scale-110 transition-transform">support_agent</span>
+</div>
+</div>
+</div>
+<footer class="pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+<div class="flex flex-wrap items-center justify-center md:justify-start gap-6">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+<span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Servidores Estáveis</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Último backup: Hoje, 04:00</span>
+</div>
+</div>
+<p class="text-xs text-slate-400 text-center md:text-right">© 2024 Huios Seminário Teológico. Desenvolvido para Excelência Acadêmica.</p>
+</footer>
+</div>
+</main>
+</div>
+
+</body></html>
