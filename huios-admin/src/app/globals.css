@@ -3,7 +3,7 @@
 @variant dark (&:is(.dark *));
 
 @theme {
-  --color-primary: #1F3A5F;
+  --color-primary: #0045e5;
   --color-background-light: #f8f6f6;
   --color-background-dark: #0f172a;
   --font-display: "Public Sans", sans-serif;

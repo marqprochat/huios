@@ -6,17 +6,35 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model Student {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  cpf       String?  @unique
-  address   String?
+  id                   String   @id @default(uuid())
+  name                 String
+  email                String   @unique
+  phone                String?
+  cpf                  String?  @unique
+  address              String?
+
+  // Novos campos pessoais
+  birthDate            DateTime?
+  maritalStatus        String?  // SOLTEIRO, CASADO, DIVORCIADO, VIUVO
+
+  // Campos espirituais
+  conversionTime       String?  // Ex: "2 anos", "5 meses"
+  churchName           String?  // Qual igreja frequenta
+  churchMembershipTime String?  // Há quanto tempo é membro
+  isBaptized           Boolean  @default(false)
+  baptismTime          String?  // Há quanto tempo é batizado
+
+  // Campos de matrícula
+  howKnewHuios         String?  // Como conheceu o Huios Avançado
+  enrollmentFee        Float?   // Taxa de Matrícula
+  didConvivaCourse     Boolean  @default(false) // Fez algum curso na Igreja Conviva?
+  convivaCourseDetails String?  // Quais cursos fez
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   enrollments Enrollment[]
