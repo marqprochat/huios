@@ -6,7 +6,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-RUN npm install
+# Ensure dev dependencies are installed for the build stage (TSC needs them)
+RUN npm install --include=dev
 
 COPY . .
 
