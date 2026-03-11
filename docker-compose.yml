@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: huios-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password
+      POSTGRES_DB: huios
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ./huios-api
+      dockerfile: Dockerfile
+    container_name: huios-api
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres_password@db:5432/huios?schema=public"
+      JWT_SECRET: "huios-secret-key-change-in-production"
+      FRONTEND_URL: "http://localhost:3000"
+      PORT: 3001
+      NODE_ENV: production
+    depends_on:
+      - db
+
+  admin:
+    build:
+      context: ./huios-admin
+      dockerfile: Dockerfile.prod
+    container_name: huios-admin
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres_password@db:5432/huios?schema=public"
+      NEXT_PUBLIC_API_URL: "http://localhost:3001"
+      JWT_SECRET: "huios-secret-key-change-in-production"
+    depends_on:
+      - api
+      - db
+
+volumes:
+  postgres_data:

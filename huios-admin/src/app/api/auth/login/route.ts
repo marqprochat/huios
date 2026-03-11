@@ -2,9 +2,12 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { verifyPassword, signToken, COOKIE_NAME } from '@/lib/auth'
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 export async function POST(request: Request) {
     try {
-        const { email, password } = await request.json()
+        const body = await request.json();
+        const { email, password } = body;
 
         if (!email || !password) {
             return NextResponse.json(
@@ -13,42 +16,28 @@ export async function POST(request: Request) {
             )
         }
 
-        const user = await prisma.user.findUnique({
-            where: { email: email.toLowerCase().trim() }
-        })
+        // Call the new Express API
+        const apiResponse = await fetch(`${API_URL}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
 
-        if (!user || !user.active) {
+        const data = await apiResponse.json();
+
+        if (!apiResponse.ok) {
             return NextResponse.json(
-                { error: 'Credenciais inválidas.' },
-                { status: 401 }
-            )
+                { error: data.message || 'Credenciais inválidas.' },
+                { status: apiResponse.status }
+            );
         }
 
-        const isValid = await verifyPassword(password, user.password)
-
-        if (!isValid) {
-            return NextResponse.json(
-                { error: 'Credenciais inválidas.' },
-                { status: 401 }
-            )
-        }
-
-        const token = await signToken({
-            userId: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-        })
+        const { token, user } = data;
 
         const response = NextResponse.json({
             success: true,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-            }
-        })
+            user
+        });
 
         response.cookies.set(COOKIE_NAME, token, {
             httpOnly: true,
@@ -56,14 +45,15 @@ export async function POST(request: Request) {
             sameSite: 'lax',
             maxAge: 60 * 60 * 24 * 7, // 7 days
             path: '/',
-        })
+        });
 
-        return response
+        return response;
     } catch (error) {
-        console.error('Login error:', error)
+        console.error('Login proxy error:', error);
         return NextResponse.json(
-            { error: 'Erro interno do servidor.' },
+            { error: 'Erro ao conectar ao servidor de autenticação.' },
             { status: 500 }
-        )
+        );
     }
 }
+
