@@ -26,6 +26,8 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/huios_dev?schema=public
+    volumes:
+      - ./public/uploads:/app/public/uploads
     depends_on:
       - db
 

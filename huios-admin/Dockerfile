@@ -51,5 +51,5 @@ USER nextjs
 EXPOSE 3000
 
 ENV PORT=3000
-# server.js is created by next build from the standalone output
-CMD ["node", "server.js"]
+# Push the Prisma schema to the database and start the server
+CMD ["sh", "-c", "npx prisma db push && node server.js"]

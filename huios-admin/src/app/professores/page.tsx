@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
+import { DeleteButton } from './DeleteButton';
 
 export default async function ProfessoresPage() {
     const professores = await prisma.teacher.findMany({
@@ -26,7 +27,7 @@ export default async function ProfessoresPage() {
                             <tr>
                                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Docente</th>
                                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Email</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Formação (Grau)</th>
+
                                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Ações</th>
                             </tr>
                         </thead>
@@ -47,11 +48,14 @@ export default async function ProfessoresPage() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-sm">{prof.email}</td>
-                                    <td className="px-6 py-4 text-sm text-slate-500">{prof.degree || '-'}</td>
+
                                     <td className="px-6 py-4">
-                                        <button className="text-slate-400 hover:text-primary transition-colors">
-                                            <span className="material-symbols-outlined text-xl">edit</span>
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <Link href={`/professores/${prof.id}/editar`} className="text-slate-400 hover:text-primary transition-colors" title="Editar Professor">
+                                                <span className="material-symbols-outlined text-xl">edit</span>
+                                            </Link>
+                                            <DeleteButton id={prof.id} />
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

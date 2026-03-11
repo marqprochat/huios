@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
+import { DeleteButton } from './DeleteButton';
 
 export default async function AlunosPage() {
     const alunos = await prisma.student.findMany({
@@ -49,9 +50,12 @@ export default async function AlunosPage() {
                                     <td className="px-6 py-4 text-sm">{aluno.email}</td>
                                     <td className="px-6 py-4 text-sm text-slate-500">{aluno.phone || '-'}</td>
                                     <td className="px-6 py-4">
-                                        <button className="text-slate-400 hover:text-primary transition-colors">
-                                            <span className="material-symbols-outlined text-xl">edit</span>
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <Link href={`/alunos/${aluno.id}/editar`} className="text-slate-400 hover:text-primary transition-colors" title="Editar Aluno">
+                                                <span className="material-symbols-outlined text-xl">edit</span>
+                                            </Link>
+                                            <DeleteButton id={aluno.id} />
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

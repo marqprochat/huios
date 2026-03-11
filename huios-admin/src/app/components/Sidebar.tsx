@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import NavLink from "./NavLink";
+import NavGroup from "./NavGroup";
 
 const ROLE_LABELS: Record<string, string> = {
     SUPER_ADMIN: "Super Admin",
@@ -40,12 +41,20 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
 
             <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
                 <NavLink href="/" icon="grid_view" label="Painel" />
-                <NavLink href="/alunos" icon="group" label="Alunos" />
-                <NavLink href="/professores" icon="school" label="Professores" />
-                <NavLink href="/monitores" icon="shield_person" label="Monitores" />
-                <NavLink href="/modulos" icon="book" label="Disciplinas" />
-                <NavLink href="/turmas" icon="diversity_3" label="Turmas" />
-                <NavLink href="/matriculas" icon="assignment" label="Matrículas" />
+                
+                <NavGroup 
+                    label="Cadastros" 
+                    icon="list_alt" 
+                    links={[
+                        { href: "/alunos", icon: "group", label: "Alunos" },
+                        { href: "/professores", icon: "school", label: "Professores" },
+                        { href: "/monitores", icon: "shield_person", label: "Monitores" },
+                        { href: "/cursos", icon: "menu_book", label: "Cursos" },
+                        { href: "/turmas", icon: "diversity_3", label: "Turmas" },
+                        { href: "/disciplinas", icon: "book", label: "Disciplinas" },
+                        { href: "/matriculas", icon: "assignment", label: "Matrículas" },
+                    ]}  
+                />
 
                 <div className="pt-4 mt-4 border-t border-slate-200 dark:border-slate-800">
                     <NavLink href="/configuracoes" icon="settings" label="Configurações" />

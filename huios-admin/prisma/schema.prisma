@@ -38,6 +38,7 @@ model Student {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   enrollments Enrollment[]
+  monitors    Monitor[]
 }
 
 model Teacher {
@@ -46,20 +47,27 @@ model Teacher {
   email     String   @unique
   phone     String?
   cpf       String?  @unique
-  degree    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  classes   Class[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  classes     Class[]
+  disciplines Discipline[]
 }
 
 model Monitor {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  area      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  phone         String?
+  cpf           String?  @unique
+  birthDate     DateTime?
+  maritalStatus String?  // SOLTEIRO, CASADO, DIVORCIADO, VIUVO
+  address       String?
+  area          String?
+  studentId     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  student       Student? @relation(fields: [studentId], references: [id])
 }
 
 model Module {
@@ -111,4 +119,43 @@ model User {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  imageUrl    String?  // URL da imagem do curso
+  status      String   @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  classes     CourseClass[]
+}
+
+model CourseClass {
+  id          String   @id @default(uuid())
+  name        String
+  startDate   DateTime?
+  endDate     DateTime?
+  duration    String?  // Tempo da turma, ex: "2 anos", "6 meses"
+  courseId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course      Course       @relation(fields: [courseId], references: [id])
+  disciplines Discipline[]
+}
+
+model Discipline {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  workload      Int?     // em horas
+  courseClassId String
+  teacherId     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  courseClass   CourseClass @relation(fields: [courseClassId], references: [id])
+  teacher       Teacher?    @relation(fields: [teacherId], references: [id])
 }
