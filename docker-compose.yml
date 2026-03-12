@@ -59,6 +59,9 @@ services:
         condition: service_healthy
       db:
         condition: service_healthy
+    volumes:
+      - ./huios-admin/public/uploads:/app/public/uploads
 
 volumes:
   postgres_data:
+  uploads_data:
