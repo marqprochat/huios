@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "start": "npx prisma migrate deploy && npx prisma db seed && node dist/index.js",
+    "start": "echo \"🚀 Iniciando migrações...\" && npx prisma migrate deploy && echo \"✨ Iniciando seed...\" && npx prisma db seed && echo \"🌐 Iniciando servidor...\" && node dist/index.js",
     "lint": "eslint . --ext .ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
