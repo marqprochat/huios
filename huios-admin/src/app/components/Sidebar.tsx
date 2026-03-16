@@ -48,7 +48,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
                     links={[
                         { href: "/alunos", icon: "group", label: "Alunos" },
                         { href: "/professores", icon: "school", label: "Professores" },
-                        { href: "/monitores", icon: "shield_person", label: "Monitores" },
+                        { href: "/equipe", icon: "shield_person", label: "Equipe" },
                         { href: "/cursos", icon: "menu_book", label: "Cursos" },
                         { href: "/turmas", icon: "diversity_3", label: "Turmas" },
                         { href: "/disciplinas", icon: "book", label: "Disciplinas" },

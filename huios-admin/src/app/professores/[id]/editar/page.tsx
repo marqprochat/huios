@@ -56,6 +56,28 @@ export default async function EditarProfessorPage({ params }: EditarProfessorPro
                             <input type="text" id="cpf" name="cpf" defaultValue={teacher.cpf || ''} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="000.000.000-00" />
                         </div>
 
+                        <div className="space-y-2">
+                            <label htmlFor="city" className="text-sm font-bold text-slate-700 dark:text-slate-300">Cidade</label>
+                            <input type="text" id="city" name="city" defaultValue={teacher.city || ''} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="São Paulo" />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label htmlFor="pixType" className="text-sm font-bold text-slate-700 dark:text-slate-300">Tipo do Pix</label>
+                            <select id="pixType" name="pixType" defaultValue={teacher.pixType || ''} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white">
+                                <option value="">Selecione...</option>
+                                <option value="CPF">CPF</option>
+                                <option value="CNPJ">CNPJ</option>
+                                <option value="EMAIL">Email</option>
+                                <option value="TELEFONE">Telefone</option>
+                                <option value="CHAVE_ALEATORIA">Chave Aleatória</option>
+                            </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label htmlFor="pix" className="text-sm font-bold text-slate-700 dark:text-slate-300">Pix</label>
+                            <input type="text" id="pix" name="pix" defaultValue={teacher.pix || ''} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="numero@email.com" />
+                        </div>
+
                     </div>
 
                     <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">

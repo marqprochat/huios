@@ -29,7 +29,7 @@ services:
     environment:
       DATABASE_URL: "postgresql://postgres:postgres_password@db:5432/huios?schema=public"
       JWT_SECRET: "huios-secret-key-change-in-production"
-      FRONTEND_URL: "http://localhost:3000"
+      FRONTEND_URL: "https://huios.marqsolucoes.com.br"
       PORT: 3001
       NODE_ENV: production
     depends_on:
@@ -52,7 +52,7 @@ services:
     environment:
       DATABASE_URL: "postgresql://postgres:postgres_password@db:5432/huios?schema=public"
       INTERNAL_API_URL: "http://api:3001"
-      NEXT_PUBLIC_API_URL: "http://localhost:3001"
+      NEXT_PUBLIC_API_URL: "https://huios.marqsolucoes.com.br/api"
       JWT_SECRET: "huios-secret-key-change-in-production"
     depends_on:
       api:
