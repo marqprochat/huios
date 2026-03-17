@@ -4,19 +4,18 @@ services:
     container_name: huios-db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres_password
-      POSTGRES_DB: huios
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d huios"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
       interval: 5s
       timeout: 5s
       retries: 5
-
 
   api:
     build:
@@ -27,16 +26,16 @@ services:
     ports:
       - "3001:3001"
     environment:
-      DATABASE_URL: "postgresql://postgres:postgres_password@db:5432/huios?schema=public"
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}?schema=public"
       JWT_SECRET: "huios-secret-key-change-in-production"
-      FRONTEND_URL: "https://huios.marqsolucoes.com.br"
+      FRONTEND_URL: "http://${DOMAIN}:3000"
       PORT: 3001
       NODE_ENV: production
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:3001/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -51,9 +50,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: "postgresql://postgres:postgres_password@db:5432/huios?schema=public"
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}?schema=public"
       INTERNAL_API_URL: "http://api:3001"
-      NEXT_PUBLIC_API_URL: "https://huios.marqsolucoes.com.br/api"
+      NEXT_PUBLIC_API_URL: "http://${DOMAIN}:3001/api"
       JWT_SECRET: "huios-secret-key-change-in-production"
     depends_on:
       api:
