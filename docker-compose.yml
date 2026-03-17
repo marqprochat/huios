@@ -12,8 +12,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${DB_NAME}"]
+      interval: 10s
       timeout: 5s
       retries: 5
 
@@ -26,7 +26,7 @@ services:
     ports:
       - "3001:3001"
     environment:
-      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}?schema=public"
+      DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: "huios-secret-key-change-in-production"
       FRONTEND_URL: "http://${DOMAIN}:3000"
       PORT: 3001
@@ -50,7 +50,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}?schema=public"
+      DATABASE_URL: ${DATABASE_URL}
       INTERNAL_API_URL: "http://api:3001"
       NEXT_PUBLIC_API_URL: "http://${DOMAIN}:3001/api"
       JWT_SECRET: "huios-secret-key-change-in-production"
