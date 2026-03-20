@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
 import authRoutes from './routes/authRoutes';
+import classRoutes from './routes/classRoutes';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/classes', classRoutes);
 
 // Rate Limiting
 

@@ -51,7 +51,7 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: ${DATABASE_URL}
-      INTERNAL_API_URL: "http://api:3001"
+      INTERNAL_API_URL: "http://api:3001/api"
       NEXT_PUBLIC_API_URL: "http://${DOMAIN}:3001/api"
       JWT_SECRET: "huios-secret-key-change-in-production"
     depends_on:

@@ -1,14 +1,39 @@
 'use server'
 
 import prisma from '@/lib/prisma';
+import { apiFetch } from '@/lib/api';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
-export async function fetchClasses() {
-    return prisma.class.findMany({
-        include: { module: true, teacher: true },
-        orderBy: { name: 'asc' },
-    });
+interface ClassWithRelations {
+    id: string;
+    name: string;
+    location?: string;
+    module: {
+        id: string;
+        name: string;
+        description?: string;
+        workload: number;
+    };
+    teacher: {
+        id: string;
+        name: string;
+        email: string;
+        phone?: string;
+        cpf?: string;
+        city?: string;
+        pixType?: string;
+        pix?: string;
+    };
+}
+
+export async function fetchClasses(): Promise<ClassWithRelations[]> {
+    try {
+        return await apiFetch('/classes') as ClassWithRelations[];
+    } catch (error) {
+        console.error('Error fetching classes:', error);
+        return [];
+    }
 }
 
 export async function createAluno(formData: FormData) {
