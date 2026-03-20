@@ -97,7 +97,6 @@ model Class {
 
   module      Module   @relation(fields: [moduleId], references: [id])
   teacher     Teacher  @relation(fields: [teacherId], references: [id])
-  enrollments Enrollment[]
 }
 
 model Enrollment {
@@ -109,7 +108,7 @@ model Enrollment {
   updatedAt DateTime @updatedAt
 
   student   Student  @relation(fields: [studentId], references: [id])
-  class     Class    @relation(fields: [classId], references: [id])
+  class     CourseClass @relation(fields: [classId], references: [id])
 
   @@unique([studentId, classId])
 }
@@ -148,6 +147,7 @@ model CourseClass {
 
   course      Course       @relation(fields: [courseId], references: [id])
   disciplines Discipline[]
+  enrollments Enrollment[]
 }
 
 model Discipline {

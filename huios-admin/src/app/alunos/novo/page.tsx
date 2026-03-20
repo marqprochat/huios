@@ -178,12 +178,13 @@ export default async function NovoAlunoPage() {
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors">{cls.name}</p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                                {cls.module.name} • Prof. {cls.teacher.name}
+                                                Curso: {cls.course.name} {cls.duration ? `• Duração: ${cls.duration}` : ''}
                                             </p>
-                                            {cls.location && (
+                                            {(cls.startDate || cls.endDate) && (
                                                 <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                                                    <span className="material-symbols-outlined text-[12px]">location_on</span>
-                                                    {cls.location}
+                                                    <span className="material-symbols-outlined text-[12px]">calendar_month</span>
+                                                    {cls.startDate ? new Date(cls.startDate).toLocaleDateString('pt-BR') : ''} 
+                                                    {cls.endDate ? ` até ${new Date(cls.endDate).toLocaleDateString('pt-BR')}` : ''}
                                                 </p>
                                             )}
                                         </div>

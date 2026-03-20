@@ -8,28 +8,22 @@ import { redirect } from 'next/navigation';
 interface ClassWithRelations {
     id: string;
     name: string;
-    location?: string;
-    module: {
+    startDate?: Date | null;
+    endDate?: Date | null;
+    duration?: string | null;
+    course: {
         id: string;
         name: string;
-        description?: string;
-        workload: number;
-    };
-    teacher: {
-        id: string;
-        name: string;
-        email: string;
-        phone?: string;
-        cpf?: string;
-        city?: string;
-        pixType?: string;
-        pix?: string;
     };
 }
 
 export async function fetchClasses(): Promise<ClassWithRelations[]> {
     try {
-        return await apiFetch('/classes') as ClassWithRelations[];
+        const classes = await prisma.courseClass.findMany({
+            include: { course: true },
+            orderBy: { name: 'asc' }
+        });
+        return classes as unknown as ClassWithRelations[];
     } catch (error) {
         console.error('Error fetching classes:', error);
         return [];
