@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { verifyPassword, signToken, COOKIE_NAME } from '@/lib/auth'
 
-const API_URL = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export async function POST(request: Request) {
     try {
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
         }
 
         // Call the new Express API
-        const apiResponse = await fetch(`${API_URL}/api/auth/login`, {
+        const apiResponse = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
