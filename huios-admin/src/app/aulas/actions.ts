@@ -63,6 +63,81 @@ export async function createLesson(formData: FormData) {
   }
 }
 
+export async function createBulkLessons(data: {
+  disciplineId: string;
+  dates: string[];
+  startTime: string;
+  endTime: string;
+  locationName: string;
+  latitude?: number;
+  longitude?: number;
+  radiusMeters: number;
+  description?: string;
+}) {
+  try {
+    const { 
+      disciplineId, 
+      dates, 
+      startTime, 
+      endTime, 
+      locationName, 
+      latitude, 
+      longitude, 
+      radiusMeters, 
+      description 
+    } = data;
+
+    // Use a transaction to ensure all or nothing
+    await prisma.$transaction(async (tx) => {
+      for (const dateStr of dates) {
+        const lesson = await tx.lesson.create({
+          data: {
+            disciplineId,
+            date: new Date(dateStr),
+            startTime: startTime ? new Date(`${dateStr}T${startTime}`) : null,
+            endTime: endTime ? new Date(`${dateStr}T${endTime}`) : null,
+            locationName,
+            latitude,
+            longitude,
+            radiusMeters: radiusMeters || 100,
+            description
+          }
+        });
+
+        // Create attendance records
+        const enrollments = await tx.enrollment.findMany({
+          where: {
+            class: {
+              disciplines: {
+                some: { id: disciplineId }
+              }
+            },
+            status: 'ACTIVE'
+          },
+          select: { studentId: true }
+        });
+
+        if (enrollments.length > 0) {
+          await tx.attendance.createMany({
+            data: enrollments.map(enrollment => ({
+              lessonId: lesson.id,
+              studentId: enrollment.studentId,
+              status: 'PENDING'
+            })),
+            skipDuplicates: true
+          });
+        }
+      }
+    });
+
+    revalidatePath('/aulas');
+    return { success: true, count: dates.length };
+  } catch (error) {
+    console.error('Error creating bulk lessons:', error);
+    throw new Error('Failed to create bulk lessons');
+  }
+}
+
 export async function updateLesson(id: string, formData: FormData) {
   try {
     const date = formData.get('date') as string;
@@ -148,5 +223,41 @@ export async function bulkUpdateAttendances(lessonId: string, attendances: { id:
   } catch (error) {
     console.error('Error bulk updating attendances:', error);
     throw new Error('Failed to update attendances');
+  }
+}
+
+export async function deleteLessonMaterial(id: string) {
+  try {
+    const material = await prisma.lessonMaterial.findUnique({
+      where: { id }
+    });
+
+    if (material) {
+      // In a real app, we'd also delete the file from the filesystem.
+      // But since we are using the API for that usually, here we just delete the DB record
+      // or we'll implement the actual file deletion if we were managing it here.
+      // For now, let's just delete the record as the API will handle the file.
+      await prisma.lessonMaterial.delete({
+        where: { id }
+      });
+    }
+
+    revalidatePath('/aulas');
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting material:', error);
+    throw new Error('Failed to delete material');
+  }
+}
+
+export async function getLessonMaterials(lessonId: string) {
+  try {
+    return await prisma.lessonMaterial.findMany({
+      where: { lessonId },
+      orderBy: { createdAt: 'desc' }
+    });
+  } catch (error) {
+    console.error('Error fetching materials:', error);
+    return [];
   }
 }
