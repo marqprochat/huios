@@ -20,6 +20,10 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Environment variables for runtime
+ENV INTERNAL_API_URL=http://api:3001/api
+ENV NEXT_PUBLIC_API_URL=http://localhost:3001/api
+
 # Copy standalone output (includes server.js and minimal node_modules)
 COPY --from=builder /app/.next/standalone ./
 

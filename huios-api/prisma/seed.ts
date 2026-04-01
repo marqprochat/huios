@@ -90,8 +90,29 @@ async function main() {
             console.log('❌ Módulo ou Professor não encontrados, não foi possível criar a turma')
         }
     } else {
-        console.log('ℹ️  Turma já existe, pulando criação.')
+        console.log('ℹ️ Turma já existe, pulando criação.')
     }
+
+    // Resetar senha do Super Admin (garantir que funcione)
+    const hashedPassword = await bcrypt.hash('admin123', 12)
+  
+    await prisma.user.upsert({
+        where: { email: 'admin@huios.com.br' },
+        update: {
+            password: hashedPassword,
+            active: true,
+            role: 'SUPER_ADMIN'
+        },
+        create: {
+            name: 'Super Administrador',
+            email: 'admin@huios.com.br',
+            password: hashedPassword,
+            role: 'SUPER_ADMIN',
+            active: true,
+        }
+    })
+
+    console.log('✅ Senha do Super Admin resetada: admin@huios.com.br / admin123')
 }
 
 main()

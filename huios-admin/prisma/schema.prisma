@@ -38,7 +38,12 @@ model Student {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   enrollments Enrollment[]
-  teamMembers    TeamMember[]
+  teamMembers TeamMember[]
+
+  // Relações novas
+  submissions ExamSubmission[]
+  attendances Attendance[]
+  grades Grade[]
 }
 
 model Teacher {
@@ -151,15 +156,227 @@ model CourseClass {
 }
 
 model Discipline {
-  id            String   @id @default(uuid())
-  name          String
-  description   String?
-  workload      Int?     // em horas
+  id String @id @default(uuid())
+  name String
+  description String?
+  workload Int? // em horas
   courseClassId String
-  teacherId     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  teacherId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  courseClass   CourseClass @relation(fields: [courseClassId], references: [id])
-  teacher       Teacher?    @relation(fields: [teacherId], references: [id])
+  courseClass CourseClass @relation(fields: [courseClassId], references: [id])
+  teacher Teacher? @relation(fields: [teacherId], references: [id])
+
+  // Relações novas
+  exams Exam[]
+  lessons Lesson[]
+  grades Grade[]
+}
+
+// ============================================================
+// MODELOS DE PROVAS E QUESTÕES
+// ============================================================
+
+model Exam {
+  id String @id @default(uuid())
+  title String
+  description String?
+  disciplineId String
+  discipline Discipline @relation(fields: [disciplineId], references: [id])
+
+  // Janela de tempo
+  startDate DateTime
+  endDate DateTime
+
+  // Configurações
+  duration Int? // Duração em minutos (opcional - se quiser limitar tempo)
+  maxAttempts Int @default(1)
+  isPublished Boolean @default(false)
+
+  // Relações
+  questions Question[]
+  submissions ExamSubmission[]
+  grades Grade[] // Para vincular notas automáticas
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Question {
+  id String @id @default(uuid())
+  examId String
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  // Conteúdo
+  statement String // Enunciado
+  type QuestionType @default(MULTIPLE_CHOICE)
+  order Int @default(0) // Ordem da questão na prova
+
+  // Configuração de peso
+  weight Float @default(1.0) // Peso da questão no total
+
+  // Relações
+  alternatives Alternative[]
+  answers StudentAnswer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Alternative {
+  id String @id @default(uuid())
+  questionId String
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  letter String // A, B, C, D, E
+  text String
+  isCorrect Boolean @default(false)
+
+  // Relação com respostas
+  answers StudentAnswer[]
+
+  createdAt DateTime @default(now())
+}
+
+// Respostas dos alunos
+model ExamSubmission {
+  id String @id @default(uuid())
+  examId String
+  exam Exam @relation(fields: [examId], references: [id])
+  studentId String
+  student Student @relation(fields: [studentId], references: [id])
+
+  startedAt DateTime @default(now())
+  submittedAt DateTime?
+
+  score Float?
+  maxScore Float?
+
+  answers StudentAnswer[]
+
+  @@unique([examId, studentId]) // Um aluno só pode submeter uma vez
+}
+
+model StudentAnswer {
+  id String @id @default(uuid())
+  submissionId String
+  submission ExamSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  questionId String
+  question Question @relation(fields: [questionId], references: [id])
+
+  alternativeId String?
+  alternative Alternative? @relation(fields: [alternativeId], references: [id])
+
+  isCorrect Boolean?
+  points Float?
+
+  @@unique([submissionId, questionId]) // Uma resposta por questão por submissão
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  // OPEN_TEXT      // Futuro
+  // FILE_UPLOAD    // Futuro
+}
+
+// ============================================================
+// MODELOS DE AULAS E PRESENÇA
+// ============================================================
+
+model Lesson {
+  id String @id @default(uuid())
+  disciplineId String
+  discipline Discipline @relation(fields: [disciplineId], references: [id])
+
+  // Data e horário
+  date DateTime
+  startTime DateTime?
+  endTime DateTime?
+
+  // Localização para check-in
+  locationName String? // Nome do local (ex: "Auditório Principal")
+  latitude Float?
+  longitude Float?
+  radiusMeters Int @default(100) // Raio de tolerância em metros
+
+  // Observações
+  description String?
+
+  // Relações
+  attendances Attendance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Attendance {
+  id String @id @default(uuid())
+  lessonId String
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  studentId String
+  student Student @relation(fields: [studentId], references: [id])
+
+  // Status
+  status AttendanceStatus @default(PENDING)
+
+  // Check-in (pode ser automático ou manual)
+  checkInAt DateTime?
+  checkInLat Float?
+  checkInLong Float?
+  distance Float? // Distância calculada em metros
+
+  // Lançamento manual
+  markedById String? // ID do usuário que marcou (se manual)
+  markedAt DateTime?
+  notes String? // Observações
+
+  @@unique([lessonId, studentId]) // Um aluno por aula
+}
+
+enum AttendanceStatus {
+  PRESENT // Presente
+  ABSENT // Ausente
+  EXCUSED // Justificado
+  PENDING // Aguardando
+}
+
+// ============================================================
+// MODELOS DE NOTAS E BOLETINS
+// ============================================================
+
+model Grade {
+  id String @id @default(uuid())
+  studentId String
+  student Student @relation(fields: [studentId], references: [id])
+  disciplineId String
+  discipline Discipline @relation(fields: [disciplineId], references: [id])
+
+  // Origem da nota
+  type GradeType
+  examId String? // Se for de prova online
+  exam Exam? @relation(fields: [examId], references: [id])
+
+  // Valores
+  score Float // Nota 0-10
+  weight Float @default(1.0) // Peso no cálculo da média
+
+  // Identificação (para notas manuais)
+  title String? // Ex: "Trabalho de Grupo", "Participação"
+
+  // Metadados
+  description String?
+  createdById String // Quem criou/lançou a nota
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId, disciplineId])
+}
+
+enum GradeType {
+  EXAM // Prova online
+  MANUAL // Lançamento manual
+  ACTIVITY // Atividade/Trabalho
+  PARTICIPATION // Participação
 }

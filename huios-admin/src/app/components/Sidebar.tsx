@@ -39,27 +39,37 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
                 </Link>
             </div>
 
-            <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-                <NavLink href="/" icon="grid_view" label="Painel" />
-                
-                <NavGroup 
-                    label="Cadastros" 
-                    icon="list_alt" 
-                    links={[
-                        { href: "/alunos", icon: "group", label: "Alunos" },
-                        { href: "/professores", icon: "school", label: "Professores" },
-                        { href: "/equipe", icon: "shield_person", label: "Equipe" },
-                        { href: "/cursos", icon: "menu_book", label: "Cursos" },
-                        { href: "/turmas", icon: "diversity_3", label: "Turmas" },
-                        { href: "/disciplinas", icon: "book", label: "Disciplinas" },
-                        { href: "/matriculas", icon: "assignment", label: "Matrículas" },
-                    ]}  
-                />
+  <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+  <NavLink href="/" icon="grid_view" label="Painel" />
 
-                <div className="pt-4 mt-4 border-t border-slate-200 dark:border-slate-800">
-                    <NavLink href="/configuracoes" icon="settings" label="Configurações" />
-                </div>
-            </nav>
+  <NavGroup
+  label="Cadastros"
+  icon="list_alt"
+  links={[
+    { href: "/alunos", icon: "group", label: "Alunos" },
+    { href: "/professores", icon: "school", label: "Professores" },
+    { href: "/equipe", icon: "shield_person", label: "Equipe" },
+    { href: "/cursos", icon: "menu_book", label: "Cursos" },
+    { href: "/turmas", icon: "diversity_3", label: "Turmas" },
+    { href: "/disciplinas", icon: "book", label: "Disciplinas" },
+    { href: "/matriculas", icon: "assignment", label: "Matrículas" },
+  ]}
+  />
+
+  <NavGroup
+  label="Acadêmico"
+  icon="school"
+  links={[
+    { href: "/provas", icon: "quiz", label: "Provas" },
+    { href: "/aulas", icon: "calendar_today", label: "Aulas" },
+    { href: "/boletins", icon: "grade", label: "Boletins" },
+  ]}
+  />
+
+  <div className="pt-4 mt-4 border-t border-slate-200 dark:border-slate-800">
+  <NavLink href="/configuracoes" icon="settings" label="Configurações" />
+  </div>
+  </nav>
 
             <div className="p-4 border-t border-slate-200 dark:border-slate-800">
                 <div className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-slate-800 rounded-xl">
