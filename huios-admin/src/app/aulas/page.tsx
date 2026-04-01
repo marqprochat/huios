@@ -25,6 +25,7 @@ export default async function AulasPage() {
     startTime: aula.startTime,
     endTime: aula.endTime,
     locationName: aula.locationName,
+    description: aula.description,
     discipline: {
       name: aula.discipline.name,
       courseClass: {

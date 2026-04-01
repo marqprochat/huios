@@ -11,6 +11,7 @@ interface Lesson {
   startTime: Date | null;
   endTime: Date | null;
   locationName: string | null;
+  description: string | null;
   discipline: {
     name: string;
     courseClass: {
@@ -33,6 +34,7 @@ export default function CalendarContainer({ initialLessons }: CalendarProps) {
       date: new Date(l.date),
       startTime: l.startTime ? new Date(l.startTime) : null,
       endTime: l.endTime ? new Date(l.endTime) : null,
+      description: l.description,
     }));
   }, [initialLessons]);
 
@@ -250,6 +252,20 @@ export default function CalendarContainer({ initialLessons }: CalendarProps) {
                            <div className="text-slate-900 dark:text-white font-bold">{selectedLesson.locationName || 'Não definido'}</div>
                         </div>
                      </div>
+
+                     {selectedLesson.description && (
+                       <div className="flex items-start gap-4">
+                          <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+                             <span className="material-symbols-outlined text-primary">notes</span>
+                          </div>
+                          <div>
+                             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Observações</div>
+                             <div className="text-sm text-slate-600 dark:text-slate-400 mt-1 italic leading-relaxed">
+                               "{selectedLesson.description}"
+                             </div>
+                          </div>
+                       </div>
+                     )}
                   </div>
 
                   <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 border border-slate-100 dark:border-slate-800 h-full">
