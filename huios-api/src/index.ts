@@ -10,6 +10,7 @@ import examRoutes from './routes/examRoutes';
 import lessonRoutes from './routes/lessonRoutes';
 import attendanceRoutes from './routes/attendanceRoutes';
 import gradeRoutes from './routes/gradeRoutes';
+import settingsRoutes from './routes/settingsRoutes';
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ app.use('/api/exams', examRoutes);
 app.use('/api/lessons', lessonRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/grades', gradeRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Rate Limiting
 
