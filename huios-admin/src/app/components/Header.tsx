@@ -1,6 +1,24 @@
+"use client";
+
 import { ThemeToggle } from "./ThemeToggle";
 
-export function Header() {
+interface UserData {
+    userId: string;
+    name: string;
+    email: string;
+    role: string;
+}
+
+interface HeaderProps {
+    user?: UserData | null;
+    onLogout?: () => void;
+}
+
+export function Header({ user, onLogout }: HeaderProps) {
+    const initials = user?.name
+        ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+        : 'A';
+
     return (
         <header className="h-16 flex items-center justify-between px-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
             <div className="flex items-center gap-4 flex-1">
@@ -27,14 +45,25 @@ export function Header() {
 
                 <div className="flex items-center gap-3">
                     <div className="text-right hidden sm:block">
-                        <p className="text-xs font-bold text-slate-900 dark:text-white">Coordenação</p>
+                        <p className="text-xs font-bold text-slate-900 dark:text-white">{user?.name || 'Coordenação'}</p>
                         <p className="text-[10px] text-slate-500">Online</p>
                     </div>
                     <div className="w-10 h-10 rounded-full border-2 border-primary/20 overflow-hidden bg-primary/10 flex items-center justify-center text-primary font-bold">
-                        A
+                        {initials}
                     </div>
                 </div>
+
+                {onLogout && (
+                    <button
+                        onClick={onLogout}
+                        title="Sair do sistema"
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center justify-center cursor-pointer"
+                    >
+                        <span className="material-symbols-outlined">logout</span>
+                    </button>
+                )}
             </div>
         </header>
     );
 }
+

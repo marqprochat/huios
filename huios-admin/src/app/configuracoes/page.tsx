@@ -13,10 +13,12 @@ export default function ConfiguracoesPage() {
   const [latitude, setLatitude] = useState("")
   const [longitude, setLongitude] = useState("")
   const [radiusMeters, setRadiusMeters] = useState("100")
+  const [checkInBufferMinutes, setCheckInBufferMinutes] = useState("30")
 
   // Carregar configurações ao montar
   useEffect(() => {
     fetchSettings()
+    fetchCheckinConfig()
   }, [])
 
   const fetchSettings = async () => {
@@ -31,6 +33,18 @@ export default function ConfiguracoesPage() {
       }
     } catch (error) {
       console.error('Error fetching settings:', error)
+    }
+  }
+
+  const fetchCheckinConfig = async () => {
+    try {
+      const response = await fetch('/api/checkin-config')
+      if (response.ok) {
+         const data = await response.json()
+         setCheckInBufferMinutes(data.checkInBufferMinutes?.toString() || '30')
+      }
+    } catch (error) {
+       console.error('Error fetching checkin config:', error)
     }
   }
 
@@ -93,7 +107,15 @@ export default function ConfiguracoesPage() {
         })
       })
 
-      if (response.ok) {
+      const configResponse = await fetch('/api/checkin-config', {
+         method: 'PUT',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+            checkInBufferMinutes: parseInt(checkInBufferMinutes) || 30
+         })
+      })
+
+      if (response.ok && configResponse.ok) {
         alert('Configurações de localização salvas com sucesso!')
       } else {
         alert('Erro ao salvar configurações')
@@ -404,6 +426,23 @@ export default function ConfiguracoesPage() {
               />
               <p className="text-xs text-slate-500 mt-1">
                 Distância máxima permitida para o check-in (padrão: 100m)
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                Limite de Horário para Check-in/out (minutos)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="120"
+                value={checkInBufferMinutes}
+                onChange={(e) => setCheckInBufferMinutes(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Tempo de tolerância antes e depois do início/fim da aula (padrão: 30 minutos)
               </p>
             </div>
 

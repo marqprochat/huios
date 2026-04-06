@@ -19,9 +19,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true)
 
     const isLoginPage = pathname === "/login"
+    const isPortalRoute = pathname.startsWith("/portal")
 
     useEffect(() => {
-        if (isLoginPage) {
+        if (isLoginPage || isPortalRoute) {
             setLoading(false)
             return
         }
@@ -41,7 +42,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }
 
         fetchUser()
-    }, [isLoginPage, pathname])
+    }, [isLoginPage, isPortalRoute, pathname])
 
     async function handleLogout() {
         await fetch("/api/auth/logout", { method: "POST" })
@@ -51,7 +52,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
 
     // Login page - render without shell
-    if (isLoginPage) {
+    if (isLoginPage || isPortalRoute) {
         return <>{children}</>
     }
 
@@ -74,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex h-screen overflow-hidden">
             <Sidebar user={user} onLogout={handleLogout} />
             <div className="flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark overflow-hidden">
-                <Header />
+                <Header user={user} onLogout={handleLogout} />
                 <main className="flex-1 overflow-y-auto w-full">
                     {children}
                 </main>

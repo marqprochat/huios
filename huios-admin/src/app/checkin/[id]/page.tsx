@@ -25,6 +25,8 @@ interface Attendance {
   status: 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'PENDING';
   checkInAt: string | null;
   distance: number | null;
+  checkOutAt: string | null;
+  checkOutDistance: number | null;
 }
 
 export default function CheckInPage() {
@@ -49,7 +51,7 @@ export default function CheckInPage() {
 
   const fetchLesson = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/lessons/${lessonId}`);
+      const response = await fetch(`/api/portal/aulas/${lessonId}`);
       if (response.ok) {
         const data = await response.json();
         setLesson(data);
@@ -63,14 +65,14 @@ export default function CheckInPage() {
 
   const checkExistingAttendance = async (lessonId: string) => {
     try {
-      // This would check if student already has attendance record
-      const response = await fetch(`http://localhost:3001/api/lessons/${lessonId}/attendances`);
+      // In a real application we would check standard endpoint or it could be retrieved with the lesson
+      // For now, let's fetch aulas from portal to see if it has attendance mapped
+      const response = await fetch(`/api/portal/aulas`);
       if (response.ok) {
         const data = await response.json();
-        // Filter for current student
-        const studentAttendance = data.find((a: any) => a.studentId === studentId);
-        if (studentAttendance) {
-          setAttendance(studentAttendance);
+        const currentLesson = data.find((l: any) => l.id === lessonId);
+        if (currentLesson && currentLesson.attendances && currentLesson.attendances.length > 0) {
+          setAttendance(currentLesson.attendances[0]);
         }
       }
       setLoading(false);
@@ -80,7 +82,7 @@ export default function CheckInPage() {
     }
   };
 
-  const handleCheckIn = async () => {
+  const handleLocationAction = async (action: 'checkin' | 'checkout') => {
     setCheckingIn(true);
     setLocationError('');
     setCheckInResult(null);
@@ -97,13 +99,13 @@ export default function CheckInPage() {
           const latitude = position.coords.latitude;
           const longitude = position.coords.longitude;
 
-          const response = await fetch(`http://localhost:3001/api/lessons/${lessonId}/checkin`, {
+          const response = await fetch(`/api/portal/aulas/${lessonId}/checkin`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              studentId,
               latitude,
-              longitude
+              longitude,
+              action
             })
           });
 
@@ -113,10 +115,10 @@ export default function CheckInPage() {
             setCheckInResult(data);
             setAttendance(data.attendance);
           } else {
-            setLocationError(data.error || 'Erro ao realizar check-in');
+            setLocationError(data.error || `Erro ao realizar ${action === 'checkin' ? 'check-in' : 'check-out'}`);
           }
         } catch (error) {
-          console.error('Error during check-in:', error);
+          console.error(`Error during ${action}:`, error);
           setLocationError('Erro ao conectar com o servidor');
         } finally {
           setCheckingIn(false);
@@ -274,16 +276,32 @@ export default function CheckInPage() {
             {attendance?.checkInAt && (
               <div className="text-sm text-slate-600 dark:text-slate-400 mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
                 <div className="flex items-center justify-between">
-                  <span>Horário:</span>
+                  <span>Check-in:</span>
                   <span className="font-medium">
                     {formatTime(attendance.checkInAt)}
                   </span>
                 </div>
                 {attendance.distance !== null && attendance.distance !== undefined && (
                   <div className="flex items-center justify-between mt-1">
-                    <span>Distância:</span>
+                    <span>Distância Check-in:</span>
                     <span className="font-medium">{Math.round(attendance.distance)}m</span>
                   </div>
+                )}
+                {attendance.checkOutAt && (
+                   <>
+                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                         <span>Check-out:</span>
+                         <span className="font-medium">
+                           {formatTime(attendance.checkOutAt)}
+                         </span>
+                       </div>
+                       {attendance.checkOutDistance !== null && attendance.checkOutDistance !== undefined && (
+                         <div className="flex items-center justify-between mt-1">
+                           <span>Distância Check-out:</span>
+                           <span className="font-medium">{Math.round(attendance.checkOutDistance)}m</span>
+                         </div>
+                       )}
+                   </>
                 )}
               </div>
             )}
@@ -301,7 +319,7 @@ export default function CheckInPage() {
               </p>
               
               <button
-                onClick={handleCheckIn}
+                onClick={() => handleLocationAction('checkin')}
                 disabled={checkingIn}
                 className="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
@@ -319,6 +337,38 @@ export default function CheckInPage() {
               </button>
             </div>
           </div>
+        )}
+
+        {/* Check-out Card (if already checked in) */}
+        {isCheckedIn && (
+           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 mb-4 mt-2">
+             <div className="text-center">
+               <h3 className="font-bold text-slate-900 dark:text-white mb-2">
+                 Realizar Check-out
+               </h3>
+               <p className="text-sm text-slate-500 mb-4">
+                 Clique no botão abaixo para registrar sua saída da aula.
+               </p>
+               
+               <button
+                 onClick={() => handleLocationAction('checkout')}
+                 disabled={checkingIn}
+                 className="w-full bg-slate-800 text-white dark:bg-slate-700 py-3 rounded-xl font-bold text-md hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+               >
+                 {checkingIn ? (
+                   <>
+                     <span className="material-symbols-outlined animate-spin">refresh</span>
+                     Obtendo localização...
+                   </>
+                 ) : (
+                   <>
+                     <span className="material-symbols-outlined">logout</span>
+                     Fazer Check-out
+                   </>
+                 )}
+               </button>
+             </div>
+           </div>
         )}
 
         {/* Error Message */}

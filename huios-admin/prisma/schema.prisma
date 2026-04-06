@@ -15,6 +15,8 @@ model Student {
   name                 String
   email                String   @unique
   phone                String?
+  userId               String?  @unique
+  user                 User?    @relation(fields: [userId], references: [id])
   cpf                  String?  @unique
   address              String?
 
@@ -127,6 +129,7 @@ model User {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  student   Student?
 }
 
 model Course {

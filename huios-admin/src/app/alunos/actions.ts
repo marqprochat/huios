@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/prisma';
 import { apiFetch } from '@/lib/api';
+import { hashPassword } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -76,6 +77,30 @@ export async function createAluno(formData: FormData) {
                 convivaCourseDetails: convivaCourseDetails || null,
             }
         });
+
+        // Create User for student login (password = CPF or 'huios123')
+        const rawPassword = cpf ? cpf.replace(/\D/g, '') : 'huios123';
+        const hashedPw = await hashPassword(rawPassword);
+
+        try {
+            const user = await prisma.user.create({
+                data: {
+                    name,
+                    email,
+                    password: hashedPw,
+                    role: 'ALUNO',
+                    active: true,
+                }
+            });
+
+            // Link user to student
+            await prisma.student.update({
+                where: { id: student.id },
+                data: { userId: user.id }
+            });
+        } catch (userError: any) {
+            console.warn('Could not create user for student (may already exist):', userError?.message);
+        }
 
         if (selectedClassIds.length > 0) {
             await prisma.enrollment.createMany({

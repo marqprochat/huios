@@ -328,6 +328,12 @@ model Attendance {
   checkInLong Float?
   distance Float? // Distância calculada em metros
 
+  // Check-out
+  checkOutAt DateTime?
+  checkOutLat Float?
+  checkOutLong Float?
+  checkOutDistance Float?
+
   // Lançamento manual
   markedById String? // ID do usuário que marcou (se manual)
   markedAt DateTime?
