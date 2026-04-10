@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { toLocalDate } from '@/lib/date-utils';
 
 interface Lesson {
   id: string;
@@ -26,6 +27,7 @@ export default function CheckInPage() {
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkingIn, setCheckingIn] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
   const [locationError, setLocationError] = useState('');
   const [checkInResult, setCheckInResult] = useState<any>(null);
   const [studentId, setStudentId] = useState<string>('');
@@ -47,8 +49,41 @@ export default function CheckInPage() {
       const lessonsRes = await fetch('/api/portal/aulas');
       if (lessonsRes.ok) {
         const lessons = await lessonsRes.json();
-        const found = lessons.find((l: any) => l.id === lessonId);
+        
+        let found;
+        if (lessonId === 'hoje') {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          found = lessons.find((l: any) => {
+            const lessonDate = toLocalDate(l.date);
+            return lessonDate.getTime() === today.getTime();
+          });
+        } else {
+          found = lessons.find((l: any) => l.id === lessonId);
+        }
+
         if (found) {
+          // If lesson has no coordinates, use system settings as fallback
+          if (found.latitude === null || found.latitude === undefined || found.longitude === null || found.longitude === undefined) {
+            try {
+              const sRes = await fetch('/api/settings');
+              if (sRes.ok) {
+                const sData = await sRes.json();
+                if (sData.latitude !== null && sData.latitude !== undefined && sData.longitude !== null && sData.longitude !== undefined) {
+                  // Update found object with fallback values
+                  found = {
+                    ...found,
+                    latitude: sData.latitude,
+                    longitude: sData.longitude,
+                    radiusMeters: sData.radiusMeters || found.radiusMeters,
+                    locationName: found.locationName || sData.locationName
+                  };
+                }
+              }
+            } catch (err) {
+              console.error('Error fetching default settings:', err);
+            }
+          }
           setLesson(found);
           // Check existing attendance
           if (found.attendances?.length > 0) {
@@ -67,6 +102,7 @@ export default function CheckInPage() {
   };
 
   const handleCheckIn = async () => {
+    if (!lesson) return;
     setCheckingIn(true);
     setLocationError('');
 
@@ -76,11 +112,12 @@ export default function CheckInPage() {
       return;
     }
 
+    const realLessonId = lesson.id;
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
           const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-          const response = await fetch(`${API_URL}/api/lessons/${lessonId}/checkin`, {
+          const response = await fetch(`${API_URL}/api/lessons/${realLessonId}/checkin`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -119,6 +156,61 @@ export default function CheckInPage() {
     );
   };
 
+  const handleCheckOut = async () => {
+    if (!lesson) return;
+    setCheckingOut(true);
+    setLocationError('');
+
+    if (!navigator.geolocation) {
+      setLocationError('Geolocalização não é suportada por este navegador.');
+      setCheckingOut(false);
+      return;
+    }
+
+    const realLessonId = lesson.id;
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+          const response = await fetch(`${API_URL}/api/lessons/${realLessonId}/checkout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              studentId,
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            })
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            setCheckInResult(data);
+          } else {
+            setLocationError(data.error || 'Erro ao realizar check-out');
+          }
+        } catch (error) {
+          console.error(error);
+          setLocationError('Erro ao conectar com o servidor');
+        } finally {
+          setCheckingOut(false);
+        }
+      },
+      (error) => {
+        let msg = 'Erro ao obter localização: ';
+        switch (error.code) {
+          case error.PERMISSION_DENIED: msg += 'Permissão negada.'; break;
+          case error.POSITION_UNAVAILABLE: msg += 'Localização indisponível.'; break;
+          case error.TIMEOUT: msg += 'Tempo esgotado.'; break;
+          default: msg += error.message;
+        }
+        setLocationError(msg);
+        setCheckingOut(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full py-20">
@@ -130,16 +222,22 @@ export default function CheckInPage() {
   if (!lesson) {
     return (
       <div className="max-w-md mx-auto p-8 text-center">
-        <span className="material-symbols-outlined text-5xl text-slate-300 mb-4">error</span>
-        <h2 className="font-bold text-slate-800 mb-2">Aula não encontrada</h2>
-        <button onClick={() => router.push('/portal')} className="text-[#135bec] text-sm font-semibold">
+        <span className="material-symbols-outlined text-5xl text-slate-300 mb-4">event_busy</span>
+        <h2 className="font-bold text-slate-800 mb-2">{lessonId === 'hoje' ? 'Nenhuma aula para hoje' : 'Aula não encontrada'}</h2>
+        <p className="text-sm text-slate-400 mb-6">
+          {lessonId === 'hoje' 
+            ? 'Não localizamos nenhuma aula agendada para a data de hoje.' 
+            : 'O link acessado pode estar incorreto ou a aula foi removida.'}
+        </p>
+        <button onClick={() => router.push('/portal')} className="bg-[#135bec] text-white px-6 py-2 rounded-xl text-sm font-semibold">
           Voltar ao Dashboard
         </button>
       </div>
     );
   }
 
-  const isCheckedIn = checkInResult?.attendance?.checkInAt;
+  const isCheckedIn = !!checkInResult?.attendance?.checkInAt;
+  const isCheckedOut = !!checkInResult?.attendance?.checkOutAt;
 
   return (
     <div className="max-w-md mx-auto p-4 lg:p-8 space-y-6">
@@ -166,7 +264,7 @@ export default function CheckInPage() {
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2 text-slate-500">
             <span className="material-symbols-outlined text-sm text-slate-400">event</span>
-            {new Date(lesson.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {toLocalDate(lesson.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
           </div>
           <div className="flex items-center gap-2 text-slate-500">
             <span className="material-symbols-outlined text-sm text-slate-400">schedule</span>
@@ -183,15 +281,63 @@ export default function CheckInPage() {
       </div>
 
       {/* Status */}
+      {(lesson.latitude === null || lesson.latitude === undefined || lesson.longitude === null || lesson.longitude === undefined) && !isCheckedIn && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
+          <span className="material-symbols-outlined text-4xl text-amber-500 mb-2">location_off</span>
+          <h3 className="font-bold text-amber-800 mb-1">Localização não definida</h3>
+          <p className="text-amber-600 text-sm">Esta aula não possui coordenadas geográficas definidas para o check-in por geolocalização. Por favor, solicite ao professor a marcação manual da sua presença.</p>
+        </div>
+      )}
+
       {isCheckedIn ? (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center">
-          <span className="material-symbols-outlined text-4xl text-emerald-500 mb-2">check_circle</span>
-          <h3 className="font-bold text-emerald-800 mb-1">Check-in Realizado!</h3>
-          <p className="text-emerald-600 text-sm">Sua presença foi registrada com sucesso.</p>
-          {checkInResult?.attendance?.distance !== null && checkInResult?.attendance?.distance !== undefined && (
-            <p className="text-emerald-500 text-xs mt-2">
-              Distância: {Math.round(checkInResult.attendance.distance)}m
-            </p>
+        <div className="space-y-4">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center">
+            <span className="material-symbols-outlined text-4xl text-emerald-500 mb-2">check_circle</span>
+            <h3 className="font-bold text-emerald-800 mb-1">Check-in Realizado!</h3>
+            <p className="text-emerald-600 text-sm">Sua presença inicial foi registrada.</p>
+            {checkInResult?.attendance?.distance !== null && checkInResult?.attendance?.distance !== undefined && (
+              <p className="text-emerald-500 text-xs mt-2">
+                Distância (In): {Math.round(checkInResult.attendance.distance)}m
+              </p>
+            )}
+          </div>
+
+          {isCheckedOut ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 text-center">
+              <span className="material-symbols-outlined text-4xl text-blue-500 mb-2">logout</span>
+              <h3 className="font-bold text-blue-800 mb-1">Check-out Realizado!</h3>
+              <p className="text-blue-600 text-sm">Sua saída foi registrada com sucesso.</p>
+              {checkInResult?.attendance?.checkOutDistance !== null && checkInResult?.attendance?.checkOutDistance !== undefined && (
+                <p className="text-blue-500 text-xs mt-2">
+                  Distância (Out): {Math.round(checkInResult.attendance.checkOutDistance)}m
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center">
+              <span className="material-symbols-outlined text-4xl text-slate-300 mb-3">sensor_door</span>
+              <h3 className="font-semibold text-slate-800 mb-2">Finalizar Aula (Check-out)</h3>
+              <p className="text-xs text-slate-500 mb-4">
+                Ao final da aula, registre sua saída para completar a presença.
+              </p>
+              <button
+                onClick={handleCheckOut}
+                disabled={checkingOut || lesson.latitude === null || lesson.latitude === undefined || lesson.longitude === null || lesson.longitude === undefined}
+                className="w-full bg-slate-800 text-white py-4 rounded-xl font-semibold text-lg hover:bg-slate-900 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {checkingOut ? (
+                  <>
+                    <span className="material-symbols-outlined animate-spin">refresh</span>
+                    Obtendo localização...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined">logout</span>
+                    Fazer Check-out
+                  </>
+                )}
+              </button>
+            </div>
           )}
         </div>
       ) : (
@@ -203,7 +349,7 @@ export default function CheckInPage() {
           </p>
           <button
             onClick={handleCheckIn}
-            disabled={checkingIn}
+            disabled={checkingIn || lesson.latitude === null || lesson.latitude === undefined || lesson.longitude === null || lesson.longitude === undefined}
             className="w-full bg-[#135bec] text-white py-4 rounded-xl font-semibold text-lg hover:bg-[#0d47a1] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {checkingIn ? (

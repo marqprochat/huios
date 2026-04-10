@@ -12,8 +12,9 @@ export default async function NovaAulaPage() {
     orderBy: { name: 'asc' }
   });
 
-  // Get today's date in YYYY-MM-DD format
-  const today = new Date().toISOString().split('T')[0];
+  // Get today's date in YYYY-MM-DD format (local time)
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   return (
     <div className="max-w-4xl mx-auto p-4 lg:p-8 space-y-6">

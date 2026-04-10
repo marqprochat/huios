@@ -20,12 +20,16 @@ export default async function ProvasPage() {
   });
 
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('pt-BR', {
+    // Ajusta para GMT-3 para exibição no servidor (já que o servidor costuma ser UTC)
+    const d = new Date(date);
+    // Não mexemos no objeto date original, apenas na exibição
+    return d.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'America/Sao_Paulo'
     });
   };
 
@@ -37,8 +41,10 @@ export default async function ProvasPage() {
     if (!prova.isPublished) {
       return <span className="px-2 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Rascunho</span>;
     }
+    
+    // As comparações funcionam corretamente se ambos forem Date objects baseados em UTC ou no mesmo fuso
     if (now < start) {
-      return <span className="px-2 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Aguardando</span>;
+      return <span className="px-2 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Agendada</span>;
     }
     if (now >= start && now <= end) {
       return <span className="px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Em Andamento</span>;

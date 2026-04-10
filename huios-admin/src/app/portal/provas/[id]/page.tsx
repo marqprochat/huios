@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useToast } from '@/app/components/Toast/useToast';
 
 interface Alternative {
   id: string;
@@ -34,6 +35,7 @@ export default function ResponderProvaPage() {
   const params = useParams();
   const router = useRouter();
   const examId = params.id as string;
+  const { toast } = useToast();
 
   const [exam, setExam] = useState<Exam | null>(null);
   const [loading, setLoading] = useState(true);
@@ -104,11 +106,11 @@ export default function ResponderProvaPage() {
       if (res.ok) {
         setResult(data);
       } else {
-        alert(data.error || 'Erro ao submeter prova');
+        toast('error', 'Erro ao submeter prova', data.error || 'Tente novamente mais tarde.');
       }
     } catch (e) {
       console.error(e);
-      alert('Erro ao submeter prova');
+      toast('error', 'Erro de conexão', 'Não foi possível submeter a prova. Verifique sua internet.');
     } finally {
       setSubmitting(false);
       setShowConfirm(false);

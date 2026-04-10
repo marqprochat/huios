@@ -274,20 +274,31 @@ export const checkIn = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Lesson not found' });
     }
 
-    if (!lesson.latitude || !lesson.longitude) {
-      return res.status(400).json({ error: 'Lesson has no location defined' });
+    let effectiveLat = lesson.latitude;
+    let effectiveLong = lesson.longitude;
+    let effectiveRadius = lesson.radiusMeters;
+
+    if (!effectiveLat || !effectiveLong) {
+      const settings = await prisma.systemSettings.findFirst();
+      if (settings?.latitude && settings?.longitude) {
+        effectiveLat = settings.latitude;
+        effectiveLong = settings.longitude;
+        effectiveRadius = settings.radiusMeters;
+      } else {
+        return res.status(400).json({ error: 'Aula e instituição não possuem localização definida' });
+      }
     }
 
     // Calculate distance
     const distance = calculateDistance(
-      lesson.latitude,
-      lesson.longitude,
+      effectiveLat,
+      effectiveLong,
       parseFloat(latitude),
       parseFloat(longitude)
     );
 
     // Check if within radius
-    const isWithinRadius = distance <= lesson.radiusMeters;
+    const isWithinRadius = distance <= effectiveRadius;
 
     // Update or create attendance
     const attendance = await prisma.attendance.upsert({
@@ -319,10 +330,83 @@ export const checkIn = async (req: Request, res: Response) => {
       attendance,
       distance: Math.round(distance),
       isWithinRadius,
-      maxDistance: lesson.radiusMeters
+      maxDistance: effectiveRadius
     });
   } catch (error) {
     console.error('Error during check-in:', error);
     res.status(500).json({ error: 'Failed to check in' });
+  }
+};
+// Check-out for attendance (mobile endpoint)
+export const checkOut = async (req: Request, res: Response) => {
+  try {
+    const { lessonId } = req.params;
+    const { studentId, latitude, longitude } = req.body;
+
+    if (!studentId || latitude === undefined || longitude === undefined) {
+      return res.status(400).json({ 
+        error: 'Student ID, latitude, and longitude are required' 
+      });
+    }
+
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId }
+    });
+
+    if (!lesson) {
+      return res.status(404).json({ error: 'Lesson not found' });
+    }
+
+    let effectiveLat = lesson.latitude;
+    let effectiveLong = lesson.longitude;
+    let effectiveRadius = lesson.radiusMeters;
+
+    if (!effectiveLat || !effectiveLong) {
+      const settings = await prisma.systemSettings.findFirst();
+      if (settings?.latitude && settings?.longitude) {
+        effectiveLat = settings.latitude;
+        effectiveLong = settings.longitude;
+        effectiveRadius = settings.radiusMeters;
+      } else {
+        return res.status(400).json({ error: 'Aula e instituição não possuem localização definida' });
+      }
+    }
+
+    // Calculate distance
+    const distance = calculateDistance(
+      effectiveLat,
+      effectiveLong,
+      parseFloat(latitude),
+      parseFloat(longitude)
+    );
+
+    // Check if within radius
+    const isWithinRadius = distance <= effectiveRadius;
+
+    // Update attendance with check-out info
+    const attendance = await prisma.attendance.update({
+      where: {
+        lessonId_studentId: {
+          lessonId,
+          studentId
+        }
+      },
+      data: {
+        checkOutAt: new Date(),
+        checkOutLat: parseFloat(latitude),
+        checkOutLong: parseFloat(longitude),
+        checkOutDistance: Math.round(distance)
+      }
+    });
+
+    res.json({
+      attendance,
+      distance: Math.round(distance),
+      isWithinRadius,
+      maxDistance: effectiveRadius
+    });
+  } catch (error) {
+    console.error('Error during check-out:', error);
+    res.status(500).json({ error: 'Failed to check out' });
   }
 };

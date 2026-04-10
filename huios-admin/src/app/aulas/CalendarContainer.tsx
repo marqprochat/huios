@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { deleteLesson } from './actions';
 import LessonMaterials from './components/LessonMaterials';
+import { toLocalDate } from '@/lib/date-utils';
 
 interface Lesson {
   id: string;
@@ -31,7 +32,7 @@ export default function CalendarContainer({ initialLessons }: CalendarProps) {
   const lessons = useMemo(() => {
     return initialLessons.map(l => ({
       ...l,
-      date: new Date(l.date),
+      date: toLocalDate(l.date),
       startTime: l.startTime ? new Date(l.startTime) : null,
       endTime: l.endTime ? new Date(l.endTime) : null,
       description: l.description,

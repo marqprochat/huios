@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useToast } from '@/app/components/Toast/useToast';
 
 interface Alternative {
   letter: string;
@@ -21,6 +22,7 @@ interface Question {
 export default function QuestoesPage() {
   const params = useParams();
   const examId = params.id as string;
+  const { toast } = useToast();
   
   const [exam, setExam] = useState<any>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -115,7 +117,7 @@ export default function QuestoesPage() {
     
     const correctCount = alternatives.filter(a => a.isCorrect).length;
     if (correctCount === 0) {
-      alert('Selecione uma alternativa correta');
+      toast('warning', 'Alternativa obrigatória', 'Selecione pelo menos uma alternativa correta.');
       return;
     }
 

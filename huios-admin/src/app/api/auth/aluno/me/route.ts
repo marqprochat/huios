@@ -13,6 +13,8 @@ export async function GET() {
             );
         }
 
+        console.log('Fetching student data for userId:', session.userId);
+
         const user = await prisma.user.findUnique({
             where: { id: session.userId },
             include: {
@@ -23,16 +25,13 @@ export async function GET() {
                             include: {
                                 class: {
                                     include: {
-                                        course: true,
-                                        disciplines: {
-                                            include: {
-                                                teacher: true
-                                            }
-                                        }
+                                        course: true
                                     }
                                 }
                             }
                         },
+                        // Tentando carregar grades e attendances separadamente se necessário, 
+                        // ou mantendo-as simples por enquanto para debug
                         grades: {
                             include: {
                                 discipline: true,
@@ -54,12 +53,14 @@ export async function GET() {
         });
 
         if (!user || !user.student) {
+            console.warn('User or student not found for id:', session.userId);
             return NextResponse.json(
                 { error: 'Aluno não encontrado' },
                 { status: 404 }
             );
         }
 
+        // Remover senhas e dados sensíveis se houver (já estamos selecionando campos específicos no JSON)
         return NextResponse.json({
             user: {
                 id: user.id,
@@ -69,10 +70,14 @@ export async function GET() {
             },
             student: user.student
         });
-    } catch (error) {
-        console.error('Get student error:', error);
+    } catch (error: any) {
+        console.error('Get student me error detail:', error);
         return NextResponse.json(
-            { error: 'Erro ao carregar dados' },
+            { 
+                error: 'Erro ao carregar dados',
+                message: error.message,
+                code: error.code
+            },
             { status: 500 }
         );
     }

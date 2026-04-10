@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { deleteLessonMaterial, getLessonMaterials } from '../actions';
+import { useToast } from '@/app/components/Toast/useToast';
 
 interface Material {
   id: string;
@@ -19,6 +20,7 @@ export default function LessonMaterials({ lessonId }: LessonMaterialsProps) {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchMaterials();
@@ -54,11 +56,12 @@ export default function LessonMaterials({ lessonId }: LessonMaterialsProps) {
       if (response.ok) {
         fetchMaterials();
       } else {
-        alert('Erro ao enviar arquivo');
+        const data = await response.json();
+        toast('error', 'Erro ao enviar arquivo', data.error || 'Tente novamente mais tarde.');
       }
     } catch (error) {
       console.error('Error uploading:', error);
-      alert('Erro de conexão ao enviar arquivo');
+      toast('error', 'Erro de conexão', 'Não foi possível enviar o arquivo. Verifique sua internet.');
     } finally {
       setUploading(false);
     }
@@ -75,8 +78,9 @@ export default function LessonMaterials({ lessonId }: LessonMaterialsProps) {
       
       if (response.ok) {
         setMaterials(prev => prev.filter(m => m.id !== id));
+        toast('success', 'Material excluído', 'O arquivo foi removido com sucesso.');
       } else {
-        alert('Erro ao excluir material');
+        toast('error', 'Erro ao excluir', 'Não foi possível excluir o material.');
       }
     } catch (error) {
       console.error('Error deleting:', error);

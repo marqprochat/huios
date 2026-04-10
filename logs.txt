@@ -1,0 +1,72 @@
+▲ Next.js 16.1.6
+- Local:         http://eb4fadb99475:3000
+- Network:       http://eb4fadb99475:3000
+
+✓ Starting...
+✓ Ready in 580ms
+Error creating lesson: Error: NEXT_REDIRECT
+    at i (.next/server/chunks/ssr/[root-of-the-server]__a34375e8._.js:1:2854)
+    at j (.next/server/chunks/ssr/[root-of-the-server]__a34375e8._.js:1:3032)
+    at f (.next/server/chunks/ssr/_645656c1._.js:1:910)
+    at async m (.next/server/chunks/ssr/_604368e7._.js:1:7182)
+    at async p (.next/server/chunks/ssr/_604368e7._.js:2:2713) {
+  digest: 'NEXT_REDIRECT;push;/aulas;307;'
+}
+⨯ Error: Failed to create lesson
+    at f (.next/server/chunks/ssr/_645656c1._.js:1:978)
+    at async m (.next/server/chunks/ssr/_604368e7._.js:1:7182)
+    at async p (.next/server/chunks/ssr/_604368e7._.js:2:2713)
+    at async Module.L (.next/server/chunks/ssr/_604368e7._.js:2:7928) {
+  digest: '3814765072'
+}
+Error updating lesson: Error: NEXT_REDIRECT
+    at i (.next/server/chunks/ssr/[root-of-the-server]__a34375e8._.js:1:2854)
+    at j (.next/server/chunks/ssr/[root-of-the-server]__a34375e8._.js:1:3032)
+    at h (.next/server/chunks/ssr/_645656c1._.js:1:2357)
+    at async m (.next/server/chunks/ssr/_44beabcd._.js:1:7246)
+    at async p (.next/server/chunks/ssr/_44beabcd._.js:2:2713) {
+  digest: 'NEXT_REDIRECT;push;/aulas;307;'
+}
+⨯ Error: Failed to update lesson
+    at h (.next/server/chunks/ssr/_645656c1._.js:1:2425)
+    at async m (.next/server/chunks/ssr/_44beabcd._.js:1:7246)
+    at async p (.next/server/chunks/ssr/_44beabcd._.js:2:2713)
+    at async Module.L (.next/server/chunks/ssr/_44beabcd._.js:2:7928) {
+  digest: '2465606460'
+}
+Error updating lesson: Error: NEXT_REDIRECT
+    at i (.next/server/chunks/ssr/[root-of-the-server]__a34375e8._.js:1:2854)
+    at j (.next/server/chunks/ssr/[root-of-the-server]__a34375e8._.js:1:3032)
+    at h (.next/server/chunks/ssr/_645656c1._.js:1:2357)
+    at async m (.next/server/chunks/ssr/_44beabcd._.js:1:7246)
+    at async p (.next/server/chunks/ssr/_44beabcd._.js:2:2713) {
+  digest: 'NEXT_REDIRECT;push;/aulas;307;'
+}
+⨯ Error: Failed to update lesson
+    at h (.next/server/chunks/ssr/_645656c1._.js:1:2425)
+    at async m (.next/server/chunks/ssr/_44beabcd._.js:1:7246)
+    at async p (.next/server/chunks/ssr/_44beabcd._.js:2:2713)
+    at async Module.L (.next/server/chunks/ssr/_44beabcd._.js:2:7928) {
+  digest: '2465606460'
+}
+▲ Next.js 16.1.6
+- Local:         http://eb4fadb99475:3000
+- Network:       http://eb4fadb99475:3000
+
+✓ Starting...
+✓ Ready in 2.7s
+Error updating lesson: Error: NEXT_REDIRECT
+    at i (.next/server/chunks/ssr/[root-of-the-server]__a34375e8._.js:1:2854)
+    at j (.next/server/chunks/ssr/[root-of-the-server]__a34375e8._.js:1:3032)
+    at h (.next/server/chunks/ssr/_645656c1._.js:1:2357)
+    at async m (.next/server/chunks/ssr/_44beabcd._.js:1:7246)
+    at async p (.next/server/chunks/ssr/_44beabcd._.js:2:2713) {
+  digest: 'NEXT_REDIRECT;push;/aulas;307;'
+}
+⨯ Error: Failed to update lesson
+    at h (.next/server/chunks/ssr/_645656c1._.js:1:2425)
+    at async m (.next/server/chunks/ssr/_44beabcd._.js:1:7246)
+    at async p (.next/server/chunks/ssr/_44beabcd._.js:2:2713)
+    at async Module.L (.next/server/chunks/ssr/_44beabcd._.js:2:7928) {
+  digest: '2465606460'
+}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { toLocalDate } from '@/lib/date-utils';
 
 interface Lesson {
   id: string;
@@ -33,7 +34,16 @@ export default function AulasPage() {
       const res = await fetch('/api/portal/aulas');
       if (res.ok) {
         const data = await res.json();
-        setLessons(data);
+        // Convert dates from UTC to local literal date
+        const processedLessons = data.map((l: Lesson) => {
+          const localDate = toLocalDate(l.date);
+          return {
+            ...l,
+            date: localDate.toISOString(), 
+            actualDate: localDate 
+          };
+        });
+        setLessons(processedLessons);
       }
     } catch (e) {
       console.error(e);
@@ -73,7 +83,7 @@ export default function AulasPage() {
 
   const getLessonsForDay = (date: Date) => {
     return lessons.filter(l => {
-      const d = new Date(l.date);
+      const d = (l as any).actualDate || new Date(l.date);
       return d.getDate() === date.getDate() && d.getMonth() === date.getMonth() && d.getFullYear() === date.getFullYear();
     });
   };
@@ -142,7 +152,7 @@ export default function AulasPage() {
                   </div>
                   <div className="space-y-0.5">
                     {dayLessons.map(lesson => {
-                      const attended = lesson.attendances?.length > 0;
+                      const attended = lesson.attendances?.some((a: any) => a.status === 'PRESENT');
                       return (
                         <button
                           key={lesson.id}
@@ -187,7 +197,7 @@ export default function AulasPage() {
                 <div>
                   <p className="text-xs text-slate-400">Data</p>
                   <p className="font-medium text-slate-800">
-                    {new Date(selectedLesson.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    {((selectedLesson as any).actualDate || new Date(selectedLesson.date)).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
                   </p>
                 </div>
               </div>
@@ -220,17 +230,17 @@ export default function AulasPage() {
 
               {/* Attendance status */}
               <div className={`p-3 rounded-xl flex items-center gap-2 ${
-                selectedLesson.attendances?.length > 0 ? 'bg-emerald-50' : 'bg-slate-50'
+                selectedLesson.attendances?.some((a: any) => a.status === 'PRESENT') ? 'bg-emerald-50' : 'bg-slate-50'
               }`}>
                 <span className={`material-symbols-outlined ${
-                  selectedLesson.attendances?.length > 0 ? 'text-emerald-500' : 'text-slate-400'
+                  selectedLesson.attendances?.some((a: any) => a.status === 'PRESENT') ? 'text-emerald-500' : 'text-slate-400'
                 }`}>
-                  {selectedLesson.attendances?.length > 0 ? 'check_circle' : 'pending'}
+                  {selectedLesson.attendances?.some((a: any) => a.status === 'PRESENT') ? 'check_circle' : 'pending'}
                 </span>
                 <span className={`text-sm font-medium ${
-                  selectedLesson.attendances?.length > 0 ? 'text-emerald-700' : 'text-slate-500'
+                  selectedLesson.attendances?.some((a: any) => a.status === 'PRESENT') ? 'text-emerald-700' : 'text-slate-500'
                 }`}>
-                  {selectedLesson.attendances?.length > 0 ? 'Presença registrada' : 'Presença pendente'}
+                  {selectedLesson.attendances?.some((a: any) => a.status === 'PRESENT') ? 'Presença registrada' : 'Presença pendente'}
                 </span>
               </div>
 
@@ -257,13 +267,15 @@ export default function AulasPage() {
 
               {/* Actions */}
               <div className="flex gap-2 pt-2">
-                {selectedLesson.attendances?.length === 0 && (
+                {(!selectedLesson.attendances?.some((a: any) => a.checkInAt) || !selectedLesson.attendances?.some((a: any) => a.checkOutAt)) && (
                   <Link
                     href={`/portal/checkin/${selectedLesson.id}`}
-                    className="flex-1 bg-[#135bec] text-white py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#0d47a1] transition-all"
+                    className={`flex-1 ${selectedLesson.attendances?.some((a: any) => a.checkInAt) ? 'bg-amber-600' : 'bg-[#135bec]'} text-white py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-all`}
                   >
-                    <span className="material-symbols-outlined text-sm">my_location</span>
-                    Check-in
+                    <span className="material-symbols-outlined text-sm">
+                      {selectedLesson.attendances?.some((a: any) => a.checkInAt) ? 'logout' : 'my_location'}
+                    </span>
+                    {selectedLesson.attendances?.some((a: any) => a.checkInAt) ? 'Check-out' : 'Check-in'}
                   </Link>
                 )}
                 <button

@@ -4,9 +4,10 @@ import { getSession } from '@/lib/auth'
 
 export async function GET(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const resolvedParams = await params;
         const session = await getSession();
         if (!session) {
             return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -22,7 +23,7 @@ export async function GET(
         }
 
         const lesson = await prisma.lesson.findUnique({
-            where: { id: params.id },
+            where: { id: resolvedParams.id },
             include: {
                 discipline: {
                     include: {

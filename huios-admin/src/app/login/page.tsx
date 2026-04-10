@@ -42,16 +42,11 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-primary/5 to-slate-200 dark:from-slate-950 dark:via-primary/5 dark:to-slate-950 p-4">
             <div className="w-full max-w-md">
                 {/* Logo / Brand */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 mb-4">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/logo.png" alt="Huios Logo" className="w-14 h-14 object-contain" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-primary tracking-wide uppercase">
-                        Huios Seminário
-                    </h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                        Teológico — Gestão Acadêmica
+                <div className="text-center mb-10 px-4">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/logo completa.png" alt="Huios Seminário Teológico" className="h-32 md:h-40 mx-auto object-contain" />
+                    <p className="text-base text-slate-500 dark:text-slate-400 mt-2 font-medium">
+                        Gestão Acadêmica
                     </p>
                 </div>
 

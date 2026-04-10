@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { formatDateBR } from '@/lib/date-utils';
+import { useToast } from '@/app/components/Toast/useToast';
 
 interface Attendance {
   id: string;
@@ -34,6 +36,7 @@ interface Lesson {
 export default function PresencaPage() {
   const params = useParams();
   const lessonId = params.id as string;
+  const { toast } = useToast();
   
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [attendances, setAttendances] = useState<Attendance[]>([]);
@@ -101,12 +104,15 @@ export default function PresencaPage() {
       });
 
       if (response.ok) {
-        alert('Presenças salvas com sucesso!');
+        toast('success', 'Presenças salvas com sucesso!');
         fetchAttendances();
+      } else {
+        const data = await response.json();
+        toast('error', 'Erro ao salvar presenças', data.error || 'Tente novamente mais tarde');
       }
     } catch (error) {
       console.error('Error saving attendances:', error);
-      alert('Erro ao salvar presenças');
+      toast('error', 'Erro ao salvar presenças', 'Verifique sua conexão e tente novamente');
     } finally {
       setSaving(false);
     }
@@ -157,7 +163,7 @@ export default function PresencaPage() {
         <div className="flex-1">
           <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Lançar Presença</h2>
           <p className="text-slate-500 dark:text-slate-400">
-            {lesson?.discipline.name} • {new Date(lesson?.date || '').toLocaleDateString('pt-BR')}
+            {lesson?.discipline.name} • {formatDateBR(lesson?.date)}
           </p>
         </div>
       </div>

@@ -4,9 +4,11 @@ import { createTeamMember, fetchStudentsForTeam } from '../actions';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/app/components/Toast/useToast';
 
 export default function NovoMembroPage() {
     const router = useRouter();
+    const { toast } = useToast();
     const [students, setStudents] = useState<any[]>([]);
     const [selectedStudent, setSelectedStudent] = useState<string>('');
     const [isPending, setIsPending] = useState(false);
@@ -83,10 +85,11 @@ export default function NovoMembroPage() {
 
         try {
             await createTeamMember(data);
+            toast('success', 'Membro salvo com sucesso!');
             router.push('/equipe');
         } catch (error) {
             console.error('Erro ao salvar membro da equipe:', error);
-            alert('Ocorreu um erro ao salvar o membro da equipe.');
+            toast('error', 'Erro ao salvar', 'Ocorreu um erro ao salvar o membro da equipe.');
         } finally {
             setIsPending(false);
         }

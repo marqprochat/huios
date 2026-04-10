@@ -403,3 +403,21 @@ enum GradeType {
   ACTIVITY // Atividade/Trabalho
   PARTICIPATION // Participação
 }
+
+model SystemSettings {
+  id String @id @default(uuid())
+  
+  // Localização padrão da instituição
+  institutionName String @default("Huios Seminário Teológico")
+  locationName String? // Nome do local (ex: "Auditório Principal")
+  latitude Float?
+  longitude Float?
+  radiusMeters Int @default(100) // Raio de tolerância em metros
+  
+  // Configurações de contato
+  contactEmail String? @default("contato@huios.edu.br")
+  contactPhone String? @default("(11) 1234-5678")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

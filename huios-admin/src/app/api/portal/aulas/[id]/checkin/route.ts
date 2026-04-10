@@ -4,9 +4,10 @@ import { getSession } from '@/lib/auth'
 
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const resolvedParams = await params;
         const session = await getSession();
         if (!session) {
             return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -21,7 +22,7 @@ export async function POST(
             return NextResponse.json({ error: 'Aluno não encontrado' }, { status: 404 });
         }
 
-        const lessonId = params.id;
+        const lessonId = resolvedParams.id;
         const studentId = user.student.id;
         const body = await request.json();
         const { latitude, longitude, action = 'checkin' } = body;

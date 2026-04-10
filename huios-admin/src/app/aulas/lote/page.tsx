@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createBulkLessons } from '../actions';
+import { useToast } from '@/app/components/Toast/useToast';
 
 interface Discipline {
   id: string;
@@ -15,6 +16,7 @@ interface Discipline {
 
 export default function LoteAulasPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [disciplinas, setDisciplinas] = useState<Discipline[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -93,7 +95,7 @@ export default function LoteAulasPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (previewDates.length === 0) {
-      alert('Nenhuma aula para criar. Verifique os dias selecionados e o período.');
+      toast('warning', 'Nenhuma aula para criar', 'Selecione os dias da semana e o período.');
       return;
     }
 
@@ -106,10 +108,11 @@ export default function LoteAulasPage() {
         radiusMeters: parseInt(formData.radiusMeters),
         dates: previewDates
       });
+      toast('success', 'Aulas criadas com sucesso!');
       router.push('/aulas');
     } catch (error) {
       console.error('Error:', error);
-      alert('Erro ao criar aulas em lote.');
+      toast('error', 'Erro ao criar aulas', 'Ocorreu um erro ao criar as aulas em lote.');
     } finally {
       setSubmitting(false);
     }

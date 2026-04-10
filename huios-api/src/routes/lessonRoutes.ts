@@ -5,7 +5,8 @@ import {
   createLesson,
   updateLesson,
   deleteLesson,
-  checkIn
+  checkIn,
+  checkOut
 } from '../controllers/lessonController';
 import {
   getAttendancesByLesson,
@@ -56,8 +57,9 @@ router.post('/', createLesson);
 router.put('/:id', updateLesson);
 router.delete('/:id', deleteLesson);
 
-// Check-in route (mobile)
+// Check-in/out route (mobile)
 router.post('/:lessonId/checkin', checkIn);
+router.post('/:lessonId/checkout', checkOut);
 
 // Attendance routes (nested under lesson)
 router.get('/:lessonId/attendances', getAttendancesByLesson);

@@ -22,9 +22,8 @@ export default function PortalHeader({ studentName }: { studentName: string }) {
     <header className="bg-white border-b border-slate-200 px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-40">
       {/* Mobile logo */}
       <div className="flex items-center gap-3 lg:hidden">
-        <div className="w-9 h-9 bg-[#135bec] rounded-xl flex items-center justify-center">
-          <span className="text-white font-black text-xs">H</span>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="Huios Logo" className="w-9 h-9 object-contain" />
         <div>
           <h1 className="text-xs font-bold text-[#135bec] tracking-wide uppercase">Huios</h1>
           <p className="text-[9px] text-slate-400">Portal do Aluno</p>

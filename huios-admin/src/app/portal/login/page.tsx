@@ -43,16 +43,9 @@ export default function PortalLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#135bec]/5 via-white to-[#135bec]/10 p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[#135bec] mb-4 shadow-xl shadow-[#135bec]/25">
-            <span className="text-white font-black text-3xl">H</span>
-          </div>
-          <h1 className="text-2xl font-bold text-[#135bec] tracking-wide uppercase">
-            Huios Seminário
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Portal do Aluno
-          </p>
+        <div className="text-center mb-10 px-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo completa.png" alt="Huios Seminário Teológico" className="h-50 md:h-50 mx-auto object-contain" />
         </div>
 
         {/* Login Card */}
@@ -62,7 +55,7 @@ export default function PortalLoginPage() {
               Acesso do Aluno
             </h2>
             <p className="text-sm text-slate-500 mt-1">
-              Entre com seu e-mail e CPF (senha padrão)
+              Entre com seu e-mail e CPF (senha inicial)
             </p>
           </div>
 

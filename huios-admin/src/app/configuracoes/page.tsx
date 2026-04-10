@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { ThemeToggle } from "../components/ThemeToggle"
+import { useToast } from "../components/Toast/useToast"
 
 export default function ConfiguracoesPage() {
   const [activeTab, setActiveTab] = useState("geral")
   const [locationStatus, setLocationStatus] = useState<string>("")
   const [geoLoading, setGeoLoading] = useState(false)
+  const { toast } = useToast()
   
   // Estados para campos de localização
   const [locationName, setLocationName] = useState("")
@@ -23,7 +25,7 @@ export default function ConfiguracoesPage() {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/settings')
+      const response = await fetch('/api/settings')
       if (response.ok) {
         const data = await response.json()
         setLocationName(data.locationName || '')
@@ -54,7 +56,7 @@ export default function ConfiguracoesPage() {
     setLocationStatus("")
 
     if (!navigator.geolocation) {
-      setLocationStatus("Geolocalização não é suportada por este navegador.")
+      toast('error', 'Geolocalização não suportada', 'Este navegador não suporta geolocalização.')
       setGeoLoading(false)
       return
     }
@@ -64,7 +66,7 @@ export default function ConfiguracoesPage() {
       (position) => {
         setLatitude(position.coords.latitude.toString())
         setLongitude(position.coords.longitude.toString())
-        setLocationStatus(`Localização obtida com sucesso! Precisão: ${Math.round(position.coords.accuracy)} metros`)
+        toast('success', 'Localização obtida', `Precisão: ${Math.round(position.coords.accuracy)} metros`)
         setGeoLoading(false)
       },
       (error) => {
@@ -82,7 +84,7 @@ export default function ConfiguracoesPage() {
           default:
             errorMessage += error.message
         }
-        setLocationStatus(errorMessage)
+        toast('error', 'Erro ao obter localização', errorMessage)
         setGeoLoading(false)
       },
       {
@@ -96,7 +98,7 @@ export default function ConfiguracoesPage() {
   // Salvar configurações de localização
   const saveLocationSettings = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/settings', {
+      const response = await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -116,13 +118,14 @@ export default function ConfiguracoesPage() {
       })
 
       if (response.ok && configResponse.ok) {
-        alert('Configurações de localização salvas com sucesso!')
+        toast('success', 'Configurações salvas', 'As configurações de localização foram salvas com sucesso!')
       } else {
-        alert('Erro ao salvar configurações')
+        const data = await response.json();
+        toast('error', 'Erro ao salvar', data.error || 'Erro ao salvar as configurações.');
       }
     } catch (error) {
       console.error('Error saving settings:', error)
-      alert('Erro ao salvar configurações')
+      toast('error', 'Erro ao salvar', 'Ocorreu um erro inesperado. Tente novamente.');
     }
   }
 

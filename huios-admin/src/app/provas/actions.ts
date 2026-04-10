@@ -13,13 +13,23 @@ export async function createExam(formData: FormData) {
   const duration = formData.get('duration') as string;
 
   try {
+    const parseLocalToUTC = (localStr: string) => {
+      if (!localStr) return new Date();
+      // Se já tiver informação de fuso horário, não precisa mexer
+      if (localStr.includes('Z') || localStr.includes('+') || (localStr.includes('-') && localStr.length > 10 && localStr.lastIndexOf('-') > 10)) {
+        return new Date(localStr);
+      }
+      // Assume local como GMT-3 (Brasil)
+      return new Date(localStr + ':00.000-03:00');
+    };
+
     await prisma.exam.create({
       data: {
         title,
         description,
         disciplineId,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
+        startDate: parseLocalToUTC(startDate),
+        endDate: parseLocalToUTC(endDate),
         duration: duration ? parseInt(duration) : null,
         isPublished: false
       }
@@ -42,14 +52,22 @@ export async function updateExam(id: string, formData: FormData) {
   const duration = formData.get('duration') as string;
 
   try {
+    const parseLocalToUTC = (localStr: string) => {
+      if (!localStr) return new Date();
+      if (localStr.includes('Z') || localStr.includes('+') || (localStr.includes('-') && localStr.length > 10 && localStr.lastIndexOf('-') > 10)) {
+        return new Date(localStr);
+      }
+      return new Date(localStr + ':00.000-03:00');
+    };
+
     await prisma.exam.update({
       where: { id },
       data: {
         title,
         description,
         disciplineId,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
+        startDate: parseLocalToUTC(startDate),
+        endDate: parseLocalToUTC(endDate),
         duration: duration ? parseInt(duration) : null
       }
     });
@@ -107,13 +125,21 @@ export async function duplicateExam(id: string, newStartDate: string, newEndDate
 
     if (!original) throw new Error('Exam not found');
 
+    const parseLocalToUTC = (localStr: string) => {
+      if (!localStr) return new Date();
+      if (localStr.includes('Z') || localStr.includes('+') || (localStr.includes('-') && localStr.length > 10 && localStr.lastIndexOf('-') > 10)) {
+        return new Date(localStr);
+      }
+      return new Date(localStr + ':00.000-03:00');
+    };
+
     await prisma.exam.create({
       data: {
         title: newTitle || `${original.title} (Cópia)`,
         description: original.description,
         disciplineId: original.disciplineId,
-        startDate: new Date(newStartDate),
-        endDate: new Date(newEndDate),
+        startDate: parseLocalToUTC(newStartDate),
+        endDate: parseLocalToUTC(newEndDate),
         duration: original.duration,
         maxAttempts: original.maxAttempts,
         isPublished: false,

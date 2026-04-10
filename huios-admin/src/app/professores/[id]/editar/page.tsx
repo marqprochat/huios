@@ -4,9 +4,9 @@ import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 
 interface EditarProfessorProps {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
 export default async function EditarProfessorPage({ params }: EditarProfessorProps) {

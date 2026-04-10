@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useToast } from '@/app/components/Toast/useToast';
 
 interface Grade {
   id: string;
@@ -36,6 +37,7 @@ interface StudentData {
 export default function BoletimAlunoPage() {
   const params = useParams();
   const alunoId = params.alunoId as string;
+  const { toast } = useToast();
   
   const [student, setStudent] = useState<StudentData | null>(null);
   const [disciplines, setDisciplines] = useState<DisciplineData[]>([]);
@@ -75,7 +77,7 @@ export default function BoletimAlunoPage() {
     e.preventDefault();
     
     if (!selectedDiscipline || !newGrade.score) {
-      alert('Preencha todos os campos obrigatórios');
+      toast('warning', 'Campos obrigatórios', 'Selecione a disciplina e informe a nota.');
       return;
     }
 

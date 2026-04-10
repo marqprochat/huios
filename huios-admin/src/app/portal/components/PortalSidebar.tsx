@@ -33,9 +33,8 @@ export default function PortalSidebar({ studentName, courseName }: { studentName
       {/* Logo */}
       <div className="p-6 border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#135bec] rounded-xl flex items-center justify-center">
-            <span className="text-white font-black text-sm">H</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Huios Logo" className="w-10 h-10 object-contain" />
           <div>
             <h1 className="text-sm font-bold text-[#135bec] tracking-wide uppercase">Huios</h1>
             <p className="text-[10px] text-slate-400">Seminário Teológico</p>

@@ -16,13 +16,21 @@ export async function createLesson(formData: FormData) {
     const radiusMeters = formData.get('radiusMeters') as string;
     const description = formData.get('description') as string;
 
+    const parseLocalToUTC = (localStr: string) => {
+      if (!localStr) return new Date();
+      if (localStr.includes('Z') || localStr.includes('+') || (localStr.includes('-') && localStr.length > 10 && localStr.lastIndexOf('-') > 10)) {
+        return new Date(localStr);
+      }
+      return new Date(localStr + (localStr.includes('T') ? ':00.000-03:00' : 'T12:00:00.000-03:00'));
+    };
+
     // Create lesson
     const lesson = await prisma.lesson.create({
       data: {
         disciplineId,
-        date: new Date(date),
-        startTime: startTime ? new Date(`${date}T${startTime}`) : null,
-        endTime: endTime ? new Date(`${date}T${endTime}`) : null,
+        date: parseLocalToUTC(date),
+        startTime: startTime ? parseLocalToUTC(`${date}T${startTime}`) : null,
+        endTime: endTime ? parseLocalToUTC(`${date}T${endTime}`) : null,
         locationName,
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
@@ -56,11 +64,12 @@ export async function createLesson(formData: FormData) {
     }
 
     revalidatePath('/aulas');
-    redirect('/aulas');
   } catch (error) {
     console.error('Error creating lesson:', error);
     throw new Error('Failed to create lesson');
   }
+  
+  redirect('/aulas');
 }
 
 export async function createBulkLessons(data: {
@@ -87,15 +96,23 @@ export async function createBulkLessons(data: {
       description 
     } = data;
 
+    const parseLocalToUTC = (localStr: string) => {
+      if (!localStr) return new Date();
+      if (localStr.includes('Z') || localStr.includes('+') || (localStr.includes('-') && localStr.length > 10 && localStr.lastIndexOf('-') > 10)) {
+        return new Date(localStr);
+      }
+      return new Date(localStr + (localStr.includes('T') ? ':00.000-03:00' : 'T12:00:00.000-03:00'));
+    };
+
     // Use a transaction to ensure all or nothing
     await prisma.$transaction(async (tx) => {
       for (const dateStr of dates) {
         const lesson = await tx.lesson.create({
           data: {
             disciplineId,
-            date: new Date(dateStr),
-            startTime: startTime ? new Date(`${dateStr}T${startTime}`) : null,
-            endTime: endTime ? new Date(`${dateStr}T${endTime}`) : null,
+            date: parseLocalToUTC(dateStr),
+            startTime: startTime ? parseLocalToUTC(`${dateStr}T${startTime}`) : null,
+            endTime: endTime ? parseLocalToUTC(`${dateStr}T${endTime}`) : null,
             locationName,
             latitude,
             longitude,
@@ -149,12 +166,20 @@ export async function updateLesson(id: string, formData: FormData) {
     const radiusMeters = formData.get('radiusMeters') as string;
     const description = formData.get('description') as string;
 
+    const parseLocalToUTC = (localStr: string) => {
+      if (!localStr) return new Date();
+      if (localStr.includes('Z') || localStr.includes('+') || (localStr.includes('-') && localStr.length > 10 && localStr.lastIndexOf('-') > 10)) {
+        return new Date(localStr);
+      }
+      return new Date(localStr + (localStr.includes('T') ? ':00.000-03:00' : 'T12:00:00.000-03:00'));
+    };
+
     await prisma.lesson.update({
       where: { id },
       data: {
-        date: new Date(date),
-        startTime: startTime ? new Date(`${date}T${startTime}`) : null,
-        endTime: endTime ? new Date(`${date}T${endTime}`) : null,
+        date: parseLocalToUTC(date),
+        startTime: startTime ? parseLocalToUTC(`${date}T${startTime}`) : null,
+        endTime: endTime ? parseLocalToUTC(`${date}T${endTime}`) : null,
         locationName,
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
@@ -164,11 +189,12 @@ export async function updateLesson(id: string, formData: FormData) {
     });
 
     revalidatePath('/aulas');
-    redirect('/aulas');
   } catch (error) {
     console.error('Error updating lesson:', error);
     throw new Error('Failed to update lesson');
   }
+  
+  redirect('/aulas');
 }
 
 export async function deleteLesson(id: string) {

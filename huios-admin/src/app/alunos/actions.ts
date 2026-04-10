@@ -31,7 +31,7 @@ export async function fetchClasses(): Promise<ClassWithRelations[]> {
     }
 }
 
-export async function createAluno(formData: FormData) {
+export async function createAluno(prevState: any, formData: FormData) {
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
     const phone = formData.get('phone') as string;
@@ -53,7 +53,7 @@ export async function createAluno(formData: FormData) {
     const selectedClassIds = formData.getAll('classIds') as string[];
 
     if (!name || !email) {
-        throw new Error('Nome e email são obrigatórios');
+        return { success: false, message: 'Nome e email são obrigatórios' };
     }
 
     try {
@@ -111,16 +111,18 @@ export async function createAluno(formData: FormData) {
                 })),
             });
         }
+        revalidatePath('/alunos');
+        return { success: true, message: 'Aluno criado com sucesso!' };
     } catch (error: any) {
-        console.error("ERRO GRAVE AO CRIAR ALUNO:", error?.message || error);
-        throw error;
+        console.error("ERRO AO CRIAR ALUNO:", error);
+        if (error.code === 'P2002') {
+            return { success: false, message: 'Este e-mail já está em uso.' };
+        }
+        return { success: false, message: 'Erro ao criar aluno: ' + error.message };
     }
-
-    revalidatePath('/alunos');
-    redirect('/alunos');
 }
 
-export async function updateAluno(id: string, formData: FormData) {
+export async function updateAluno(id: string, prevState: any, formData: FormData) {
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
     const phone = formData.get('phone') as string;
@@ -144,48 +146,56 @@ export async function updateAluno(id: string, formData: FormData) {
     const selectedClassIds = formData.getAll('classIds') as string[];
 
     if (!name || !email) {
-        throw new Error('Nome e email são obrigatórios');
+        return { success: false, message: 'Nome e email são obrigatórios' };
     }
 
-    await prisma.student.update({
-        where: { id },
-        data: {
-            name,
-            email,
-            phone: phone || null,
-            cpf: cpf || null,
-            address: address || null,
-            birthDate: birthDate ? new Date(birthDate) : null,
-            maritalStatus: maritalStatus || null,
-            conversionTime: conversionTime || null,
-            churchName: churchName || null,
-            churchMembershipTime: churchMembershipTime || null,
-            isBaptized,
-            baptismTime: baptismTime || null,
-            howKnewHuios: howKnewHuios || null,
-            enrollmentFee: enrollmentFee ? parseFloat(enrollmentFee) : null,
-            didConvivaCourse,
-            convivaCourseDetails: convivaCourseDetails || null,
-        }
-    });
-
-    // Update enrollments
-    await prisma.enrollment.deleteMany({
-        where: { studentId: id }
-    });
-
-    if (selectedClassIds.length > 0) {
-        await prisma.enrollment.createMany({
-            data: selectedClassIds.map(classId => ({
-                studentId: id,
-                classId,
-                status: 'ACTIVE',
-            })),
+    try {
+        await prisma.student.update({
+            where: { id },
+            data: {
+                name,
+                email,
+                phone: phone || null,
+                cpf: cpf || null,
+                address: address || null,
+                birthDate: birthDate ? new Date(birthDate) : null,
+                maritalStatus: maritalStatus || null,
+                conversionTime: conversionTime || null,
+                churchName: churchName || null,
+                churchMembershipTime: churchMembershipTime || null,
+                isBaptized,
+                baptismTime: baptismTime || null,
+                howKnewHuios: howKnewHuios || null,
+                enrollmentFee: enrollmentFee ? parseFloat(enrollmentFee) : null,
+                didConvivaCourse,
+                convivaCourseDetails: convivaCourseDetails || null,
+            }
         });
-    }
 
-    revalidatePath('/alunos');
-    redirect('/alunos');
+        // Update enrollments
+        await prisma.enrollment.deleteMany({
+            where: { studentId: id }
+        });
+
+        if (selectedClassIds.length > 0) {
+            await prisma.enrollment.createMany({
+                data: selectedClassIds.map(classId => ({
+                    studentId: id,
+                    classId,
+                    status: 'ACTIVE',
+                })),
+            });
+        }
+
+        revalidatePath('/alunos');
+        return { success: true, message: 'Aluno atualizado com sucesso!' };
+    } catch (error: any) {
+        console.error("ERRO AO ATUALIZAR ALUNO:", error);
+        if (error.code === 'P2002') {
+            return { success: false, message: 'Este e-mail já está em uso.' };
+        }
+        return { success: false, message: 'Erro ao atualizar aluno: ' + error.message };
+    }
 }
 
 export async function deleteAluno(id: string) {

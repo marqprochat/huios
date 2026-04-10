@@ -3,6 +3,7 @@
 import { useStudent } from './components/PortalShell';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { toLocalDate } from '@/lib/date-utils';
 
 export default function PortalDashboard() {
   const { data } = useStudent();
@@ -72,16 +73,16 @@ export default function PortalDashboard() {
   todayEnd.setHours(23, 59, 59, 999);
 
   const todayLessons = lessons.filter(l => {
-    const lessonDate = new Date(l.date);
-    return lessonDate >= today && lessonDate <= todayEnd;
+    const lessonDate = toLocalDate(l.date);
+    return lessonDate.getTime() === today.getTime();
   });
 
   // Upcoming lessons (next 7 days)
   const weekEnd = new Date(today);
   weekEnd.setDate(weekEnd.getDate() + 7);
   const upcomingLessons = lessons.filter(l => {
-    const d = new Date(l.date);
-    return d > todayEnd && d <= weekEnd;
+    const d = toLocalDate(l.date);
+    return d > today && d <= weekEnd;
   }).slice(0, 5);
 
   // Pending exams
@@ -245,8 +246,8 @@ export default function PortalDashboard() {
               {Array.from({ length: 7 }, (_, i) => {
                 const d = new Date(today);
                 d.setDate(d.getDate() - d.getDay() + i);
-                const isToday = d.toDateString() === today.toDateString();
-                const hasLessons = lessons.some(l => new Date(l.date).toDateString() === d.toDateString());
+                const isToday = d.getTime() === today.getTime();
+                const hasLessons = lessons.some(l => toLocalDate(l.date).getTime() === d.getTime());
 
                 return (
                   <div
@@ -277,7 +278,7 @@ export default function PortalDashboard() {
                 {todayLessons.map((lesson: any) => (
                   <Link
                     key={lesson.id}
-                    href={`/portal/aulas/${lesson.id}`}
+                    href={`/portal/checkin/${lesson.id}`}
                     className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 hover:bg-[#135bec]/5 border border-transparent hover:border-[#135bec]/20 transition-all group"
                   >
                     <div className="text-center min-w-[60px]">
@@ -298,7 +299,7 @@ export default function PortalDashboard() {
                         {lesson.locationName || 'Local não definido'} • {lesson.discipline?.courseClass?.name}
                       </p>
                     </div>
-                    {lesson.attendances?.length > 0 ? (
+                    {lesson.attendances?.some((a: any) => a.status === 'PRESENT') ? (
                       <span className="material-symbols-outlined text-emerald-500">check_circle</span>
                     ) : (
                       <span className="material-symbols-outlined text-slate-300 group-hover:text-[#135bec]">chevron_right</span>
@@ -321,7 +322,7 @@ export default function PortalDashboard() {
                   {upcomingLessons.slice(0, 3).map((lesson: any) => (
                     <div key={lesson.id} className="flex items-center gap-3 text-sm">
                       <span className="text-xs font-semibold text-slate-400 min-w-[44px]">
-                        {new Date(lesson.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                        {toLocalDate(lesson.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                       </span>
                       <span className="text-slate-700 truncate">{lesson.discipline?.name}</span>
                     </div>
@@ -383,20 +384,36 @@ export default function PortalDashboard() {
 
           {/* Check-in Card */}
           {todayLessons.length > 0 && (
-            <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl p-6 text-white shadow-xl shadow-emerald-500/20">
+            <div className={`bg-gradient-to-br ${
+              todayLessons[0].attendances?.some((a: any) => a.checkOutAt) ? 'from-blue-500 to-blue-700' :
+              todayLessons[0].attendances?.some((a: any) => a.checkInAt) ? 'from-amber-500 to-amber-700' :
+              'from-emerald-500 to-emerald-700'
+            } rounded-2xl p-6 text-white shadow-xl shadow-emerald-500/20`}>
               <div className="flex items-center gap-2 mb-3">
-                <span className="material-symbols-outlined">my_location</span>
-                <h3 className="font-semibold">Check-in Disponível</h3>
+                <span className="material-symbols-outlined">
+                  {todayLessons[0].attendances?.some((a: any) => a.checkOutAt) ? 'task_alt' : 'my_location'}
+                </span>
+                <h3 className="font-semibold">
+                  {todayLessons[0].attendances?.some((a: any) => a.checkOutAt) ? 'Aula Finalizada' : 
+                   todayLessons[0].attendances?.some((a: any) => a.checkInAt) ? 'Check-out Disponível' : 
+                   'Check-in Disponível'}
+                </h3>
               </div>
-              <p className="text-emerald-100 text-xs mb-4 leading-relaxed">
-                Você tem {todayLessons.length} aula(s) hoje. Faça seu check-in de presença por geolocalização.
+              <p className="text-white/80 text-xs mb-4 leading-relaxed">
+                {todayLessons[0].attendances?.some((a: any) => a.checkOutAt) ? 'Sua presença foi registrada e a saída confirmada.' :
+                 todayLessons[0].attendances?.some((a: any) => a.checkInAt) ? 'Você já registrou sua entrada. Lembre-se de fazer o check-out ao sair.' :
+                 `Você tem ${todayLessons.length} aula(s) hoje. Faça seu check-in de presença por geolocalização.`}
               </p>
               <Link
                 href={`/portal/checkin/${todayLessons[0].id}`}
                 className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
               >
-                <span className="material-symbols-outlined text-sm">near_me</span>
-                Fazer Check-in
+                <span className="material-symbols-outlined text-sm">
+                  {todayLessons[0].attendances?.some((a: any) => a.checkInAt) ? 'logout' : 'near_me'}
+                </span>
+                {todayLessons[0].attendances?.some((a: any) => a.checkOutAt) ? 'Ver Detalhes' :
+                 todayLessons[0].attendances?.some((a: any) => a.checkInAt) ? 'Fazer Check-out' :
+                 'Fazer Check-in'}
               </Link>
             </div>
           )}
