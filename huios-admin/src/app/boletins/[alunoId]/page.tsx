@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useToast } from '@/app/components/Toast/useToast';
+import { getReportCardData, createManualGrade } from './actions';
 
 interface Grade {
   id: string;
@@ -60,16 +61,14 @@ export default function BoletimAlunoPage() {
 
   const fetchReportCard = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${apiUrl}/grades/report-card/${alunoId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setStudent(data.student);
-        setDisciplines(data.disciplines);
-      }
+      // Use Server Action instead of fetch to avoid CORS and API proxy issues
+      const data = await getReportCardData(alunoId);
+      setStudent(data.student);
+      setDisciplines(data.disciplines);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching report card:', error);
+      toast('error', 'Erro ao carregar', 'Não foi possível carregar o boletim.');
       setLoading(false);
     }
   };
@@ -83,34 +82,24 @@ export default function BoletimAlunoPage() {
     }
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${apiUrl}/grades`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentId: alunoId,
-          disciplineId: selectedDiscipline,
-          score: parseFloat(newGrade.score),
-          weight: parseFloat(newGrade.weight),
-          title: newGrade.title,
-          description: newGrade.description,
-          type: newGrade.type
-        })
+      await createManualGrade({
+        studentId: alunoId,
+        disciplineId: selectedDiscipline,
+        score: parseFloat(newGrade.score),
+        weight: parseFloat(newGrade.weight),
+        title: newGrade.title,
+        description: newGrade.description,
+        type: newGrade.type
       });
 
-      if (response.ok) {
-        setNewGrade({ score: '', weight: '1', title: '', description: '', type: 'MANUAL' });
-        setShowAddGrade(false);
-        setSelectedDiscipline('');
-        fetchReportCard();
-        toast('success', 'Nota salva', 'A nota foi lançada com sucesso.');
-      } else {
-        const errorData = await response.json();
-        toast('error', 'Erro ao salvar', errorData.error || 'Não foi possível salvar a nota.');
-      }
+      setNewGrade({ score: '', weight: '1', title: '', description: '', type: 'MANUAL' });
+      setShowAddGrade(false);
+      setSelectedDiscipline('');
+      fetchReportCard();
+      toast('success', 'Nota salva', 'A nota foi lançada com sucesso.');
     } catch (error) {
       console.error('Error adding grade:', error);
-      toast('error', 'Erro de conexão', 'Não foi possível conectar ao servidor.');
+      toast('error', 'Erro ao salvar', 'Não foi possível salvar a nota.');
     }
   };
 
