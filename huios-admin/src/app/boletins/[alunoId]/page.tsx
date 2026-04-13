@@ -60,13 +60,14 @@ export default function BoletimAlunoPage() {
 
   const fetchReportCard = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/grades/report-card/${alunoId}`);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${apiUrl}/grades/report-card/${alunoId}`);
       if (response.ok) {
         const data = await response.json();
         setStudent(data.student);
         setDisciplines(data.disciplines);
-        setLoading(false);
       }
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching report card:', error);
       setLoading(false);
@@ -82,7 +83,8 @@ export default function BoletimAlunoPage() {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/grades', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${apiUrl}/grades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -101,9 +103,14 @@ export default function BoletimAlunoPage() {
         setShowAddGrade(false);
         setSelectedDiscipline('');
         fetchReportCard();
+        toast('success', 'Nota salva', 'A nota foi lançada com sucesso.');
+      } else {
+        const errorData = await response.json();
+        toast('error', 'Erro ao salvar', errorData.error || 'Não foi possível salvar a nota.');
       }
     } catch (error) {
       console.error('Error adding grade:', error);
+      toast('error', 'Erro de conexão', 'Não foi possível conectar ao servidor.');
     }
   };
 

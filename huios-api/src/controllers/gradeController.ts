@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient, GradeType } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { GradeType } from '@prisma/client';
+import { prisma } from '../services/prisma';
 
 // Get grades by student
 export const getStudentGrades = async (req: Request, res: Response) => {
@@ -305,11 +304,12 @@ export const getReportCard = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Student not found' });
     }
 
-    // Get all disciplines where student is enrolled
+    // Get all enrollments for this student (regardless of status if they are in the database)
+    // To be more robust, we fetch all enrollments that aren't CANCELLED
     const enrollments = await prisma.enrollment.findMany({
       where: {
         studentId,
-        status: 'ACTIVE'
+        status: { in: ['ACTIVE', 'COMPLETED', 'Ativa', 'Concluída'] } // Broader status support
       },
       include: {
         class: {
@@ -343,26 +343,28 @@ export const getReportCard = async (req: Request, res: Response) => {
     // Build report card
     const reportCard: any[] = [];
     enrollments.forEach(enrollment => {
-      enrollment.class.disciplines.forEach(discipline => {
-        const disciplineGrades = grades.filter(g => g.disciplineId === discipline.id);
-        
-        // Calculate average
-        const totalWeight = disciplineGrades.reduce((sum, g) => sum + g.weight, 0);
-        const weightedScore = disciplineGrades.reduce((sum, g) => sum + (g.score * g.weight), 0);
-        const average = totalWeight > 0 ? weightedScore / totalWeight : 0;
+      if (enrollment.class && enrollment.class.disciplines) {
+        enrollment.class.disciplines.forEach(discipline => {
+          const disciplineGrades = grades.filter(g => g.disciplineId === discipline.id);
+          
+          // Calculate average
+          const totalWeight = disciplineGrades.reduce((sum, g) => sum + g.weight, 0);
+          const weightedScore = disciplineGrades.reduce((sum, g) => sum + (g.score * g.weight), 0);
+          const average = totalWeight > 0 ? weightedScore / totalWeight : 0;
 
-        reportCard.push({
-          discipline: {
-            id: discipline.id,
-            name: discipline.name,
-            workload: discipline.workload,
-            teacher: discipline.teacher?.name || 'N/A'
-          },
-          grades: disciplineGrades,
-          average: Math.round(average * 100) / 100,
-          status: average >= 6 ? 'Aprovado' : average >= 4 ? 'Recuperação' : 'Reprovado'
+          reportCard.push({
+            discipline: {
+              id: discipline.id,
+              name: discipline.name,
+              workload: discipline.workload,
+              teacher: discipline.teacher ? { name: discipline.teacher.name } : null
+            },
+            grades: disciplineGrades,
+            average: Math.round(average * 100) / 100,
+            status: average >= 6 ? 'Aprovado' : average >= 4 ? 'Recuperação' : 'Reprovado'
+          });
         });
-      });
+      }
     });
 
     // Calculate overall average
