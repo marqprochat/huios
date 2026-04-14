@@ -90,14 +90,14 @@ export async function GET() {
         }
       },
       include: {
-        discipline: true
+        disciplines: true
       },
       orderBy: { date: 'asc' },
       take: 5
     });
     const events = upcomingLessons.map(l => ({
       id: l.id,
-      title: l.discipline.name,
+      title: l.disciplines[0]?.name || 'Aula',
       date: l.date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
       time: l.startTime ? new Date(l.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--',
       location: l.locationName || 'Auditório'

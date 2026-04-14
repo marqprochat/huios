@@ -290,8 +290,9 @@ enum QuestionType {
 
 model Lesson {
   id String @id @default(uuid())
-  disciplineId String
-  discipline Discipline @relation(fields: [disciplineId], references: [id])
+  
+  // Relações
+  disciplines Discipline[]
 
   // Data e horário
   date DateTime
@@ -397,13 +398,6 @@ model Grade {
   @@index([studentId, disciplineId])
 }
 
-enum GradeType {
-  EXAM // Prova online
-  MANUAL // Lançamento manual
-  ACTIVITY // Atividade/Trabalho
-  PARTICIPATION // Participação
-}
-
 model SystemSettings {
   id String @id @default(uuid())
   
@@ -420,4 +414,11 @@ model SystemSettings {
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+enum GradeType {
+  EXAM // Prova online
+  MANUAL // Lançamento manual
+  ACTIVITY // Atividade/Trabalho
+  PARTICIPATION // Participação
 }

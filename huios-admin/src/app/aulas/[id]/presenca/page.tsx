@@ -25,12 +25,12 @@ interface Lesson {
   startTime: string | null;
   endTime: string | null;
   locationName: string | null;
-  discipline: {
+  disciplines: {
     name: string;
     courseClass: {
       name: string;
     };
-  };
+  }[];
 }
 
 export default function PresencaPage() {
@@ -163,7 +163,7 @@ export default function PresencaPage() {
         <div className="flex-1">
           <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Lançar Presença</h2>
           <p className="text-slate-500 dark:text-slate-400">
-            {lesson?.discipline.name} • {formatDateBR(lesson?.date)}
+            {lesson?.disciplines.map(d => d.name).join(' / ')} • {formatDateBR(lesson?.date)}
           </p>
         </div>
       </div>

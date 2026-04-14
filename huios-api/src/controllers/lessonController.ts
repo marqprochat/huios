@@ -9,7 +9,11 @@ export const getLessons = async (req: Request, res: Response) => {
     const { disciplineId, startDate, endDate } = req.query;
     
     const where: any = {};
-    if (disciplineId) where.disciplineId = disciplineId as string;
+    if (disciplineId) {
+      where.disciplines = {
+        some: { id: disciplineId as string }
+      };
+    }
     if (startDate || endDate) {
       where.date = {};
       if (startDate) where.date.gte = new Date(startDate as string);
@@ -19,7 +23,7 @@ export const getLessons = async (req: Request, res: Response) => {
     const lessons = await prisma.lesson.findMany({
       where,
       include: {
-        discipline: {
+        disciplines: {
           select: {
             id: true,
             name: true,
@@ -54,7 +58,7 @@ export const getLessonById = async (req: Request, res: Response) => {
     const lesson = await prisma.lesson.findUnique({
       where: { id },
       include: {
-        discipline: {
+        disciplines: {
           select: {
             id: true,
             name: true,
@@ -106,7 +110,8 @@ export const getLessonById = async (req: Request, res: Response) => {
 export const createLesson = async (req: Request, res: Response) => {
   try {
     const {
-      disciplineId,
+      disciplineId, // singular for backward compatibility OR
+      disciplineIds, // plural for new UI
       date,
       startTime,
       endTime,
@@ -117,16 +122,20 @@ export const createLesson = async (req: Request, res: Response) => {
       description
     } = req.body;
 
+    const ids: string[] = disciplineIds || (disciplineId ? [disciplineId] : []);
+
     // Validation
-    if (!disciplineId || !date) {
+    if (ids.length === 0 || !date) {
       return res.status(400).json({ 
-        error: 'Discipline and date are required' 
+        error: 'At least one discipline and date are required' 
       });
     }
 
     const lesson = await prisma.lesson.create({
       data: {
-        disciplineId,
+        disciplines: {
+          connect: ids.map(id => ({ id }))
+        },
         date: new Date(date),
         startTime: startTime ? new Date(startTime) : null,
         endTime: endTime ? new Date(endTime) : null,
@@ -137,7 +146,7 @@ export const createLesson = async (req: Request, res: Response) => {
         description
       },
       include: {
-        discipline: {
+        disciplines: {
           select: {
             id: true,
             name: true
@@ -151,7 +160,7 @@ export const createLesson = async (req: Request, res: Response) => {
       where: {
         class: {
           disciplines: {
-            some: { id: disciplineId }
+            some: { id: { in: ids } }
           }
         },
         status: 'ACTIVE'
@@ -205,7 +214,7 @@ export const updateLesson = async (req: Request, res: Response) => {
         description
       },
       include: {
-        discipline: {
+        disciplines: {
           select: {
             id: true,
             name: true

@@ -22,7 +22,7 @@ export default function LoteAulasPage() {
   const [submitting, setSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
-    disciplineId: '',
+    disciplineIds: [] as string[],
     startDate: '',
     endDate: '',
     weekDays: [] as number[], // 0 = Sunday, 1 = Monday...
@@ -94,6 +94,10 @@ export default function LoteAulasPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.disciplineIds.length === 0) {
+      toast('warning', 'Nenhuma disciplina selecionada', 'Selecione ao menos uma disciplina.');
+      return;
+    }
     if (previewDates.length === 0) {
       toast('warning', 'Nenhuma aula para criar', 'Selecione os dias da semana e o período.');
       return;
@@ -136,20 +140,41 @@ export default function LoteAulasPage() {
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 gap-6">
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                Disciplina *
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">
+                Disciplinas / Turmas *
               </label>
-              <select
-                required
-                value={formData.disciplineId}
-                onChange={e => setFormData({ ...formData, disciplineId: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all"
-              >
-                <option value="">Selecione uma disciplina</option>
-                {disciplinas.map(d => (
-                  <option key={d.id} value={d.id}>{d.name} ({d.courseClass.name})</option>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800">
+                {disciplinas.map((d) => (
+                  <label key={d.id} className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors group">
+                    <div className="relative flex items-center mt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={formData.disciplineIds.includes(d.id)}
+                        onChange={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            disciplineIds: prev.disciplineIds.includes(d.id)
+                              ? prev.disciplineIds.filter(id => id !== d.id)
+                              : [...prev.disciplineIds, d.id]
+                          }));
+                        }}
+                        className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 dark:border-slate-600 checked:bg-primary checked:border-primary transition-all"
+                      />
+                      <span className="material-symbols-outlined absolute text-white scale-0 peer-checked:scale-100 transition-transform pointer-events-none text-base font-bold">
+                        check
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors line-clamp-1">
+                        {d.name}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {d.courseClass.name}
+                      </span>
+                    </div>
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

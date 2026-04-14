@@ -42,7 +42,7 @@ export async function GET() {
                             include: {
                                 lesson: {
                                     include: {
-                                        discipline: true
+                                        disciplines: true
                                     }
                                 }
                             }

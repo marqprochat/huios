@@ -32,22 +32,35 @@ export default async function NovaAulaPage() {
         <form action={createLesson} className="space-y-6">
           <div className="space-y-4">
             <div>
-              <label htmlFor="disciplineId" className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                Disciplina *
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">
+                Disciplinas / Turmas *
               </label>
-              <select
-                id="disciplineId"
-                name="disciplineId"
-                required
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-              >
-                <option value="">Selecione uma disciplina</option>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800">
                 {disciplinas.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} - {d.courseClass.name}
-                  </option>
+                  <label key={d.id} className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors group">
+                    <div className="relative flex items-center mt-0.5">
+                      <input
+                        type="checkbox"
+                        name="disciplineIds"
+                        value={d.id}
+                        className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 dark:border-slate-600 checked:bg-primary checked:border-primary transition-all"
+                      />
+                      <span className="material-symbols-outlined absolute text-white scale-0 peer-checked:scale-100 transition-transform pointer-events-none text-base font-bold">
+                        check
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors line-clamp-1">
+                        {d.name}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {d.courseClass.name}
+                      </span>
+                    </div>
+                  </label>
                 ))}
-              </select>
+              </div>
+              <p className="mt-2 text-xs text-slate-500">Selecione uma ou mais disciplinas para vincular a esta aula.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

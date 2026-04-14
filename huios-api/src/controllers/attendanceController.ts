@@ -66,7 +66,7 @@ export const updateAttendance = async (req: Request, res: Response) => {
           select: {
             id: true,
             date: true,
-            discipline: {
+            disciplines: {
               select: {
                 name: true
               }
@@ -138,7 +138,9 @@ export const getStudentAttendanceReport = async (req: Request, res: Response) =>
     const where: any = { studentId };
     if (disciplineId) {
       where.lesson = {
-        disciplineId: disciplineId as string
+        disciplines: {
+          some: { id: disciplineId as string }
+        }
       };
     }
     if (startDate || endDate) {
@@ -155,7 +157,7 @@ export const getStudentAttendanceReport = async (req: Request, res: Response) =>
           select: {
             id: true,
             date: true,
-            discipline: {
+            disciplines: {
               select: {
                 id: true,
                 name: true
@@ -199,7 +201,11 @@ export const getDisciplineAttendanceReport = async (req: Request, res: Response)
     const { disciplineId } = req.params;
     const { startDate, endDate } = req.query;
 
-    const where: any = { disciplineId };
+    const where: any = {
+      disciplines: {
+        some: { id: disciplineId }
+      }
+    };
     if (startDate || endDate) {
       where.date = {};
       if (startDate) where.date.gte = new Date(startDate as string);

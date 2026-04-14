@@ -25,10 +25,13 @@ export async function GET(
         const lesson = await prisma.lesson.findUnique({
             where: { id: resolvedParams.id },
             include: {
-                discipline: {
+                disciplines: {
                     include: {
                         courseClass: true
                     }
+                },
+                attendances: {
+                    where: { studentId: user.student.id }
                 }
             }
         });
@@ -37,7 +40,20 @@ export async function GET(
             return NextResponse.json({ error: 'Aula não encontrada' }, { status: 404 });
         }
 
-        return NextResponse.json(lesson);
+        // Compatibilidade: Encontrar a disciplina correta para o aluno
+        const studentEnrollments = await prisma.enrollment.findMany({
+            where: { studentId: user.student.id, status: 'ACTIVE' },
+            select: { classId: true }
+        });
+        const classIds = studentEnrollments.map(e => e.classId);
+        
+        const relevantDiscipline = lesson.disciplines.find(d => classIds.includes(d.courseClassId)) || lesson.disciplines[0];
+
+        return NextResponse.json({
+            ...lesson,
+            discipline: relevantDiscipline,
+            disciplines: undefined // Opcional: remover o array original para economizar banda
+        });
     } catch (error) {
         console.error('Portal lesson error:', error);
         return NextResponse.json({ error: 'Erro interno ao carregar a aula' }, { status: 500 });

@@ -40,10 +40,12 @@ export async function GET() {
         // Get lessons for those disciplines
         const lessons = await prisma.lesson.findMany({
             where: {
-                disciplineId: { in: disciplineIds }
+                disciplines: {
+                    some: { id: { in: disciplineIds } }
+                }
             },
             include: {
-                discipline: {
+                disciplines: {
                     include: {
                         courseClass: {
                             include: { course: true }
@@ -59,7 +61,18 @@ export async function GET() {
             orderBy: { date: 'asc' }
         });
 
-        return NextResponse.json(lessons);
+        // Map lessons to include the specific discipline for this student
+        const flattenedLessons = lessons.map(lesson => {
+            const { disciplines, ...rest } = lesson;
+            // Find the discipline that belongs to one of the student's classes
+            const studentDiscipline = disciplines.find(d => disciplineIds.includes(d.id)) || disciplines[0];
+            return {
+                ...rest,
+                discipline: studentDiscipline
+            };
+        });
+
+        return NextResponse.json(flattenedLessons);
     } catch (error) {
         console.error('Portal aulas error:', error);
         return NextResponse.json({ error: 'Erro ao carregar aulas' }, { status: 500 });

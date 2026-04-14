@@ -4,7 +4,7 @@ import CalendarContainer from './CalendarContainer';
 export default async function AulasPage() {
   const aulas = await prisma.lesson.findMany({
     include: {
-      discipline: {
+      disciplines: {
         include: {
           courseClass: true
         }
@@ -26,12 +26,12 @@ export default async function AulasPage() {
     endTime: aula.endTime,
     locationName: aula.locationName,
     description: aula.description,
-    discipline: {
-      name: aula.discipline.name,
+    disciplines: aula.disciplines.map(d => ({
+      name: d.name,
       courseClass: {
-        name: aula.discipline.courseClass.name
+        name: d.courseClass.name
       }
-    }
+    }))
   }));
 
   return (

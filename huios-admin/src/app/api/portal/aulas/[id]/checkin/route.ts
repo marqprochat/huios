@@ -34,7 +34,7 @@ export async function POST(
         const lesson = await prisma.lesson.findUnique({
             where: { id: lessonId },
             include: {
-                discipline: { include: { courseClass: true } }
+                disciplines: { include: { courseClass: true } }
             }
         });
 
@@ -46,7 +46,7 @@ export async function POST(
         const isEnrolled = await prisma.enrollment.findFirst({
             where: {
                  studentId: studentId,
-                 classId: lesson.discipline.courseClassId,
+                 classId: { in: lesson.disciplines.map(d => d.courseClassId) },
                  status: 'ACTIVE'
             }
         });

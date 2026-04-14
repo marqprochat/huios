@@ -13,12 +13,12 @@ interface Lesson {
   endTime: Date | null;
   locationName: string | null;
   description: string | null;
-  discipline: {
+  disciplines: {
     name: string;
     courseClass: {
       name: string;
     }
-  };
+  }[];
 }
 
 interface CalendarProps {
@@ -183,11 +183,12 @@ export default function CalendarContainer({ initialLessons }: CalendarProps) {
                     <button
                       key={lesson.id}
                       onClick={() => setSelectedLesson(lesson)}
-                      className={`w-full text-left p-1.5 rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98] group overflow-hidden ${getDisciplineColor(lesson.discipline.name)}/10 border border-transparent hover:border-current`}
-                      style={{ borderLeftColor: getDisciplineColor(lesson.discipline.name).replace('bg-', '') }}
+                      className={`w-full text-left p-1.5 rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98] group overflow-hidden ${getDisciplineColor(lesson.disciplines[0]?.name || '')}/10 border border-transparent hover:border-current`}
+                      style={{ borderLeftColor: getDisciplineColor(lesson.disciplines[0]?.name || '').replace('bg-', '') }}
                     >
-                      <div className={`text-[10px] font-black uppercase tracking-tighter truncate ${getDisciplineColor(lesson.discipline.name).replace('bg-', 'text-')}`}>
-                        {lesson.discipline.name}
+                      <div className={`text-[10px] font-black uppercase tracking-tighter truncate ${getDisciplineColor(lesson.disciplines[0]?.name || '').replace('bg-', 'text-')}`}>
+                        {lesson.disciplines[0]?.name}
+                        {lesson.disciplines.length > 1 && ` (+${lesson.disciplines.length - 1})`}
                       </div>
                       <div className="text-[9px] text-slate-500 font-medium truncate">
                         {lesson.startTime ? lesson.startTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
@@ -205,10 +206,12 @@ export default function CalendarContainer({ initialLessons }: CalendarProps) {
       {selectedLesson && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className={`h-32 p-8 flex items-end justify-between ${getDisciplineColor(selectedLesson.discipline.name)}`}>
+            <div className={`h-32 p-8 flex items-end justify-between ${getDisciplineColor(selectedLesson.disciplines[0]?.name || '')}`}>
                <div>
                   <div className="text-white/60 text-xs font-black uppercase tracking-widest mb-1">Detalhes da Aula</div>
-                  <h3 className="text-2xl font-black text-white">{selectedLesson.discipline.name}</h3>
+                  <h3 className="text-2xl font-black text-white">
+                    {selectedLesson.disciplines.map(d => d.name).join(' / ')}
+                  </h3>
                </div>
                <button onClick={() => setSelectedLesson(null)} className="absolute top-4 right-4 p-2 bg-black/10 hover:bg-black/20 text-white rounded-full transition-colors">
                   <span className="material-symbols-outlined">close</span>
@@ -239,8 +242,10 @@ export default function CalendarContainer({ initialLessons }: CalendarProps) {
                            <span className="material-symbols-outlined text-primary">layers</span>
                         </div>
                         <div>
-                           <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Turma</div>
-                           <div className="text-slate-900 dark:text-white font-bold">{selectedLesson.discipline.courseClass.name}</div>
+                           <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Turmas</div>
+                           <div className="text-slate-900 dark:text-white font-bold">
+                             {selectedLesson.disciplines.map(d => d.courseClass.name).join(', ')}
+                           </div>
                         </div>
                      </div>
 

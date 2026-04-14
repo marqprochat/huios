@@ -290,8 +290,7 @@ enum QuestionType {
 
 model Lesson {
   id String @id @default(uuid())
-  disciplineId String
-  discipline Discipline @relation(fields: [disciplineId], references: [id])
+  disciplines Discipline[]
 
   // Data e horário
   date DateTime

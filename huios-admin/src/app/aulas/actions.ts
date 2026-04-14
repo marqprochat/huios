@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma';
 
 export async function createLesson(formData: FormData) {
   try {
-    const disciplineId = formData.get('disciplineId') as string;
+    const disciplineIds = formData.getAll('disciplineIds') as string[];
     const date = formData.get('date') as string;
     const startTime = formData.get('startTime') as string;
     const endTime = formData.get('endTime') as string;
@@ -27,7 +27,9 @@ export async function createLesson(formData: FormData) {
     // Create lesson
     const lesson = await prisma.lesson.create({
       data: {
-        disciplineId,
+        disciplines: {
+          connect: disciplineIds.map(id => ({ id }))
+        },
         date: parseLocalToUTC(date),
         startTime: startTime ? parseLocalToUTC(`${date}T${startTime}`) : null,
         endTime: endTime ? parseLocalToUTC(`${date}T${endTime}`) : null,
@@ -39,12 +41,12 @@ export async function createLesson(formData: FormData) {
       }
     });
 
-    // Create attendance records for all enrolled students
+    // Create attendance records for all enrolled students in all selected disciplines/classes
     const enrollments = await prisma.enrollment.findMany({
       where: {
         class: {
           disciplines: {
-            some: { id: disciplineId }
+            some: { id: { in: disciplineIds } }
           }
         },
         status: 'ACTIVE'
@@ -73,7 +75,7 @@ export async function createLesson(formData: FormData) {
 }
 
 export async function createBulkLessons(data: {
-  disciplineId: string;
+  disciplineIds: string[];
   dates: string[];
   startTime: string;
   endTime: string;
@@ -85,7 +87,7 @@ export async function createBulkLessons(data: {
 }) {
   try {
     const { 
-      disciplineId, 
+      disciplineIds, 
       dates, 
       startTime, 
       endTime, 
@@ -109,7 +111,9 @@ export async function createBulkLessons(data: {
       for (const dateStr of dates) {
         const lesson = await tx.lesson.create({
           data: {
-            disciplineId,
+            disciplines: {
+              connect: disciplineIds.map(id => ({ id }))
+            },
             date: parseLocalToUTC(dateStr),
             startTime: startTime ? parseLocalToUTC(`${dateStr}T${startTime}`) : null,
             endTime: endTime ? parseLocalToUTC(`${dateStr}T${endTime}`) : null,
@@ -126,7 +130,7 @@ export async function createBulkLessons(data: {
           where: {
             class: {
               disciplines: {
-                some: { id: disciplineId }
+                some: { id: { in: disciplineIds } }
               }
             },
             status: 'ACTIVE'
@@ -157,6 +161,7 @@ export async function createBulkLessons(data: {
 
 export async function updateLesson(id: string, formData: FormData) {
   try {
+    const disciplineIds = formData.getAll('disciplineIds') as string[];
     const date = formData.get('date') as string;
     const startTime = formData.get('startTime') as string;
     const endTime = formData.get('endTime') as string;
@@ -177,6 +182,9 @@ export async function updateLesson(id: string, formData: FormData) {
     await prisma.lesson.update({
       where: { id },
       data: {
+        disciplines: {
+          set: disciplineIds.map(id => ({ id }))
+        },
         date: parseLocalToUTC(date),
         startTime: startTime ? parseLocalToUTC(`${date}T${startTime}`) : null,
         endTime: endTime ? parseLocalToUTC(`${date}T${endTime}`) : null,

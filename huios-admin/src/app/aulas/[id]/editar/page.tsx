@@ -10,19 +10,29 @@ interface Props {
 export default async function EditarAulaPage({ params }: Props) {
   const { id } = await params;
 
-  const lesson = await prisma.lesson.findUnique({
-    where: { id },
-    include: {
-      discipline: {
-        include: {
-          courseClass: true
+  const [lesson, disciplinas] = await Promise.all([
+    prisma.lesson.findUnique({
+      where: { id },
+      include: {
+        disciplines: {
+          include: {
+            courseClass: true
+          }
+        },
+        _count: {
+          select: { attendances: true }
+        }
+      }
+    }),
+    prisma.discipline.findMany({
+      include: {
+        courseClass: {
+          select: { name: true }
         }
       },
-      _count: {
-        select: { attendances: true }
-      }
-    }
-  });
+      orderBy: { name: 'asc' }
+    })
+  ]);
 
   if (!lesson) {
     notFound();
@@ -52,7 +62,7 @@ export default async function EditarAulaPage({ params }: Props) {
         <div>
           <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Editar Aula</h2>
           <p className="text-slate-500 dark:text-slate-400">
-            {lesson.discipline.name} - {lesson.discipline.courseClass.name}
+            {lesson.disciplines.map(d => d.name).join(', ')}
           </p>
         </div>
       </div>
@@ -60,6 +70,37 @@ export default async function EditarAulaPage({ params }: Props) {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 lg:p-8">
         <form action={updateLesson.bind(null, id)} className="space-y-6">
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">
+                Disciplinas / Turmas *
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800">
+                {disciplinas.map((d) => (
+                  <label key={d.id} className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors group">
+                    <div className="relative flex items-center mt-0.5">
+                      <input
+                        type="checkbox"
+                        name="disciplineIds"
+                        value={d.id}
+                        defaultChecked={lesson.disciplines.some(ld => ld.id === d.id)}
+                        className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 dark:border-slate-600 checked:bg-primary checked:border-primary transition-all"
+                      />
+                      <span className="material-symbols-outlined absolute text-white scale-0 peer-checked:scale-100 transition-transform pointer-events-none text-base font-bold">
+                        check
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors line-clamp-1">
+                        {d.name}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {d.courseClass.name}
+                      </span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label htmlFor="date" className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
