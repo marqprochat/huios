@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const disciplinas = await prisma.discipline.findMany({
       include: {
-        courseClass: {
+        courseClasses: {
           select: { name: true }
         }
       },

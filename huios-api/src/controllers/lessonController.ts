@@ -27,7 +27,7 @@ export const getLessons = async (req: Request, res: Response) => {
           select: {
             id: true,
             name: true,
-            courseClass: {
+            courseClasses: {
               select: {
                 name: true
               }
@@ -62,7 +62,7 @@ export const getLessonById = async (req: Request, res: Response) => {
           select: {
             id: true,
             name: true,
-            courseClass: {
+            courseClasses: {
               select: {
                 name: true,
                 enrollments: {

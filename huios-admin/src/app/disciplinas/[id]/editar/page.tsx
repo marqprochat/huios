@@ -6,7 +6,8 @@ import { notFound } from 'next/navigation';
 export default async function EditarDisciplinaPage({ params }: { params: Promise<{ id: string }> }) {
     const p = await params;
     const disciplina = await prisma.discipline.findUnique({
-        where: { id: p.id }
+        where: { id: p.id },
+        include: { courseClasses: { select: { id: true } } }
     });
 
     if (!disciplina) {
@@ -22,6 +23,7 @@ export default async function EditarDisciplinaPage({ params }: { params: Promise
         orderBy: { name: 'asc' }
     });
 
+    const selectedClassIds = new Set(disciplina.courseClasses.map(cc => cc.id));
     const updateDisciplinaWithId = updateDiscipline.bind(null, disciplina.id);
 
     return (
@@ -50,13 +52,24 @@ export default async function EditarDisciplinaPage({ params }: { params: Promise
                         </div>
 
                         <div className="space-y-2 md:col-span-2">
-                            <label htmlFor="courseClassId" className="text-sm font-bold text-slate-700 dark:text-slate-300">Turma (Curso) <span className="text-red-500">*</span></label>
-                            <select id="courseClassId" name="courseClassId" defaultValue={disciplina.courseClassId} required className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white">
-                                <option value="">Selecione a turma...</option>
+                            <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Turmas (Curso) <span className="text-red-500">*</span></label>
+                            <p className="text-xs text-slate-400">Selecione uma ou mais turmas para esta disciplina.</p>
+                            <div className="space-y-2 max-h-60 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-50 dark:bg-slate-800">
                                 {turmas.map(turma => (
-                                    <option key={turma.id} value={turma.id}>{turma.name} — {turma.course.name}</option>
+                                    <label key={turma.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors">
+                                        <input
+                                            type="checkbox"
+                                            name="courseClassIds"
+                                            value={turma.id}
+                                            defaultChecked={selectedClassIds.has(turma.id)}
+                                            className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/50"
+                                        />
+                                        <span className="text-sm text-slate-700 dark:text-slate-300">
+                                            {turma.name} — <span className="text-primary font-medium">{turma.course.name}</span>
+                                        </span>
+                                    </label>
                                 ))}
-                            </select>
+                            </div>
                         </div>
 
                         <div className="space-y-2">
@@ -72,6 +85,11 @@ export default async function EditarDisciplinaPage({ params }: { params: Promise
                         <div className="space-y-2">
                             <label htmlFor="workload" className="text-sm font-bold text-slate-700 dark:text-slate-300">Carga Horária (horas)</label>
                             <input type="number" id="workload" name="workload" defaultValue={disciplina.workload || ''} min="1" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="Ex: 40" />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label htmlFor="year" className="text-sm font-bold text-slate-700 dark:text-slate-300">Ano Letivo</label>
+                            <input type="number" id="year" name="year" min="2020" max="2099" defaultValue={disciplina.year || ''} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="Ex: 2026" />
                         </div>
                     </div>
 

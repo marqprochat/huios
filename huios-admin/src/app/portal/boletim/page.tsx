@@ -7,7 +7,7 @@ interface DisciplineGrade {
   id: string;
   name: string;
   teacher: { name: string } | null;
-  courseClass: { name: string; course: { name: string } };
+  courseClasses: { name: string; course: { name: string } }[];
   grades: Array<{
     id: string;
     score: number;

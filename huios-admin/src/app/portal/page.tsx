@@ -296,7 +296,7 @@ export default function PortalDashboard() {
                       </p>
                       <p className="text-xs text-slate-400 flex items-center gap-1">
                         <span className="material-symbols-outlined text-xs">location_on</span>
-                        {lesson.locationName || 'Local não definido'} • {lesson.discipline?.courseClass?.name}
+                        {lesson.locationName || 'Local não definido'} • {lesson.discipline?.courseClasses?.map((cc: any) => cc.name).join(', ')}
                       </p>
                     </div>
                     {lesson.attendances?.some((a: any) => a.status === 'PRESENT') ? (

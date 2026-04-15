@@ -26,7 +26,7 @@ interface Exam {
   startDate: string;
   endDate: string;
   duration: number | null;
-  discipline: { name: string; courseClass: { name: string } };
+  discipline: { name: string; courseClasses: { name: string }[] };
   questions: Question[];
   submissions: Array<{ submittedAt: string | null; score: number | null; maxScore: number | null }>;
 }

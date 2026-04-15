@@ -20,9 +20,9 @@ interface Aluno {
 interface Disciplina {
   id: string;
   name: string;
-  courseClass: {
+  courseClasses: {
     name: string;
-  };
+  }[];
   workload: number | null;
 }
 
@@ -109,7 +109,7 @@ export default function BoletinsClient({ initialAlunos, initialDisciplinas }: Bo
               className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50"
             >
               <div className="font-bold text-slate-900 dark:text-white">{disciplina.name}</div>
-              <div className="text-sm text-slate-500">{disciplina.courseClass.name}</div>
+              <div className="text-sm text-slate-500">{disciplina.courseClasses.map(cc => cc.name).join(', ') || 'Sem turma'}</div>
               <div className="text-xs text-slate-400 mt-1">
                 {disciplina.workload ? `${disciplina.workload}h` : 'Sem carga horária'}
               </div>

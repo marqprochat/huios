@@ -9,9 +9,9 @@ import { useToast } from '@/app/components/Toast/useToast';
 interface Discipline {
   id: string;
   name: string;
-  courseClass: {
+  courseClasses: {
     name: string;
-  };
+  }[];
 }
 
 export default function LoteAulasPage() {
@@ -169,7 +169,7 @@ export default function LoteAulasPage() {
                         {d.name}
                       </span>
                       <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {d.courseClass.name}
+                        {d.courseClasses.map(cc => cc.name).join(', ')}
                       </span>
                     </div>
                   </label>

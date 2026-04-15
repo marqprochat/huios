@@ -14,7 +14,7 @@ interface Lesson {
   discipline: {
     name: string;
     teacher: { name: string } | null;
-    courseClass: { name: string };
+    courseClasses: { name: string }[];
   };
   attendances: Array<{ status: string; checkInAt: string | null }>;
   materials: Array<{ id: string; fileName: string; filePath: string; mimeType: string }>;

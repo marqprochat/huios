@@ -15,7 +15,7 @@ export default async function DuplicarProvaPage({ params }: Props) {
     include: {
       discipline: {
         include: {
-          courseClass: true
+          courseClasses: true
         }
       }
     }

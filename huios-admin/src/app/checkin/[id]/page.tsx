@@ -14,9 +14,9 @@ interface Lesson {
   radiusMeters: number;
   discipline: {
     name: string;
-    courseClass: {
+    courseClasses: {
       name: string;
-    };
+    }[];
   };
 }
 
@@ -220,7 +220,7 @@ export default function CheckInPage() {
                 {lesson.discipline.name}
               </h2>
               <p className="text-sm text-slate-500">
-                {lesson.discipline.courseClass.name}
+                {lesson.discipline.courseClasses.map(cc => cc.name).join(', ')}
               </p>
             </div>
           </div>

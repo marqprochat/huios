@@ -28,9 +28,9 @@ export async function GET() {
 
         const classIds = enrollments.map(e => e.classId);
 
-        // Get disciplines
+        // Get disciplines (N:N)
         const disciplines = await prisma.discipline.findMany({
-            where: { courseClassId: { in: classIds } },
+            where: { courseClasses: { some: { id: { in: classIds } } } },
             select: { id: true }
         });
 
@@ -45,7 +45,7 @@ export async function GET() {
             include: {
                 discipline: {
                     include: {
-                        courseClass: true
+                        courseClasses: true
                     }
                 },
                 questions: {

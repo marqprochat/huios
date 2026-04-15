@@ -12,7 +12,7 @@ interface Exam {
   duration: number | null;
   discipline: {
     name: string;
-    courseClass: { name: string };
+    courseClasses: { name: string }[];
   };
   questions: Array<any>;
   submissions: Array<{
@@ -143,7 +143,7 @@ export default function ProvasPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-slate-800 truncate">{exam.title}</h4>
-                      <p className="text-xs text-slate-400 mt-0.5">{exam.discipline.name} • {exam.discipline.courseClass.name}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{exam.discipline.name} • {exam.discipline.courseClasses.map(cc => cc.name).join(', ')}</p>
 
                       <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-slate-500">
                         <span className="flex items-center gap-1">

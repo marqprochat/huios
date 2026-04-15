@@ -6,7 +6,7 @@ export default async function AulasPage() {
     include: {
       disciplines: {
         include: {
-          courseClass: true
+          courseClasses: true
         }
       },
       _count: {
@@ -28,9 +28,7 @@ export default async function AulasPage() {
     description: aula.description,
     disciplines: aula.disciplines.map(d => ({
       name: d.name,
-      courseClass: {
-        name: d.courseClass.name
-      }
+      courseClasses: d.courseClasses.map(cc => ({ name: cc.name }))
     }))
   }));
 

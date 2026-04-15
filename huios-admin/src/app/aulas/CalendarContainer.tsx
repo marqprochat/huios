@@ -15,9 +15,9 @@ interface Lesson {
   description: string | null;
   disciplines: {
     name: string;
-    courseClass: {
+    courseClasses: {
       name: string;
-    }
+    }[]
   }[];
 }
 
@@ -244,7 +244,7 @@ export default function CalendarContainer({ initialLessons }: CalendarProps) {
                         <div>
                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Turmas</div>
                            <div className="text-slate-900 dark:text-white font-bold">
-                             {selectedLesson.disciplines.map(d => d.courseClass.name).join(', ')}
+                             {selectedLesson.disciplines.flatMap(d => d.courseClasses.map(cc => cc.name)).join(', ')}
                            </div>
                         </div>
                      </div>

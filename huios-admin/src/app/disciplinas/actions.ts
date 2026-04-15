@@ -8,21 +8,26 @@ export async function createDiscipline(formData: FormData) {
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const workloadStr = formData.get('workload') as string;
-    const courseClassId = formData.get('courseClassId') as string;
+    const courseClassIds = formData.getAll('courseClassIds') as string[];
     const teacherId = formData.get('teacherId') as string;
+    const yearStr = formData.get('year') as string;
 
-    if (!name || !courseClassId) {
-        throw new Error('Nome e Turma são obrigatórios');
+    if (!name || courseClassIds.length === 0) {
+        throw new Error('Nome e pelo menos uma Turma são obrigatórios');
     }
 
     const workload = workloadStr ? parseInt(workloadStr, 10) : null;
+    const year = yearStr ? parseInt(yearStr, 10) : null;
 
     await prisma.discipline.create({
         data: {
             name,
             description: description || null,
             workload: workload || null,
-            courseClassId,
+            year,
+            courseClasses: {
+                connect: courseClassIds.map(id => ({ id }))
+            },
             teacherId: teacherId || null,
         }
     });
@@ -35,14 +40,16 @@ export async function updateDiscipline(id: string, formData: FormData) {
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const workloadStr = formData.get('workload') as string;
-    const courseClassId = formData.get('courseClassId') as string;
+    const courseClassIds = formData.getAll('courseClassIds') as string[];
     const teacherId = formData.get('teacherId') as string;
+    const yearStr = formData.get('year') as string;
 
-    if (!name || !courseClassId) {
-        throw new Error('Nome e Turma são obrigatórios');
+    if (!name || courseClassIds.length === 0) {
+        throw new Error('Nome e pelo menos uma Turma são obrigatórios');
     }
 
     const workload = workloadStr ? parseInt(workloadStr, 10) : null;
+    const year = yearStr ? parseInt(yearStr, 10) : null;
 
     await prisma.discipline.update({
         where: { id },
@@ -50,7 +57,10 @@ export async function updateDiscipline(id: string, formData: FormData) {
             name,
             description: description || null,
             workload: workload || null,
-            courseClassId,
+            year,
+            courseClasses: {
+                set: courseClassIds.map(id => ({ id }))
+            },
             teacherId: teacherId || null,
         }
     });

@@ -5,7 +5,7 @@ import { createLesson } from '../actions';
 export default async function NovaAulaPage() {
   const disciplinas = await prisma.discipline.findMany({
     include: {
-      courseClass: {
+      courseClasses: {
         select: { name: true }
       }
     },
@@ -54,7 +54,7 @@ export default async function NovaAulaPage() {
                         {d.name}
                       </span>
                       <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {d.courseClass.name}
+                        {d.courseClasses.map(cc => cc.name).join(', ')}
                       </span>
                     </div>
                   </label>

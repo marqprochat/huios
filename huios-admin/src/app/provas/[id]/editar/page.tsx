@@ -15,7 +15,7 @@ export default async function EditarProvaPage({ params }: Props) {
     include: {
       discipline: {
         include: {
-          courseClass: true
+          courseClasses: true
         }
       },
       _count: {
@@ -30,7 +30,7 @@ export default async function EditarProvaPage({ params }: Props) {
 
   const disciplinas = await prisma.discipline.findMany({
     include: {
-      courseClass: {
+      courseClasses: {
         select: { name: true }
       }
     },
@@ -89,7 +89,7 @@ export default async function EditarProvaPage({ params }: Props) {
               >
                 {disciplinas.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.name} - {d.courseClass.name}
+                    {d.name} - {d.courseClasses.map(cc => cc.name).join(', ')}
                   </option>
                 ))}
               </select>

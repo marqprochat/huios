@@ -18,7 +18,7 @@ export const getStudentGrades = async (req: Request, res: Response) => {
           select: {
             id: true,
             name: true,
-            courseClass: {
+            courseClasses: {
               select: {
                 name: true
               }

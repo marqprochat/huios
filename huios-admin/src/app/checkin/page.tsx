@@ -11,9 +11,9 @@ interface Lesson {
   locationName: string | null;
   discipline: {
     name: string;
-    courseClass: {
+    courseClasses: {
       name: string;
-    };
+    }[];
   };
 }
 
@@ -132,7 +132,7 @@ export default function CheckInHomePage() {
                       {lesson.discipline.name}
                     </h3>
                     <p className="text-sm text-slate-500">
-                      {lesson.discipline.courseClass.name}
+                      {lesson.discipline.courseClasses.map(cc => cc.name).join(', ')}
                     </p>
                     <div className="flex items-center gap-4 mt-2 text-sm text-slate-600 dark:text-slate-400">
                       <span className="flex items-center gap-1">

@@ -6,7 +6,7 @@ import Link from 'next/link';
 interface Discipline {
   id: string;
   name: string;
-  courseClass: { name: string };
+  courseClasses: { name: string }[];
 }
 
 interface StudentStat {
@@ -159,7 +159,7 @@ export default function RelatorioPresencaPage() {
               <option value="">Selecione uma disciplina</option>
               {disciplinas.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.name} - {d.courseClass.name}
+                  {d.name} - {d.courseClasses.map(cc => cc.name).join(', ')}
                 </option>
               ))}
             </select>

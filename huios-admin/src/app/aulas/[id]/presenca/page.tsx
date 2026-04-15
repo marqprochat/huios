@@ -27,9 +27,9 @@ interface Lesson {
   locationName: string | null;
   disciplines: {
     name: string;
-    courseClass: {
+    courseClasses: {
       name: string;
-    };
+    }[];
   }[];
 }
 

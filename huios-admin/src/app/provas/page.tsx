@@ -6,7 +6,7 @@ export default async function ProvasPage() {
     include: {
       discipline: {
         include: {
-          courseClass: true
+          courseClasses: true
         }
       },
       _count: {
@@ -99,7 +99,7 @@ export default async function ProvasPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-bold text-primary">{prova.discipline.name}</div>
-                    <div className="text-xs text-slate-500">{prova.discipline.courseClass.name}</div>
+                    <div className="text-xs text-slate-500">{prova.discipline.courseClasses.map(cc => cc.name).join(', ')}</div>
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                     <div>{formatDate(prova.startDate)}</div>

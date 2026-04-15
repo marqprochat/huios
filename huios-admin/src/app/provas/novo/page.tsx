@@ -5,7 +5,7 @@ import { createExam } from '../actions';
 export default async function NovaProvaPage() {
   const disciplinas = await prisma.discipline.findMany({
     include: {
-      courseClass: {
+      courseClasses: {
         select: {
           name: true
         }
@@ -72,7 +72,7 @@ export default async function NovaProvaPage() {
                 <option value="">Selecione uma disciplina</option>
                 {disciplinas.map((disciplina) => (
                   <option key={disciplina.id} value={disciplina.id}>
-                    {disciplina.name} - {disciplina.courseClass.name}
+                    {disciplina.name} - {disciplina.courseClasses.map(cc => cc.name).join(', ')}
                   </option>
                 ))}
               </select>

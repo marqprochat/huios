@@ -163,12 +163,12 @@ model Discipline {
   name String
   description String?
   workload Int? // em horas
-  courseClassId String
+  year Int? // Ano letivo (ex: 2026)
   teacherId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  courseClass CourseClass @relation(fields: [courseClassId], references: [id])
+  courseClasses CourseClass[] // N:N implícito
   teacher Teacher? @relation(fields: [teacherId], references: [id])
 
   // Relações novas

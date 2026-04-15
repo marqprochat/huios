@@ -16,7 +16,7 @@ export default async function EditarAulaPage({ params }: Props) {
       include: {
         disciplines: {
           include: {
-            courseClass: true
+            courseClasses: true
           }
         },
         _count: {
@@ -26,7 +26,7 @@ export default async function EditarAulaPage({ params }: Props) {
     }),
     prisma.discipline.findMany({
       include: {
-        courseClass: {
+        courseClasses: {
           select: { name: true }
         }
       },
@@ -94,7 +94,7 @@ export default async function EditarAulaPage({ params }: Props) {
                         {d.name}
                       </span>
                       <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {d.courseClass.name}
+                        {d.courseClasses.map(cc => cc.name).join(', ')}
                       </span>
                     </div>
                   </label>

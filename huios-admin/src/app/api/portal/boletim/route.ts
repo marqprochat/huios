@@ -26,7 +26,7 @@ export async function GET() {
             include: {
                 discipline: {
                     include: {
-                        courseClass: {
+                        courseClasses: {
                             include: { course: true }
                         },
                         teacher: true
@@ -46,9 +46,9 @@ export async function GET() {
         const classIds = enrollments.map(e => e.classId);
 
         const disciplines = await prisma.discipline.findMany({
-            where: { courseClassId: { in: classIds } },
+            where: { courseClasses: { some: { id: { in: classIds } } } },
             include: {
-                courseClass: {
+                courseClasses: {
                     include: { course: true }
                 },
                 teacher: true,

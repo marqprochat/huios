@@ -27,7 +27,7 @@ export async function GET(
             include: {
                 disciplines: {
                     include: {
-                        courseClass: true
+                        courseClasses: true
                     }
                 },
                 attendances: {
@@ -47,7 +47,9 @@ export async function GET(
         });
         const classIds = studentEnrollments.map(e => e.classId);
         
-        const relevantDiscipline = lesson.disciplines.find(d => classIds.includes(d.courseClassId)) || lesson.disciplines[0];
+        const relevantDiscipline = lesson.disciplines.find(d => 
+            d.courseClasses.some(cc => classIds.includes(cc.id))
+        ) || lesson.disciplines[0];
 
         return NextResponse.json({
             ...lesson,
