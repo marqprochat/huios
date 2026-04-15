@@ -69,6 +69,6 @@ export async function deleteGrade(id: string) {
     return { success: true };
   } catch (error) {
     console.error('Error deleting grade:', error);
-    throw new Error('Failed to delete grade');
+    return { success: false, error: 'Ocorreu um erro ao excluir a nota.' };
   }
 }

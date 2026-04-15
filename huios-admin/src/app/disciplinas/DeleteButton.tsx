@@ -8,8 +8,11 @@ export function DeleteButton({ id }: { id: string }) {
 
     const handleDelete = () => {
         if (window.confirm('Tem certeza que deseja excluir esta disciplina? Esta ação não pode ser desfeita.')) {
-            startTransition(() => {
-                deleteDiscipline(id);
+            startTransition(async () => {
+                const result = await deleteDiscipline(id);
+                if (result && !result.success) {
+                    alert(result.error);
+                }
             });
         }
     };

@@ -8,8 +8,11 @@ export function DeleteButton({ id }: { id: string }) {
 
     const handleDelete = () => {
         if (window.confirm('Tem certeza que deseja excluir este professor? Esta ação não pode ser desfeita.')) {
-            startTransition(() => {
-                deleteProfessor(id);
+            startTransition(async () => {
+                const result = await deleteProfessor(id);
+                if (result && !result.success) {
+                    alert(result.error);
+                }
             });
         }
     };

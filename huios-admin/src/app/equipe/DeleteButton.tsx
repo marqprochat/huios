@@ -9,7 +9,10 @@ export function DeleteButton({ id }: { id: string }) {
     const handleDelete = () => {
         if (confirm('Tem certeza que deseja excluir este membro da equipe?')) {
             startTransition(async () => {
-                await deleteTeamMember(id);
+                const result = await deleteTeamMember(id);
+                if (result && !result.success) {
+                    alert(result.error);
+                }
             });
         }
     };

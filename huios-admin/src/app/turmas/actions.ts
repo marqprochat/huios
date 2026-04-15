@@ -56,9 +56,26 @@ export async function updateCourseClass(id: string, formData: FormData) {
 }
 
 export async function deleteCourseClass(id: string) {
-    await prisma.courseClass.delete({
-        where: { id }
-    });
-    
-    revalidatePath('/turmas');
+    try {
+        await prisma.courseClass.delete({
+            where: { id }
+        });
+        
+        revalidatePath('/turmas');
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error deleting course class:', error);
+        
+        if (error.code === 'P2003') {
+            return { 
+                success: false, 
+                error: 'Não é possível excluir esta turma pois existem disciplinas ou matrículas vinculadas a ela.' 
+            };
+        }
+        
+        return { 
+            success: false, 
+            error: 'Ocorreu um erro ao tentar excluir a turma.' 
+        };
+    }
 }

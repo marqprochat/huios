@@ -65,9 +65,26 @@ export async function updateProfessor(id: string, formData: FormData) {
 }
 
 export async function deleteProfessor(id: string) {
-    await prisma.teacher.delete({
-        where: { id }
-    });
-    
-    revalidatePath('/professores');
+    try {
+        await prisma.teacher.delete({
+            where: { id }
+        });
+        
+        revalidatePath('/professores');
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error deleting teacher:', error);
+        
+        if (error.code === 'P2003') {
+            return { 
+                success: false, 
+                error: 'Não é possível excluir este professor pois existem turmas ou disciplinas vinculadas a ele.' 
+            };
+        }
+        
+        return { 
+            success: false, 
+            error: 'Ocorreu um erro ao tentar excluir o professor.' 
+        };
+    }
 }

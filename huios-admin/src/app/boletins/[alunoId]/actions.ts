@@ -73,6 +73,8 @@ export async function getReportCardData(studentId: string) {
       }
     });
 
+    reportCard.sort((a, b) => a.discipline.name.localeCompare(b.discipline.name));
+
     return { student, disciplines: reportCard };
   } catch (error: any) {
     console.error('Error fetching report card via action:', error);
@@ -159,6 +161,6 @@ export async function deleteManualGrade(gradeId: string, studentId: string) {
     return { success: true };
   } catch (error: any) {
     console.error('Error deleting grade:', error);
-    throw new Error('Failed to delete grade');
+    return { success: false, error: 'Ocorreu um erro ao excluir a nota.' };
   }
 }

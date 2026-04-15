@@ -8,8 +8,11 @@ export function DeleteButton({ id }: { id: string }) {
 
     const handleDelete = () => {
         if (window.confirm('Tem certeza que deseja excluir esta turma? Esta ação não pode ser desfeita.')) {
-            startTransition(() => {
-                deleteCourseClass(id);
+            startTransition(async () => {
+                const result = await deleteCourseClass(id);
+                if (result && !result.success) {
+                    alert(result.error);
+                }
             });
         }
     };

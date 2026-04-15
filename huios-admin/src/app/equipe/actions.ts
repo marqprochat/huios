@@ -131,8 +131,12 @@ export async function deleteTeamMember(id: string) {
             where: { id },
         });
         revalidatePath('/equipe');
-    } catch (error) {
+        return { success: true };
+    } catch (error: any) {
         console.error('Erro ao deletar membro da equipe:', error);
-        throw error;
+        return { 
+            success: false, 
+            error: 'Não foi possível excluir o membro da equipe. Verifique se existem registros vinculados.' 
+        };
     }
 }

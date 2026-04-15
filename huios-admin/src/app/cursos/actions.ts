@@ -81,9 +81,26 @@ export async function updateCourse(id: string, formData: FormData) {
 }
 
 export async function deleteCourse(id: string) {
-    await prisma.course.delete({
-        where: { id }
-    });
-    
-    revalidatePath('/cursos');
+    try {
+        await prisma.course.delete({
+            where: { id }
+        });
+        
+        revalidatePath('/cursos');
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error deleting course:', error);
+        
+        if (error.code === 'P2003') {
+            return { 
+                success: false, 
+                error: 'Não é possível excluir este curso pois existem turmas vinculadas a ele.' 
+            };
+        }
+        
+        return { 
+            success: false, 
+            error: 'Ocorreu um erro ao tentar excluir o curso.' 
+        };
+    }
 }
