@@ -50,9 +50,8 @@ export default function BoletimPage() {
   };
 
   const getStatus = (media: number | null) => {
-    if (media === null) return { label: 'Cursando', color: 'text-slate-400', bg: 'bg-slate-50' };
+    if (media === null) return { label: 'Aguardando', color: 'text-slate-400', bg: 'bg-slate-50' };
     if (media >= 7) return { label: 'Aprovado', color: 'text-emerald-600', bg: 'bg-emerald-50' };
-    if (media >= 5) return { label: 'Recuperação', color: 'text-amber-600', bg: 'bg-amber-50' };
     return { label: 'Reprovado', color: 'text-red-600', bg: 'bg-red-50' };
   };
 
@@ -144,7 +143,6 @@ export default function BoletimPage() {
                       <p className="text-[10px] font-bold text-slate-400 uppercase">Média</p>
                       <p className={`text-xl font-bold ${
                         media !== null && media >= 7 ? 'text-emerald-600' :
-                        media !== null && media >= 5 ? 'text-amber-600' :
                         media !== null ? 'text-red-600' : 'text-slate-300'
                       }`}>
                         {media !== null ? media.toFixed(1) : '—'}
@@ -166,7 +164,7 @@ export default function BoletimPage() {
                             <p className="text-[10px] text-slate-400 capitalize">{grade.type.toLowerCase()}</p>
                           </div>
                           <span className={`font-bold text-sm ${
-                            grade.score >= 7 ? 'text-emerald-600' : grade.score >= 5 ? 'text-amber-600' : 'text-red-600'
+                            grade.score >= 7 ? 'text-emerald-600' : 'text-red-600'
                           }`}>
                             {grade.score.toFixed(1)}
                           </span>

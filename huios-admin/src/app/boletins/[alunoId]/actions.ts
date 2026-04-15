@@ -67,7 +67,7 @@ export async function getReportCardData(studentId: string) {
             },
             grades: serializedGrades,
             average: Math.round(average * 100) / 100,
-            status: average >= 6 ? 'Aprovado' : average >= 4 ? 'Recuperação' : 'Reprovado'
+            status: disciplineGrades.length === 0 ? 'Aguardando' : average >= 7 ? 'Aprovado' : 'Reprovado'
           });
         });
       }
@@ -113,5 +113,52 @@ export async function createManualGrade(data: {
   } catch (error: any) {
     console.error('Error creating manual grade:', error);
     throw new Error('Failed to create grade');
+  }
+}
+
+export async function updateManualGrade(data: {
+  gradeId: string;
+  studentId: string;
+  score: number;
+  weight: number;
+  title?: string;
+  description?: string;
+}) {
+  try {
+    const { gradeId, studentId, score, weight, title, description } = data;
+
+    if (score < 0 || score > 10) {
+      throw new Error('Score must be between 0 and 10');
+    }
+
+    await prisma.grade.update({
+      where: { id: gradeId },
+      data: {
+        score,
+        weight,
+        title: title || undefined,
+        description: description || undefined,
+      }
+    });
+
+    revalidatePath(`/boletins/${studentId}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating grade:', error);
+    throw new Error(error.message || 'Failed to update grade');
+  }
+}
+
+export async function deleteManualGrade(gradeId: string, studentId: string) {
+  try {
+    await prisma.grade.delete({
+      where: { id: gradeId }
+    });
+
+    revalidatePath(`/boletins/${studentId}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting grade:', error);
+    throw new Error('Failed to delete grade');
   }
 }

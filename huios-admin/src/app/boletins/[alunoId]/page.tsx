@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useToast } from '@/app/components/Toast/useToast';
-import { getReportCardData, createManualGrade } from './actions';
+import { getReportCardData, createManualGrade, updateManualGrade, deleteManualGrade } from './actions';
 
 interface Grade {
   id: string;
@@ -46,6 +46,19 @@ export default function BoletimAlunoPage() {
   const [showAddGrade, setShowAddGrade] = useState(false);
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('');
   
+  // Edit state
+  const [editingGrade, setEditingGrade] = useState<Grade | null>(null);
+  const [editForm, setEditForm] = useState({
+    score: '',
+    weight: '',
+    title: '',
+    description: '',
+  });
+
+  // Delete state
+  const [deletingGrade, setDeletingGrade] = useState<Grade | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
   // Form state
   const [newGrade, setNewGrade] = useState({
     score: '',
@@ -103,6 +116,58 @@ export default function BoletimAlunoPage() {
     }
   };
 
+  const handleStartEdit = (grade: Grade) => {
+    setEditingGrade(grade);
+    setEditForm({
+      score: grade.score.toString(),
+      weight: grade.weight.toString(),
+      title: grade.title || '',
+      description: grade.description || '',
+    });
+  };
+
+  const handleEditGrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingGrade) return;
+
+    setActionLoading(true);
+    try {
+      await updateManualGrade({
+        gradeId: editingGrade.id,
+        studentId: alunoId,
+        score: parseFloat(editForm.score),
+        weight: parseFloat(editForm.weight),
+        title: editForm.title,
+        description: editForm.description,
+      });
+      setEditingGrade(null);
+      fetchReportCard();
+      toast('success', 'Nota atualizada', 'A nota foi editada com sucesso.');
+    } catch (error) {
+      console.error('Error updating grade:', error);
+      toast('error', 'Erro ao atualizar', 'Não foi possível atualizar a nota.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteGrade = async () => {
+    if (!deletingGrade) return;
+
+    setActionLoading(true);
+    try {
+      await deleteManualGrade(deletingGrade.id, alunoId);
+      setDeletingGrade(null);
+      fetchReportCard();
+      toast('success', 'Nota excluída', 'A nota foi removida com sucesso.');
+    } catch (error) {
+      console.error('Error deleting grade:', error);
+      toast('error', 'Erro ao excluir', 'Não foi possível excluir a nota.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       EXAM: 'Prova',
@@ -117,8 +182,8 @@ export default function BoletimAlunoPage() {
     switch (status) {
       case 'Aprovado':
         return 'text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400';
-      case 'Recuperação':
-        return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400';
+      case 'Aguardando':
+        return 'text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-400';
       default:
         return 'text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400';
     }
@@ -130,9 +195,9 @@ export default function BoletimAlunoPage() {
 
   const stats = {
     total: disciplines.length,
-    approved: disciplines.filter(d => d.average >= 6).length,
-    recovery: disciplines.filter(d => d.average >= 4 && d.average < 6).length,
-    failed: disciplines.filter(d => d.average < 4).length
+    approved: disciplines.filter(d => d.status === 'Aprovado').length,
+    failed: disciplines.filter(d => d.status === 'Reprovado').length,
+    waiting: disciplines.filter(d => d.status === 'Aguardando').length
   };
 
   if (loading) {
@@ -189,12 +254,12 @@ export default function BoletimAlunoPage() {
           <div className="text-sm text-slate-500">Aprovados</div>
         </div>
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-          <div className="text-3xl font-black text-yellow-600">{stats.recovery}</div>
-          <div className="text-sm text-slate-500">Recuperação</div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
           <div className="text-3xl font-black text-red-600">{stats.failed}</div>
           <div className="text-sm text-slate-500">Reprovados</div>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+          <div className="text-3xl font-black text-slate-500">{stats.waiting}</div>
+          <div className="text-sm text-slate-500">Aguardando</div>
         </div>
       </div>
 
@@ -350,6 +415,7 @@ export default function BoletimAlunoPage() {
                       <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Avaliação</th>
                       <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Peso</th>
                       <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Nota</th>
+                      <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -372,11 +438,28 @@ export default function BoletimAlunoPage() {
                         <td className="px-6 py-3 text-sm text-slate-500">{grade.weight}</td>
                         <td className="px-6 py-3">
                           <span className={`font-bold ${
-                            grade.score >= 6 ? 'text-green-600' : 
-                            grade.score >= 4 ? 'text-yellow-600' : 'text-red-600'
+                            grade.score >= 7 ? 'text-green-600' : 'text-red-600'
                           }`}>
                             {grade.score.toFixed(1)}
                           </span>
+                        </td>
+                        <td className="px-6 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => handleStartEdit(grade)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                              title="Editar nota"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">edit</span>
+                            </button>
+                            <button
+                              onClick={() => setDeletingGrade(grade)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                              title="Excluir nota"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">delete</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -396,6 +479,146 @@ export default function BoletimAlunoPage() {
         <div className="text-center py-12 text-slate-500">
           <span className="material-symbols-outlined text-4xl mb-2">school</span>
           <p>Nenhuma disciplina encontrada para este aluno</p>
+        </div>
+      )}
+
+      {/* Edit Grade Modal */}
+      {editingGrade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-lg mx-4 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Editar Nota</h3>
+              <button
+                onClick={() => setEditingGrade(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleEditGrade} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                    Nota (0-10) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    step="0.1"
+                    value={editForm.score}
+                    onChange={(e) => setEditForm({ ...editForm, score: e.target.value })}
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                    Peso
+                  </label>
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    value={editForm.weight}
+                    onChange={(e) => setEditForm({ ...editForm, weight: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                  Título
+                </label>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  placeholder="Ex: Trabalho 1"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                  Descrição
+                </label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  rows={2}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingGrade(null)}
+                  className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {actionLoading && <span className="material-symbols-outlined text-sm animate-spin">refresh</span>}
+                  Salvar Alterações
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingGrade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-md mx-4 shadow-2xl">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-2xl">warning</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Excluir Nota</h3>
+                <p className="text-sm text-slate-500">Esta ação não pode ser desfeita.</p>
+              </div>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-slate-900 dark:text-white">
+                    {deletingGrade.title || deletingGrade.exam?.title || 'Sem título'}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    {getTypeLabel(deletingGrade.type)} • {new Date(deletingGrade.createdAt).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+                <span className={`text-xl font-black ${
+                  deletingGrade.score >= 6 ? 'text-green-600' :
+                  deletingGrade.score >= 4 ? 'text-yellow-600' : 'text-red-600'
+                }`}>
+                  {deletingGrade.score.toFixed(1)}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeletingGrade(null)}
+                className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteGrade}
+                disabled={actionLoading}
+                className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center gap-2"
+              >
+                {actionLoading && <span className="material-symbols-outlined text-sm animate-spin">refresh</span>}
+                Excluir
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

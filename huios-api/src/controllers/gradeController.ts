@@ -361,7 +361,7 @@ export const getReportCard = async (req: Request, res: Response) => {
             },
             grades: disciplineGrades,
             average: Math.round(average * 100) / 100,
-            status: average >= 6 ? 'Aprovado' : average >= 4 ? 'Recuperação' : 'Reprovado'
+            status: disciplineGrades.length === 0 ? 'Aguardando' : average >= 7 ? 'Aprovado' : 'Reprovado'
           });
         });
       }
@@ -377,9 +377,9 @@ export const getReportCard = async (req: Request, res: Response) => {
       disciplines: reportCard,
       overallAverage: Math.round(overallAverage * 100) / 100,
       totalDisciplines: reportCard.length,
-      approved: reportCard.filter(r => r.average >= 6).length,
-      recovery: reportCard.filter(r => r.average >= 4 && r.average < 6).length,
-      failed: reportCard.filter(r => r.average < 4).length
+      approved: reportCard.filter(r => r.status === 'Aprovado').length,
+      failed: reportCard.filter(r => r.status === 'Reprovado').length,
+      waiting: reportCard.filter(r => r.status === 'Aguardando').length
     });
   } catch (error) {
     console.error('Error generating report card:', error);
