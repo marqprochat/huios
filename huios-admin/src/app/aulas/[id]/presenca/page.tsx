@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { formatDateBR } from '@/lib/date-utils';
+import { API_URL } from '@/lib/api';
 import { useToast } from '@/app/components/Toast/useToast';
 
 interface Attendance {
@@ -50,7 +51,7 @@ export default function PresencaPage() {
 
   const fetchLesson = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/lessons/${lessonId}`);
+      const response = await fetch(`${API_URL}/api/lessons/${lessonId}`);
       if (response.ok) {
         const data = await response.json();
         setLesson(data);
@@ -62,7 +63,7 @@ export default function PresencaPage() {
 
   const fetchAttendances = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/lessons/${lessonId}/attendances`);
+      const response = await fetch(`${API_URL}/api/lessons/${lessonId}/attendances`);
       if (response.ok) {
         const data = await response.json();
         setAttendances(data);
@@ -95,7 +96,7 @@ export default function PresencaPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/lessons/${lessonId}/attendances/bulk`, {
+      const response = await fetch(`${API_URL}/api/lessons/${lessonId}/attendances/bulk`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

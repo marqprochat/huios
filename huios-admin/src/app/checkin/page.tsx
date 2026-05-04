@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { API_URL } from '@/lib/api';
 
 interface Lesson {
   id: string;
@@ -31,7 +32,7 @@ export default function CheckInHomePage() {
       // Get today's date
       const today = new Date().toISOString().split('T')[0];
       
-      const response = await fetch(`http://localhost:3001/api/lessons?date=${today}`);
+       const response = await fetch(`${API_URL}/api/lessons?date=${today}`);
       if (response.ok) {
         const data = await response.json();
         setLessons(data);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { deleteLessonMaterial, getLessonMaterials } from '../actions';
+import { API_URL } from '@/lib/api';
 import { useToast } from '@/app/components/Toast/useToast';
 
 interface Material {
@@ -48,7 +49,7 @@ export default function LessonMaterials({ lessonId }: LessonMaterialsProps) {
 
     try {
       // Use API for upload
-      const response = await fetch(`http://localhost:3001/api/lessons/${lessonId}/materials`, {
+      const response = await fetch(`${API_URL}/api/lessons/${lessonId}/materials`, {
         method: 'POST',
         body: formData
       });
@@ -72,7 +73,7 @@ export default function LessonMaterials({ lessonId }: LessonMaterialsProps) {
     
     try {
       // Call API or Action to delete
-      const response = await fetch(`http://localhost:3001/api/lessons/${lessonId}/materials/${id}`, {
+      const response = await fetch(`${API_URL}/api/lessons/${lessonId}/materials/${id}`, {
         method: 'DELETE'
       });
       
@@ -139,7 +140,7 @@ export default function LessonMaterials({ lessonId }: LessonMaterialsProps) {
               </div>
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <a 
-                  href={`http://localhost:3001/api/lessons/${lessonId}/materials/${material.id}/download`} 
+                  href={`${API_URL}/api/lessons/${lessonId}/materials/${material.id}/download`} 
                   target="_blank" 
                   rel="noreferrer"
                   className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-primary rounded-lg transition-colors"

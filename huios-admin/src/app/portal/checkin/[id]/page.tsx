@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toLocalDate } from '@/lib/date-utils';
+import { API_URL } from '@/lib/api';
 
 interface Lesson {
   id: string;
@@ -115,9 +116,8 @@ export default function CheckInPage() {
     const realLessonId = lesson.id;
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        try {
-          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-          const response = await fetch(`${API_URL}/api/lessons/${realLessonId}/checkin`, {
+          try {
+            const response = await fetch(`${API_URL}/api/lessons/${realLessonId}/checkin`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -170,9 +170,8 @@ export default function CheckInPage() {
     const realLessonId = lesson.id;
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        try {
-          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-          const response = await fetch(`${API_URL}/api/lessons/${realLessonId}/checkout`, {
+          try {
+            const response = await fetch(`${API_URL}/api/lessons/${realLessonId}/checkout`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

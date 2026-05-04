@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { API_URL } from '@/lib/api';
 
 interface Discipline {
   id: string;
@@ -59,7 +60,7 @@ export default function RelatorioPresencaPage() {
 
   const fetchDisciplinas = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/classes');
+      const response = await fetch(`${API_URL}/api/classes`);
       if (response.ok) {
         // Buscar disciplinas de alguma forma - vamos simplificar por enquanto
         const data = await response.json();
@@ -74,7 +75,7 @@ export default function RelatorioPresencaPage() {
   const fetchReport = async () => {
     setLoading(true);
     try {
-      let url = `http://localhost:3001/api/attendance/discipline/${selectedDiscipline}`;
+      let url = `${API_URL}/api/attendance/discipline/${selectedDiscipline}`;
       if (dateRange.start || dateRange.end) {
         const params = new URLSearchParams();
         if (dateRange.start) params.append('startDate', dateRange.start);

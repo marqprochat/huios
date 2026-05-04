@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { API_URL } from '@/lib/api';
 import { useToast } from '@/app/components/Toast/useToast';
 
 interface Alternative {
@@ -47,7 +48,7 @@ export default function QuestoesPage() {
 
   const fetchExam = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/exams/${examId}`);
+      const response = await fetch(`${API_URL}/api/exams/${examId}`);
       if (response.ok) {
         const data = await response.json();
         setExam(data);
@@ -59,7 +60,7 @@ export default function QuestoesPage() {
 
   const fetchQuestions = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/exams/${examId}/questions`);
+      const response = await fetch(`${API_URL}/api/exams/${examId}/questions`);
       if (response.ok) {
         const data = await response.json();
         setQuestions(data);
@@ -129,8 +130,8 @@ export default function QuestoesPage() {
 
     try {
       const url = editingQuestion 
-        ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/exams/${examId}/questions/${editingQuestion.id}`
-        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/exams/${examId}/questions`;
+        ? `${API_URL}/api/exams/${examId}/questions/${editingQuestion.id}`
+        : `${API_URL}/api/exams/${examId}/questions`;
       
       const response = await fetch(url, {
         method: editingQuestion ? 'PUT' : 'POST',
@@ -167,7 +168,7 @@ export default function QuestoesPage() {
     
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/exams/${examId}/questions/${questionId}`,
+        `${API_URL}/api/exams/${examId}/questions/${questionId}`,
         { method: 'DELETE' }
       );
       
