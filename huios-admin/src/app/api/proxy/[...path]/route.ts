@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const INTERNAL_API_URL = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-
 function getApiBase() {
-  let base = INTERNAL_API_URL;
+  // Sempre resolve em runtime
+  const internalUrl = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://api:3001/api';
+  let base = internalUrl;
+  
+  if (base.includes('localhost') || base.includes('127.0.0.1')) {
+    base = 'http://api:3001/api';
+  }
+
   if (base.endsWith('/')) base = base.slice(0, -1);
   if (base.endsWith('/api')) base = base.slice(0, -4);
   return base;
@@ -13,6 +18,7 @@ async function proxyRequest(request: NextRequest, params: Promise<{ path: string
   const { path } = await params;
   const apiPath = path.join('/');
   const apiBase = getApiBase();
+  
   // path already includes 'api/...' from the client-side URL
   const targetUrl = new URL(`/${apiPath}`, apiBase);
 
@@ -27,6 +33,7 @@ async function proxyRequest(request: NextRequest, params: Promise<{ path: string
   // Forward relevant headers
   const contentType = request.headers.get('content-type');
   if (contentType) headers.set('Content-Type', contentType);
+  
   const authorization = request.headers.get('authorization');
   if (authorization) headers.set('Authorization', authorization);
 
@@ -37,22 +44,25 @@ async function proxyRequest(request: NextRequest, params: Promise<{ path: string
 
   // Forward body for non-GET/HEAD requests
   if (request.method !== 'GET' && request.method !== 'HEAD') {
-    if (contentType?.includes('multipart/form-data')) {
-      // For multipart, pass the raw body and let fetch set the boundary
-      const formData = await request.formData();
-      fetchOptions.body = formData;
-      // Remove content-type so fetch sets it correctly with boundary
-      headers.delete('Content-Type');
-    } else {
-      fetchOptions.body = await request.text();
+    try {
+      if (contentType?.includes('multipart/form-data')) {
+        const formData = await request.formData();
+        fetchOptions.body = formData;
+        headers.delete('Content-Type');
+      } else {
+        fetchOptions.body = await request.text();
+      }
+    } catch (e) {
+      console.warn('[API Proxy] Could not parse body:', e);
     }
   }
 
   try {
     const response = await fetch(targetUrl.toString(), fetchOptions);
 
-    // For file downloads, stream the response
     const responseContentType = response.headers.get('content-type') || '';
+    
+    // For file downloads or PDFs, stream the response
     if (
       responseContentType.includes('application/octet-stream') ||
       responseContentType.includes('application/pdf') ||
@@ -60,14 +70,12 @@ async function proxyRequest(request: NextRequest, params: Promise<{ path: string
     ) {
       const blob = await response.blob();
       const responseHeaders = new Headers();
-      const ct = response.headers.get('content-type');
-      if (ct) responseHeaders.set('Content-Type', ct);
+      if (responseContentType) responseHeaders.set('Content-Type', responseContentType);
       const cd = response.headers.get('content-disposition');
       if (cd) responseHeaders.set('Content-Disposition', cd);
       return new NextResponse(blob, { status: response.status, headers: responseHeaders });
     }
 
-    // For JSON responses
     const data = await response.text();
     return new NextResponse(data, {
       status: response.status,
@@ -75,10 +83,10 @@ async function proxyRequest(request: NextRequest, params: Promise<{ path: string
         'Content-Type': responseContentType || 'application/json',
       },
     });
-  } catch (error) {
-    console.error(`[API Proxy] Error proxying ${request.method} /api/${apiPath}:`, error);
+  } catch (error: any) {
+    console.error(`[API Proxy] Error proxying ${request.method} /${apiPath}:`, error);
     return NextResponse.json(
-      { error: 'Erro de comunicação com o servidor.' },
+      { error: `Erro de comunicação interna: ${error.message}` },
       { status: 502 }
     );
   }

@@ -17,41 +17,51 @@ export async function POST(request: Request) {
 
         // Call the backend API
         const apiUrl = getApiUrl();
-        const apiResponse = await fetch(`${apiUrl}/api/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
+        const fullUrl = `${apiUrl}/api/auth/login`;
+        
+        try {
+            const apiResponse = await fetch(fullUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
 
-        const data = await apiResponse.json();
+            const data = await apiResponse.json();
 
-        if (!apiResponse.ok) {
+            if (!apiResponse.ok) {
+                return NextResponse.json(
+                    { error: data.message || 'Credenciais inválidas.' },
+                    { status: apiResponse.status }
+                );
+            }
+
+            const { token, user } = data;
+
+            const response = NextResponse.json({
+                success: true,
+                user
+            });
+
+            response.cookies.set(COOKIE_NAME, token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 60 * 60 * 24 * 7, // 7 days
+                path: '/',
+            });
+
+            return response;
+        } catch (fetchError: any) {
+            console.error('Fetch error calling backend:', fetchError);
             return NextResponse.json(
-                { error: data.message || 'Credenciais inválidas.' },
-                { status: apiResponse.status }
+                { error: `Erro ao conectar na API interna: ${fetchError.message}` },
+                { status: 502 }
             );
         }
-
-        const { token, user } = data;
-
-        const response = NextResponse.json({
-            success: true,
-            user
-        });
-
-        response.cookies.set(COOKIE_NAME, token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 7, // 7 days
-            path: '/',
-        });
-
-        return response;
-    } catch (error) {
-        console.error('Login proxy error:', error);
+    } catch (error: any) {
+        console.error('Login proxy internal error:', error);
         return NextResponse.json(
-            { error: 'Erro ao conectar ao servidor de autenticação.' },
+            { error: 'Erro interno no servidor de login.' },
             { status: 500 }
         );
     }
