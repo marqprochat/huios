@@ -48,7 +48,6 @@ export default function LessonMaterials({ lessonId }: LessonMaterialsProps) {
     formData.append('file', file);
 
     try {
-      // Use API for upload
       const response = await fetch(`${API_URL}/api/lessons/${lessonId}/materials`, {
         method: 'POST',
         body: formData
@@ -72,7 +71,6 @@ export default function LessonMaterials({ lessonId }: LessonMaterialsProps) {
     if (!confirm('Excluir este material?')) return;
     
     try {
-      // Call API or Action to delete
       const response = await fetch(`${API_URL}/api/lessons/${lessonId}/materials/${id}`, {
         method: 'DELETE'
       });
