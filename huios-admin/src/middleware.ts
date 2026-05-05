@@ -8,7 +8,7 @@ const JWT_SECRET = new TextEncoder().encode(
 
 const COOKIE_NAME = 'huios-session'
 
-const PUBLIC_PATHS = ['/login', '/portal/login', '/api/auth/', '/api/portal/']
+const PUBLIC_PATHS = ['/login', '/portal/login', '/api/auth/', '/api/portal/', '/api/proxy/']
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { verifyPassword, signToken, COOKIE_NAME } from '@/lib/auth'
-import { API_URL } from '@/lib/api'
+import { getApiUrl } from '@/lib/api'
 
 export async function POST(request: Request) {
     try {
@@ -15,8 +15,9 @@ export async function POST(request: Request) {
             )
         }
 
-        // Call the new Express API
-        const apiResponse = await fetch(`${API_URL}/api/auth/login`, {
+        // Call the backend API
+        const apiUrl = getApiUrl();
+        const apiResponse = await fetch(`${apiUrl}/api/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
