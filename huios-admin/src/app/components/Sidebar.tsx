@@ -63,6 +63,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
     { href: "/provas", icon: "quiz", label: "Provas" },
     { href: "/aulas", icon: "calendar_today", label: "Aulas" },
     { href: "/boletins", icon: "grade", label: "Boletins" },
+    { href: "/avaliacoes", icon: "rate_review", label: "Avaliações" },
   ]}
   />
 

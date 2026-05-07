@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+// Re-generated types
 
 const prismaClientSingleton = () => {
     return new PrismaClient()
