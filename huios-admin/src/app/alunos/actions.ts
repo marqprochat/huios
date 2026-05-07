@@ -107,7 +107,7 @@ export async function createAluno(prevState: any, formData: FormData) {
                 data: selectedClassIds.map(classId => ({
                     studentId: student.id,
                     classId,
-                    status: 'ACTIVE',
+                    status: (formData.get(`status_${classId}`) as string) || 'CURSANDO',
                 })),
             });
         }
@@ -182,7 +182,7 @@ export async function updateAluno(id: string, prevState: any, formData: FormData
                 data: selectedClassIds.map(classId => ({
                     studentId: id,
                     classId,
-                    status: 'ACTIVE',
+                    status: (formData.get(`status_${classId}`) as string) || 'CURSANDO',
                 })),
             });
         }

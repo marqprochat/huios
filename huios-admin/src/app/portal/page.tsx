@@ -66,6 +66,16 @@ export default function PortalDashboard() {
   const courseName = enrollment?.class?.course?.name || 'Sem matrícula';
   const className = enrollment?.class?.name || '';
 
+  const statusMap: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+    CURSANDO: { label: 'Cursando', bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+    TRANCADO: { label: 'Trancado', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
+    APROVADO: { label: 'Aprovado', bg: 'bg-[#135bec]/10', text: 'text-[#135bec]', dot: 'bg-[#135bec]' },
+    REPROVADO: { label: 'Reprovado', bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
+  };
+
+  const currentStatusStr = enrollment?.status || 'SEM_MATRICULA';
+  const statusInfo = statusMap[currentStatusStr] || { label: 'Sem Matrícula', bg: 'bg-slate-100', text: 'text-slate-700', dot: 'bg-slate-500' };
+
   // Today's lessons
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -125,9 +135,9 @@ export default function PortalDashboard() {
             <span className="w-2 h-2 bg-[#135bec] rounded-full"></span>
             Semestre 2024.1
           </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold">
-            <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-            Matriculado
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full ${statusInfo.bg} ${statusInfo.text} text-xs font-semibold`}>
+            <span className={`w-2 h-2 ${statusInfo.dot} rounded-full`}></span>
+            {statusInfo.label}
           </span>
         </div>
       </div>
@@ -437,9 +447,9 @@ export default function PortalDashboard() {
               )}
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</p>
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                  Ativo
+                <span className={`inline-flex items-center gap-1 px-2 py-1 ${statusInfo.bg} ${statusInfo.text} text-xs font-semibold rounded-full`}>
+                  <span className={`w-1.5 h-1.5 ${statusInfo.dot} rounded-full`}></span>
+                  {statusInfo.label}
                 </span>
               </div>
             </div>

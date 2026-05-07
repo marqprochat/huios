@@ -2,17 +2,35 @@ import { updateDiscipline } from '../../actions';
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
+import LessonListClient from './LessonListClient';
 
 export default async function EditarDisciplinaPage({ params }: { params: Promise<{ id: string }> }) {
     const p = await params;
     const disciplina = await prisma.discipline.findUnique({
         where: { id: p.id },
-        include: { courseClasses: { select: { id: true } } }
+        include: { 
+            courseClasses: {
+                include: { course: true }
+            },
+            lessons: { 
+                orderBy: { date: 'asc' },
+                include: {
+                    disciplines: {
+                        include: {
+                            courseClasses: true
+                        }
+                    }
+                }
+            }
+        }
     });
 
     if (!disciplina) {
         notFound();
     }
+
+    const settings = await prisma.systemSettings.findFirst();
+    const defaultLocationName = settings?.locationName || undefined;
 
     const turmas = await prisma.courseClass.findMany({
         include: { course: true },
@@ -103,6 +121,30 @@ export default async function EditarDisciplinaPage({ params }: { params: Promise
                         </button>
                     </div>
                 </form>
+            </div>
+
+            {/* Seção de Aulas */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 mt-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white">Aulas da Disciplina</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Gerencie os encontros e aulas desta disciplina.</p>
+                    </div>
+                    <Link href={`/aulas/novo?disciplineId=${disciplina.id}`} className="bg-primary/10 text-primary px-4 py-2 rounded-xl text-sm font-bold hover:bg-primary/20 transition-colors flex items-center justify-center gap-2">
+                        <span className="material-symbols-outlined text-[18px]">add</span>
+                        Nova Aula
+                    </Link>
+                </div>
+
+                {disciplina.lessons && disciplina.lessons.length > 0 ? (
+                    <LessonListClient lessons={disciplina.lessons} defaultLocationName={defaultLocationName} />
+                ) : (
+                    <div className="text-center py-8 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
+                        <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">event_busy</span>
+                        <p className="text-slate-500 dark:text-slate-400 font-medium">Nenhuma aula lançada ainda.</p>
+                        <p className="text-sm text-slate-400 mt-1">Clique em "Nova Aula" para adicionar o primeiro encontro.</p>
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -178,22 +178,33 @@ export default function NovoAlunoForm({ classes }: { classes: any[] }) {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {classes.map(cls => (
-                            <label key={cls.id} className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group">
-                                <input type="checkbox" name="classIds" value={cls.id} className="mt-0.5 w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary" />
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors">{cls.name}</p>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                        Curso: {cls.course.name} {cls.duration ? `• Duração: ${cls.duration}` : ''}
-                                    </p>
-                                    {(cls.startDate || cls.endDate) && (
-                                        <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                                            <span className="material-symbols-outlined text-[12px]">calendar_month</span>
-                                            {cls.startDate ? new Date(cls.startDate).toLocaleDateString('pt-BR') : ''} 
-                                            {cls.endDate ? ` até ${new Date(cls.endDate).toLocaleDateString('pt-BR')}` : ''}
+                            <div key={cls.id} className="flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary/50 hover:bg-primary/5 transition-all group">
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" name="classIds" value={cls.id} className="mt-0.5 w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors">{cls.name}</p>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                            Curso: {cls.course.name} {cls.duration ? `• Duração: ${cls.duration}` : ''}
                                         </p>
-                                    )}
+                                        {(cls.startDate || cls.endDate) && (
+                                            <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                                                <span className="material-symbols-outlined text-[12px]">calendar_month</span>
+                                                {cls.startDate ? new Date(cls.startDate).toLocaleDateString('pt-BR') : ''} 
+                                                {cls.endDate ? ` até ${new Date(cls.endDate).toLocaleDateString('pt-BR')}` : ''}
+                                            </p>
+                                        )}
+                                    </div>
+                                </label>
+                                <div className="pl-7">
+                                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Status da Matrícula</label>
+                                    <select name={`status_${cls.id}`} defaultValue="CURSANDO" className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white">
+                                        <option value="CURSANDO">Cursando</option>
+                                        <option value="TRANCADO">Trancado</option>
+                                        <option value="APROVADO">Aprovado</option>
+                                        <option value="REPROVADO">Reprovado</option>
+                                    </select>
                                 </div>
-                            </label>
+                            </div>
                         ))}
                     </div>
                 )}

@@ -26,7 +26,10 @@ export default async function EditarAlunoPage({ params }: EditarAlunoProps) {
     }
 
     const classes = await fetchClasses();
-    const enrolledClassIds = aluno.enrollments.map(e => e.classId);
+    const enrollmentsMap = aluno.enrollments.reduce((acc: any, e: any) => {
+        acc[e.classId] = e.status;
+        return acc;
+    }, {});
 
     return (
         <div className="max-w-[900px] mx-auto p-4 lg:p-8 space-y-6">
@@ -41,7 +44,7 @@ export default async function EditarAlunoPage({ params }: EditarAlunoProps) {
             </div>
 
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8">
-                <EditarAlunoForm aluno={aluno} classes={classes} enrolledClassIds={enrolledClassIds} />
+                <EditarAlunoForm aluno={aluno} classes={classes} enrollmentsMap={enrollmentsMap} />
             </div>
         </div>
     );

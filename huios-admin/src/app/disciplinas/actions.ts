@@ -19,7 +19,7 @@ export async function createDiscipline(formData: FormData) {
     const workload = workloadStr ? parseInt(workloadStr, 10) : null;
     const year = yearStr ? parseInt(yearStr, 10) : null;
 
-    await prisma.discipline.create({
+    const discipline = await prisma.discipline.create({
         data: {
             name,
             description: description || null,
@@ -33,7 +33,43 @@ export async function createDiscipline(formData: FormData) {
     });
 
     revalidatePath('/disciplinas');
-    redirect('/disciplinas');
+    return discipline;
+}
+
+export async function createDisciplinesBatch(formData: FormData) {
+    const namesText = formData.get('names') as string;
+    const courseClassIds = formData.getAll('courseClassIds') as string[];
+    const teacherId = formData.get('teacherId') as string;
+    const yearStr = formData.get('year') as string;
+
+    if (!namesText || courseClassIds.length === 0) {
+        throw new Error('Nomes e pelo menos uma Turma são obrigatórios');
+    }
+
+    const year = yearStr ? parseInt(yearStr, 10) : null;
+    const names = namesText.split('\n').map(n => n.trim()).filter(n => n !== '');
+
+    if (names.length === 0) {
+        throw new Error('Nenhum nome de disciplina válido fornecido');
+    }
+
+    const created = [];
+    for (const name of names) {
+        const discipline = await prisma.discipline.create({
+            data: {
+                name,
+                year,
+                courseClasses: {
+                    connect: courseClassIds.map(id => ({ id }))
+                },
+                teacherId: teacherId || null,
+            }
+        });
+        created.push(discipline);
+    }
+
+    revalidatePath('/disciplinas');
+    return created;
 }
 
 export async function updateDiscipline(id: string, formData: FormData) {

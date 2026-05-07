@@ -110,7 +110,7 @@ model Enrollment {
   id        String   @id @default(uuid())
   studentId String
   classId   String
-  status    String   @default("ACTIVE") // ACTIVE, CANCELLED, COMPLETED
+  status    String   @default("CURSANDO") // CURSANDO, TRANCADO, APROVADO, REPROVADO
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

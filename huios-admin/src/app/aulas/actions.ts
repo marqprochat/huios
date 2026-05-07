@@ -66,11 +66,15 @@ export async function createLesson(formData: FormData) {
     }
 
     revalidatePath('/aulas');
+    return lesson;
   } catch (error) {
     console.error('Error creating lesson:', error);
     throw new Error('Failed to create lesson');
   }
-  
+}
+
+export async function createLessonWithRedirect(formData: FormData) {
+  await createLesson(formData);
   redirect('/aulas');
 }
 

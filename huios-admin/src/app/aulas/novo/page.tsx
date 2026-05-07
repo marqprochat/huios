@@ -1,8 +1,11 @@
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
-import { createLesson } from '../actions';
+import { createLessonWithRedirect } from '../actions';
 
-export default async function NovaAulaPage() {
+export default async function NovaAulaPage({ searchParams }: { searchParams: Promise<{ disciplineId?: string }> }) {
+  const p = await searchParams;
+  const preSelectedDisciplineId = p.disciplineId;
+
   const disciplinas = await prisma.discipline.findMany({
     include: {
       courseClasses: {
@@ -29,7 +32,7 @@ export default async function NovaAulaPage() {
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 lg:p-8">
-        <form action={createLesson} className="space-y-6">
+        <form action={createLessonWithRedirect} className="space-y-6">
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">
@@ -43,6 +46,7 @@ export default async function NovaAulaPage() {
                         type="checkbox"
                         name="disciplineIds"
                         value={d.id}
+                        defaultChecked={preSelectedDisciplineId === d.id}
                         className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 dark:border-slate-600 checked:bg-primary checked:border-primary transition-all"
                       />
                       <span className="material-symbols-outlined absolute text-white scale-0 peer-checked:scale-100 transition-transform pointer-events-none text-base font-bold">

@@ -15,8 +15,10 @@ export default async function AulasPage() {
         }
       }
     },
-    orderBy: { date: 'asc' }
   });
+
+  const settings = await prisma.systemSettings.findFirst();
+  const defaultLocationName = settings?.locationName || undefined;
 
   // Convert to plain objects for client component
   const initialLessons = aulas.map(aula => ({
@@ -34,7 +36,7 @@ export default async function AulasPage() {
 
   return (
     <div className="max-w-[1600px] mx-auto p-4 lg:p-8">
-      <CalendarContainer initialLessons={initialLessons} />
+      <CalendarContainer initialLessons={initialLessons} defaultLocationName={defaultLocationName} />
     </div>
   );
 }
