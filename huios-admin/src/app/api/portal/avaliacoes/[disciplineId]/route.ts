@@ -4,9 +4,10 @@ import { getSession } from '@/lib/auth'
 
 export async function POST(
     request: Request,
-    { params }: { params: { disciplineId: string } }
+    { params }: { params: Promise<{ disciplineId: string }> }
 ) {
     try {
+        const { disciplineId } = await params;
         const session = await getSession();
         if (!session) {
             return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -22,7 +23,6 @@ export async function POST(
         }
 
         const studentId = user.student.id;
-        const { disciplineId } = params;
         const body = await request.json();
         const { clarity, engagement, mastery, observations } = body;
 

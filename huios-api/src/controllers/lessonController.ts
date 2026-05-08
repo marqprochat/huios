@@ -66,7 +66,7 @@ export const getLessonById = async (req: Request, res: Response) => {
               select: {
                 name: true,
                 enrollments: {
-                  where: { status: 'ACTIVE' },
+                  where: { status: 'CURSANDO' },
                   include: {
                     student: {
                       select: {
@@ -163,7 +163,7 @@ export const createLesson = async (req: Request, res: Response) => {
             some: { id: { in: ids } }
           }
         },
-        status: 'ACTIVE'
+        status: 'CURSANDO'
       },
       select: { studentId: true }
     });

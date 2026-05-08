@@ -60,7 +60,7 @@ export const getExamById = async (req: Request, res: Response) => {
               select: {
                 name: true,
                 enrollments: {
-                  where: { status: 'ACTIVE' },
+                  where: { status: 'CURSANDO' },
                   select: { id: true }
                 }
               }

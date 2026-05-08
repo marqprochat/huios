@@ -22,7 +22,7 @@ export async function GET() {
 
         // Get enrolled class IDs
         const enrollments = await prisma.enrollment.findMany({
-            where: { studentId, status: 'ACTIVE' },
+            where: { studentId, status: 'CURSANDO' },
             select: { classId: true }
         });
 

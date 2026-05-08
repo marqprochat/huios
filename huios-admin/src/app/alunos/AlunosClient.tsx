@@ -109,6 +109,15 @@ export function AlunosClient({ alunos }: AlunosClientProps) {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <Link
+                        href={`/alunos/${aluno.id}`}
+                        className="text-slate-400 hover:text-primary transition-colors"
+                        title="Ver Perfil/Gerenciar"
+                      >
+                        <span className="material-symbols-outlined text-xl">
+                          visibility
+                        </span>
+                      </Link>
+                      <Link
                         href={`/alunos/${aluno.id}/editar`}
                         className="text-slate-400 hover:text-primary transition-colors"
                         title="Editar Aluno"

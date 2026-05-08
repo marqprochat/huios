@@ -39,7 +39,7 @@ export async function GET() {
 
         // Get all disciplines the student is enrolled in (for showing 0 grades too)
         const enrollments = await prisma.enrollment.findMany({
-            where: { studentId, status: 'ACTIVE' },
+            where: { studentId, status: 'CURSANDO' },
             select: { classId: true }
         });
 

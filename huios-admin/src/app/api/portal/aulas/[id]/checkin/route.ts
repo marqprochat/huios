@@ -48,7 +48,7 @@ export async function POST(
             where: {
                  studentId: studentId,
                  classId: { in: lessonClassIds },
-                 status: 'ACTIVE'
+                 status: 'CURSANDO'
             }
         });
 

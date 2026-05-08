@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -11,9 +11,9 @@ const ratings = [
   { value: 'RUIM', label: 'Ruim', color: 'bg-red-500' },
 ];
 
-export default function AvaliacaoFormPage({ params }: { params: { disciplineId: string } }) {
+export default function AvaliacaoFormPage({ params }: { params: Promise<{ disciplineId: string }> }) {
   const router = useRouter();
-  const { disciplineId } = params;
+  const { disciplineId } = use(params);
   
   const [discipline, setDiscipline] = useState<any>(null);
   const [loading, setLoading] = useState(true);

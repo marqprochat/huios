@@ -21,7 +21,7 @@ export async function POST(request: Request) {
                 student: {
                     include: {
                         enrollments: {
-                            where: { status: 'ACTIVE' },
+                            where: { status: 'CURSANDO' },
                             include: {
                                 class: {
                                     include: { course: true }

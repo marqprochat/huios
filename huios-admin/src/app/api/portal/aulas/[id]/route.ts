@@ -42,7 +42,7 @@ export async function GET(
 
         // Compatibilidade: Encontrar a disciplina correta para o aluno
         const studentEnrollments = await prisma.enrollment.findMany({
-            where: { studentId: user.student.id, status: 'ACTIVE' },
+            where: { studentId: user.student.id, status: 'CURSANDO' },
             select: { classId: true }
         });
         const classIds = studentEnrollments.map(e => e.classId);

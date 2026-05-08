@@ -49,7 +49,7 @@ export async function createLesson(formData: FormData) {
             some: { id: { in: disciplineIds } }
           }
         },
-        status: 'ACTIVE'
+        status: 'CURSANDO'
       },
       select: { studentId: true }
     });
@@ -137,7 +137,7 @@ export async function createBulkLessons(data: {
                 some: { id: { in: disciplineIds } }
               }
             },
-            status: 'ACTIVE'
+            status: 'CURSANDO'
           },
           select: { studentId: true }
         });

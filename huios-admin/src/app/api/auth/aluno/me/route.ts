@@ -21,7 +21,7 @@ export async function GET() {
                 student: {
                     include: {
                         enrollments: {
-                            where: { status: 'ACTIVE' },
+                            where: { status: 'CURSANDO' },
                             include: {
                                 class: {
                                     include: {

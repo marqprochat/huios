@@ -7,6 +7,27 @@ const prisma = new PrismaClient();
 export const getAttendancesByLesson = async (req: Request, res: Response) => {
   try {
     const { lessonId } = req.params;
+
+    // Fetch the lesson to get its disciplines and their courseClasses
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      include: {
+        disciplines: {
+          select: {
+            id: true,
+            courseClasses: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Collect all courseClass IDs linked to this lesson's disciplines
+    const courseClassIds = lesson?.disciplines.flatMap(d => d.courseClasses.map(cc => cc.id)) || [];
     
     const attendances = await prisma.attendance.findMany({
       where: { lessonId },
@@ -15,7 +36,21 @@ export const getAttendancesByLesson = async (req: Request, res: Response) => {
           select: {
             id: true,
             name: true,
-            email: true
+            email: true,
+            enrollments: {
+              where: {
+                classId: { in: courseClassIds },
+                status: 'CURSANDO'
+              },
+              select: {
+                class: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
+              }
+            }
           }
         }
       },
