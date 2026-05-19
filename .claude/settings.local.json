@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep -l \"upload\")",
+      "Bash(npx prisma *)",
+      "Bash(docker-compose up *)",
+      "Bash(Get-ChildItem -Path \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\src\" -Recurse -Filter \"*.ts\")",
+      "Bash(Select-Object -First 20 FullName)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)"
+    ]
+  }
+}

@@ -68,6 +68,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
   />
 
   <div className="pt-4 mt-4 border-t border-slate-200 dark:border-slate-800">
+  <NavLink href="/pendencias" icon="pending_actions" label="Pendências" />
   <NavLink href="/configuracoes" icon="settings" label="Configurações" />
   </div>
   </nav>

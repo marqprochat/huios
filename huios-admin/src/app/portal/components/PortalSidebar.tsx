@@ -8,6 +8,7 @@ const navItems = [
   { href: '/portal', icon: 'dashboard', label: 'Visão Geral' },
   { href: '/portal/aulas', icon: 'calendar_today', label: 'Aulas' },
   { href: '/portal/provas', icon: 'quiz', label: 'Provas' },
+  { href: '/portal/presenca', icon: 'how_to_reg', label: 'Presenças' },
   { href: '/portal/boletim', icon: 'assessment', label: 'Boletim' },
   { href: '/portal/avaliacoes', icon: 'rate_review', label: 'Avaliações' },
   { href: '/portal/perfil', icon: 'person', label: 'Perfil' },

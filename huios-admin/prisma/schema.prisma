@@ -46,6 +46,7 @@ model Student {
   submissions ExamSubmission[]
   attendances Attendance[]
   grades Grade[]
+  absenceJustifications AbsenceJustification[]
 }
 
 model Teacher {
@@ -178,6 +179,7 @@ model Discipline {
   lessons Lesson[]
   grades Grade[]
   evaluations TeacherEvaluation[]
+  absenceJustifications AbsenceJustification[]
 }
 
 // ============================================================
@@ -346,6 +348,8 @@ model Attendance {
   markedAt DateTime?
   notes String? // Observações
 
+  justification AbsenceJustification?
+
   @@unique([lessonId, studentId]) // Um aluno por aula
 }
 
@@ -449,8 +453,53 @@ model TeacherEvaluationSubmission {
   id            String   @id @default(uuid())
   studentId     String
   disciplineId  String
-  
+
   createdAt     DateTime @default(now())
 
   @@unique([studentId, disciplineId])
+}
+
+// ============================================================
+// JUSTIFICATIVAS DE FALTA E NOTIFICAÇÕES
+// ============================================================
+
+model AbsenceJustification {
+  id           String   @id @default(uuid())
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id])
+  attendanceId String   @unique
+  attendance   Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  disciplineId String
+  discipline   Discipline @relation(fields: [disciplineId], references: [id])
+
+  fileName     String
+  filePath     String
+  fileSize     Int
+  mimeType     String
+
+  status       JustificationStatus @default(PENDING_REVIEW)
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNotes  String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum JustificationStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  type        String
+  title       String
+  message     String
+  targetRole  String   @default("COORDENADOR")
+  relatedId   String?
+  read        Boolean  @default(false)
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
 }
