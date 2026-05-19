@@ -111,6 +111,8 @@ model Enrollment {
   studentId String
   classId   String
   status    String   @default("CURSANDO") // CURSANDO, TRANCADO, APROVADO, REPROVADO
+  statusDate DateTime? @default(now())
+  statusReason String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -175,6 +177,7 @@ model Discipline {
   exams Exam[]
   lessons Lesson[]
   grades Grade[]
+  evaluations TeacherEvaluation[]
 }
 
 // ============================================================
@@ -290,6 +293,8 @@ enum QuestionType {
 
 model Lesson {
   id String @id @default(uuid())
+  
+  // Relações
   disciplines Discipline[]
 
   // Data e horário
@@ -419,4 +424,33 @@ enum GradeType {
   MANUAL // Lançamento manual
   ACTIVITY // Atividade/Trabalho
   PARTICIPATION // Participação
+}
+
+// ============================================================
+// MODELOS DE AVALIAÇÃO DE PROFESSORES
+// ============================================================
+
+model TeacherEvaluation {
+  id            String   @id @default(uuid())
+  disciplineId  String
+  discipline    Discipline @relation(fields: [disciplineId], references: [id])
+  
+  // Perguntas (EXCELENTE, BOA, REGULAR, RUIM)
+  clarity       String   // Clareza da explicação
+  engagement    String   // Engajamento e metodologia
+  mastery       String   // Domínio do conteúdo e interação
+  
+  observations  String?  // Gostaria de acrescentar alguma observação?
+  
+  createdAt     DateTime @default(now())
+}
+
+model TeacherEvaluationSubmission {
+  id            String   @id @default(uuid())
+  studentId     String
+  disciplineId  String
+  
+  createdAt     DateTime @default(now())
+
+  @@unique([studentId, disciplineId])
 }
