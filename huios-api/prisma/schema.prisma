@@ -124,15 +124,25 @@ model Enrollment {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      String   @default("ALUNO") // ALUNO, MONITOR, COORDENADOR, SUPER_ADMIN
-  active    Boolean  @default(true)
+  id         String      @id @default(uuid())
+  name       String
+  email      String      @unique
+  password   String
+  role       String      @default("ALUNO") // ALUNO, MONITOR, COORDENADOR, SUPER_ADMIN
+  active     Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  student    Student?
+  pushTokens PushToken[]
+}
+
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String   // "android" | "ios"
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  student   Student?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Course {

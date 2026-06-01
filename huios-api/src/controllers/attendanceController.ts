@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient, AttendanceStatus } from '@prisma/client';
+import { sendPushToUser } from '../services/pushService';
 
 const prisma = new PrismaClient();
 
@@ -49,7 +50,10 @@ async function applyAttendanceRules(studentId: string, disciplineId: string) {
           }
         });
 
-        const student = await prisma.student.findUnique({ where: { id: studentId }, select: { name: true } });
+        const student = await prisma.student.findUnique({
+          where: { id: studentId },
+          select: { name: true, userId: true },
+        });
         await prisma.notification.create({
           data: {
             type: 'AUTO_FAILED',
@@ -59,6 +63,14 @@ async function applyAttendanceRules(studentId: string, disciplineId: string) {
             relatedId: studentId
           }
         });
+        // Notifica o aluno via push
+        if (student?.userId) {
+          await sendPushToUser(
+            student.userId,
+            '⚠️ Reprovado por Faltas',
+            `Você foi reprovado na disciplina "${discipline.name}" por excesso de faltas (${absentCount}/${totalLessons} aulas).`,
+          );
+        }
       }
     }
   } else if (absentCount === ABSENT_FOR_PENDING) {
@@ -85,6 +97,19 @@ async function applyAttendanceRules(studentId: string, disciplineId: string) {
           relatedId: absences[0].id
         }
       });
+
+      // Notifica o aluno via push
+      const studentWithUser = await prisma.student.findUnique({
+        where: { id: studentId },
+        select: { userId: true },
+      });
+      if (studentWithUser?.userId) {
+        await sendPushToUser(
+          studentWithUser.userId,
+          '📋 Falta Registrada',
+          `Você tem 1 falta na disciplina "${discipline?.name}". Envie a justificativa pelo app para regularizar.`,
+        );
+      }
     }
   }
 }

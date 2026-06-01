@@ -248,7 +248,7 @@ model Alternative {
 }
 
 // Respostas dos alunos
- model ExamSubmission {
+model ExamSubmission {
   id String @id @default(uuid())
   examId String
   exam Exam @relation(fields: [examId], references: [id])

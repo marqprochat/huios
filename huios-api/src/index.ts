@@ -12,6 +12,7 @@ import attendanceRoutes from './routes/attendanceRoutes';
 import gradeRoutes from './routes/gradeRoutes';
 import settingsRoutes from './routes/settingsRoutes';
 import justificationRoutes from './routes/justificationRoutes';
+import pushTokenRoutes from './routes/pushTokenRoutes';
 
 dotenv.config();
 
@@ -21,7 +22,14 @@ const port = process.env.PORT || 3001;
 // Security Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    // Expo Go e apps mobile usam fetch diretamente (sem CORS), mas emuladores podem passar aqui
+    /^http:\/\/localhost/,
+    /^http:\/\/10\.\d+\.\d+\.\d+/,
+    /^http:\/\/192\.168\.\d+\.\d+/,
+    /^http:\/\/172\.\d+\.\d+\.\d+/,
+  ],
   credentials: true
 }));
 app.use(express.json());
@@ -35,6 +43,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/grades', gradeRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/justifications', justificationRoutes);
+app.use('/api/push-tokens', pushTokenRoutes);
 
 // Rate Limiting
 
