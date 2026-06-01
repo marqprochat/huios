@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
-import prisma from '../services/prisma';
+import { prisma } from '../services/prisma';
 
 export async function registerToken(req: AuthRequest, res: Response) {
   const userId = req.user?.id;

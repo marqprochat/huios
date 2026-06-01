@@ -1,5 +1,6 @@
 import { Expo, ExpoPushMessage } from 'expo-server-sdk';
-import prisma from './prisma';
+import { PushToken } from '@prisma/client';
+import { prisma } from './prisma';
 
 const expo = new Expo();
 
@@ -8,8 +9,8 @@ export async function sendPushToUser(userId: string, title: string, body: string
   if (tokens.length === 0) return;
 
   const messages: ExpoPushMessage[] = tokens
-    .filter((t) => Expo.isExpoPushToken(t.token))
-    .map((t) => ({
+    .filter((t: PushToken) => Expo.isExpoPushToken(t.token))
+    .map((t: PushToken) => ({
       to: t.token,
       sound: 'default' as const,
       title,
