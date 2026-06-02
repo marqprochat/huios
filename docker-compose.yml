@@ -40,8 +40,8 @@ services:
       test: [ "CMD", "curl", "-f", "http://localhost:3001/health" ]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 40s
+      retries: 10
+      start_period: 120s
 
   admin:
     build:
