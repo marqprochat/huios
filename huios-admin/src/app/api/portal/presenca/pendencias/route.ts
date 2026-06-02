@@ -19,10 +19,15 @@ export async function GET() {
     }
 
     const studentId = user.student.id;
+    const now = new Date();
 
-    // Busca todas as faltas do aluno com info da disciplina e justificativa
+    // Busca faltas do aluno apenas em aulas já ocorridas (data <= hoje)
     const absences = await prisma.attendance.findMany({
-      where: { studentId, status: 'ABSENT' },
+      where: {
+        studentId,
+        status: 'ABSENT',
+        lesson: { date: { lte: now } }
+      },
       include: {
         lesson: {
           include: {
@@ -56,9 +61,12 @@ export async function GET() {
     for (const absence of absences) {
       for (const discipline of absence.lesson.disciplines) {
         if (!byDiscipline[discipline.id]) {
-          // Conta total de aulas da disciplina
+          // Conta apenas aulas já ocorridas (data <= hoje)
           const totalLessons = await prisma.lesson.count({
-            where: { disciplines: { some: { id: discipline.id } } }
+            where: {
+              disciplines: { some: { id: discipline.id } },
+              date: { lte: now }
+            }
           });
           byDiscipline[discipline.id] = {
             disciplineId: discipline.id,
