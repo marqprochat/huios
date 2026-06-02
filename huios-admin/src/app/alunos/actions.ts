@@ -198,6 +198,34 @@ export async function updateAluno(id: string, prevState: any, formData: FormData
     }
 }
 
+export async function changeStudentPassword(studentId: string, newPassword: string) {
+    if (!newPassword || newPassword.length < 6) {
+        return { success: false, message: 'A senha deve ter pelo menos 6 caracteres.' };
+    }
+
+    try {
+        const student = await prisma.student.findUnique({
+            where: { id: studentId },
+            select: { userId: true, email: true }
+        });
+
+        if (!student?.userId) {
+            return { success: false, message: 'Usuário de acesso não encontrado para este aluno.' };
+        }
+
+        const hashedPw = await hashPassword(newPassword);
+
+        await prisma.user.update({
+            where: { id: student.userId },
+            data: { password: hashedPw }
+        });
+
+        return { success: true, message: 'Senha alterada com sucesso!' };
+    } catch (error: any) {
+        return { success: false, message: 'Erro ao alterar senha: ' + error.message };
+    }
+}
+
 export async function deleteAluno(id: string) {
     // Apagar matrículas do aluno primeiro para não dar erro de foreign key
     await prisma.enrollment.deleteMany({

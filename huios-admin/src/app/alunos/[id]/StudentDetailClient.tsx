@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { StatusModal } from "./StatusModal";
+import { ChangePasswordModal } from "./ChangePasswordModal";
 import { useRouter } from "next/navigation";
 
 interface StudentDetailClientProps {
@@ -11,6 +12,7 @@ interface StudentDetailClientProps {
 
 export default function StudentDetailClient({ student }: StudentDetailClientProps) {
   const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const router = useRouter();
 
   return (
@@ -30,13 +32,22 @@ export default function StudentDetailClient({ student }: StudentDetailClientProp
             </p>
           </div>
         </div>
-        <Link
-          href={`/alunos/${student.id}/editar`}
-          className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
-        >
-          <span className="material-symbols-outlined text-sm">edit</span>
-          Editar Cadastro
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowChangePassword(true)}
+            className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
+          >
+            <span className="material-symbols-outlined text-sm">lock_reset</span>
+            Trocar Senha
+          </button>
+          <Link
+            href={`/alunos/${student.id}/editar`}
+            className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
+          >
+            <span className="material-symbols-outlined text-sm">edit</span>
+            Editar Cadastro
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -178,6 +189,14 @@ export default function StudentDetailClient({ student }: StudentDetailClientProp
           </div>
         </div>
       </div>
+
+      {showChangePassword && (
+        <ChangePasswordModal
+          studentId={student.id}
+          studentName={student.name}
+          onClose={() => setShowChangePassword(false)}
+        />
+      )}
 
       {selectedEnrollment && (
         <StatusModal
