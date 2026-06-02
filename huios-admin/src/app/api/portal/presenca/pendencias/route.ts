@@ -19,14 +19,16 @@ export async function GET() {
     }
 
     const studentId = user.student.id;
-    const now = new Date();
+    // Usa início do dia SEGUINTE em UTC para incluir todas as aulas de hoje independente do horário de armazenamento
+    const today = new Date();
+    const endOfToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 1));
 
     // Busca faltas do aluno apenas em aulas já ocorridas (data <= hoje)
     const absences = await prisma.attendance.findMany({
       where: {
         studentId,
         status: 'ABSENT',
-        lesson: { date: { lte: now } }
+        lesson: { date: { lt: endOfToday } }
       },
       include: {
         lesson: {
@@ -65,7 +67,7 @@ export async function GET() {
           const totalLessons = await prisma.lesson.count({
             where: {
               disciplines: { some: { id: discipline.id } },
-              date: { lte: now }
+              date: { lt: endOfToday }
             }
           });
           byDiscipline[discipline.id] = {

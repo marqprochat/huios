@@ -15,10 +15,7 @@ export async function getReportCardData(studentId: string) {
     }
 
     const enrollments = await prisma.enrollment.findMany({
-      where: {
-        studentId,
-        status: { in: ['ACTIVE', 'COMPLETED', 'Ativa', 'Concluída'] }
-      },
+      where: { studentId },
       include: {
         class: {
           include: {
