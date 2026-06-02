@@ -21,15 +21,22 @@ const port = process.env.PORT || 3001;
 
 // Security Middleware
 app.use(helmet());
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:3000',
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^http:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/,
+  /^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/,
+  /^http:\/\/172\.\d+\.\d+\.\d+(:\d+)?$/,
+];
+
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:3000',
-    // Expo Go e apps mobile usam fetch diretamente (sem CORS), mas emuladores podem passar aqui
-    /^http:\/\/localhost/,
-    /^http:\/\/10\.\d+\.\d+\.\d+/,
-    /^http:\/\/192\.168\.\d+\.\d+/,
-    /^http:\/\/172\.\d+\.\d+\.\d+/,
-  ],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // server-to-server (proxy)
+    const allowed = allowedOrigins.some(o =>
+      typeof o === 'string' ? o === origin : o.test(origin)
+    );
+    callback(null, allowed);
+  },
   credentials: true
 }));
 app.use(express.json());
