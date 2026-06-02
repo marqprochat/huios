@@ -106,9 +106,12 @@ export default function PortalDashboard() {
   // Recent grades
   const recentGrades = grades.slice(0, 3);
 
-  // Calculate attendance
-  const totalAttendances = student.attendances?.length || 0;
-  const presentCount = student.attendances?.filter((a: any) => a.status === 'PRESENT').length || 0;
+  // Calculate attendance — only lessons that have already occurred
+  const endOfToday = new Date(today);
+  endOfToday.setDate(endOfToday.getDate() + 1);
+  const pastAttendances = student.attendances?.filter((a: any) => new Date(a.lesson.date) < endOfToday) || [];
+  const totalAttendances = pastAttendances.length;
+  const presentCount = pastAttendances.filter((a: any) => a.status === 'PRESENT').length;
   const attendanceRate = totalAttendances > 0 ? Math.round((presentCount / totalAttendances) * 100) : 100;
 
   // Average grade
