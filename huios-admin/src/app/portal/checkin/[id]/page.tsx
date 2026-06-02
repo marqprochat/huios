@@ -32,10 +32,49 @@ export default function CheckInPage() {
   const [locationError, setLocationError] = useState('');
   const [checkInResult, setCheckInResult] = useState<any>(null);
   const [studentId, setStudentId] = useState<string>('');
+  const [locationPermission, setLocationPermission] = useState<'unknown' | 'granted' | 'prompt' | 'denied'>('unknown');
+  const [requestingPermission, setRequestingPermission] = useState(false);
 
   useEffect(() => {
     fetchData();
+    checkLocationPermission();
   }, [lessonId]);
+
+  const checkLocationPermission = async () => {
+    if (!navigator.geolocation) {
+      setLocationPermission('denied');
+      return;
+    }
+    if (navigator.permissions) {
+      try {
+        const result = await navigator.permissions.query({ name: 'geolocation' });
+        setLocationPermission(result.state as 'granted' | 'prompt' | 'denied');
+        result.onchange = () => setLocationPermission(result.state as 'granted' | 'prompt' | 'denied');
+      } catch {
+        setLocationPermission('prompt');
+      }
+    } else {
+      setLocationPermission('prompt');
+    }
+  };
+
+  const requestLocationPermission = () => {
+    setRequestingPermission(true);
+    setLocationError('');
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        setLocationPermission('granted');
+        setRequestingPermission(false);
+      },
+      (error) => {
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationPermission('denied');
+        }
+        setRequestingPermission(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
 
   const fetchData = async () => {
     try {
@@ -279,6 +318,56 @@ export default function CheckInPage() {
         </div>
       </div>
 
+      {/* Location Permission */}
+      {locationPermission === 'denied' && !isCheckedIn && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-center">
+          <span className="material-symbols-outlined text-4xl text-red-400 mb-2">location_disabled</span>
+          <h3 className="font-bold text-red-800 mb-1">Localização bloqueada</h3>
+          <p className="text-red-600 text-sm mb-4">
+            O acesso à localização está bloqueado neste navegador. Para fazer o check-in, você precisa liberar manualmente:
+          </p>
+          <ol className="text-xs text-red-700 text-left space-y-1 mb-4 list-decimal list-inside">
+            <li>Toque no ícone de cadeado ou informações na barra de endereço</li>
+            <li>Selecione <strong>Permissões</strong> ou <strong>Configurações do site</strong></li>
+            <li>Ative <strong>Localização</strong></li>
+            <li>Recarregue a página e tente novamente</li>
+          </ol>
+          <button
+            onClick={() => { setLocationError(''); checkLocationPermission(); }}
+            className="text-sm text-red-600 underline"
+          >
+            Verificar novamente
+          </button>
+        </div>
+      )}
+
+      {locationPermission === 'prompt' && !isCheckedIn && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 text-center">
+          <span className="material-symbols-outlined text-4xl text-blue-400 mb-2">my_location</span>
+          <h3 className="font-bold text-blue-800 mb-1">Autorizar localização</h3>
+          <p className="text-blue-600 text-sm mb-4">
+            Para registrar presença, precisamos da sua localização. Clique no botão abaixo e <strong>autorize o acesso</strong> quando o navegador solicitar.
+          </p>
+          <button
+            onClick={requestLocationPermission}
+            disabled={requestingPermission}
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {requestingPermission ? (
+              <>
+                <span className="material-symbols-outlined animate-spin text-sm">refresh</span>
+                Aguardando autorização...
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined">location_on</span>
+                Autorizar Localização
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Status */}
       {(lesson.latitude === null || lesson.latitude === undefined || lesson.longitude === null || lesson.longitude === undefined) && !isCheckedIn && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
@@ -369,8 +458,15 @@ export default function CheckInPage() {
       {/* Error */}
       {locationError && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-          <span className="material-symbols-outlined text-red-500">error</span>
-          <p className="text-sm text-red-700">{locationError}</p>
+          <span className="material-symbols-outlined text-red-500 flex-shrink-0">error</span>
+          <div>
+            <p className="text-sm text-red-700">{locationError}</p>
+            {locationPermission === 'denied' && (
+              <p className="text-xs text-red-500 mt-1">
+                Vá em Configurações do navegador &gt; Permissões do site &gt; Localização e ative para este site.
+              </p>
+            )}
+          </div>
         </div>
       )}
 
