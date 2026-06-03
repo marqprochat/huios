@@ -5,6 +5,8 @@ import Link from "next/link";
 import { StatusModal } from "./StatusModal";
 import { ChangePasswordModal } from "./ChangePasswordModal";
 import { useRouter } from "next/navigation";
+import { createStudentLogin } from "../actions";
+import { useToast } from "../../components/Toast/useToast";
 
 interface StudentDetailClientProps {
   student: any;
@@ -13,7 +15,21 @@ interface StudentDetailClientProps {
 export default function StudentDetailClient({ student }: StudentDetailClientProps) {
   const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [creatingLogin, setCreatingLogin] = useState(false);
   const router = useRouter();
+  const { toast } = useToast();
+
+  const handleCreateLogin = async () => {
+    setCreatingLogin(true);
+    const result = await createStudentLogin(student.id);
+    if (result.success) {
+      toast("success", result.message);
+      router.refresh();
+    } else {
+      toast("error", result.message);
+    }
+    setCreatingLogin(false);
+  };
 
   return (
     <div className="max-w-[1200px] mx-auto p-4 lg:p-8 space-y-8">
@@ -33,13 +49,24 @@ export default function StudentDetailClient({ student }: StudentDetailClientProp
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowChangePassword(true)}
-            className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
-          >
-            <span className="material-symbols-outlined text-sm">lock_reset</span>
-            Trocar Senha
-          </button>
+          {student.userId ? (
+            <button
+              onClick={() => setShowChangePassword(true)}
+              className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
+            >
+              <span className="material-symbols-outlined text-sm">lock_reset</span>
+              Trocar Senha
+            </button>
+          ) : (
+            <button
+              onClick={handleCreateLogin}
+              disabled={creatingLogin}
+              className="bg-amber-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-sm disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-sm">person_add</span>
+              {creatingLogin ? "Criando..." : "Criar Login"}
+            </button>
+          )}
           <Link
             href={`/alunos/${student.id}/editar`}
             className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
@@ -69,6 +96,31 @@ export default function StudentDetailClient({ student }: StudentDetailClientProp
                 <span className="text-slate-600 dark:text-slate-300">{student.cpf || "Não informado"}</span>
               </div>
             </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Acesso ao Portal</h3>
+            <div className="flex items-center gap-2">
+              {student.userId ? (
+                <span className="flex items-center gap-1.5 text-xs font-bold text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-400 px-3 py-1.5 rounded-full">
+                  <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                  Login ativo
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 px-3 py-1.5 rounded-full">
+                  <span className="material-symbols-outlined text-[14px]">warning</span>
+                  Sem login
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Login: <span className="font-medium text-slate-700 dark:text-slate-300">{student.email}</span>
+            </p>
+            {!student.userId && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Clique em "Criar Login" para habilitar o acesso.
+              </p>
+            )}
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">

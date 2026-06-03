@@ -198,6 +198,56 @@ export async function updateAluno(id: string, prevState: any, formData: FormData
     }
 }
 
+export async function createStudentLogin(studentId: string) {
+    try {
+        const student = await prisma.student.findUnique({
+            where: { id: studentId },
+            select: { userId: true, name: true, email: true, cpf: true }
+        });
+
+        if (!student) {
+            return { success: false, message: 'Aluno não encontrado.' };
+        }
+
+        if (student.userId) {
+            return { success: false, message: 'Este aluno já possui um login.' };
+        }
+
+        const rawPassword = student.cpf ? student.cpf.replace(/\D/g, '') : 'huios123';
+        const hashedPw = await hashPassword(rawPassword);
+
+        // Check if a user with this email already exists
+        const existingUser = await prisma.user.findUnique({ where: { email: student.email } });
+
+        let userId: string;
+        if (existingUser) {
+            userId = existingUser.id;
+        } else {
+            const newUser = await prisma.user.create({
+                data: {
+                    name: student.name,
+                    email: student.email,
+                    password: hashedPw,
+                    role: 'ALUNO',
+                    active: true,
+                }
+            });
+            userId = newUser.id;
+        }
+
+        await prisma.student.update({
+            where: { id: studentId },
+            data: { userId }
+        });
+
+        revalidatePath(`/alunos/${studentId}`);
+        const defaultPw = student.cpf ? 'CPF (apenas números)' : '"huios123"';
+        return { success: true, message: `Login criado! Senha padrão: ${defaultPw}` };
+    } catch (error: any) {
+        return { success: false, message: 'Erro ao criar login: ' + error.message };
+    }
+}
+
 export async function changeStudentPassword(studentId: string, newPassword: string) {
     if (!newPassword || newPassword.length < 6) {
         return { success: false, message: 'A senha deve ter pelo menos 6 caracteres.' };
