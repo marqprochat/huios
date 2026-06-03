@@ -1,0 +1,17 @@
+{
+  "name": "Huios - Portal do Aluno",
+  "short_name": "Huios",
+  "description": "Portal do Aluno - Huios Seminário Teológico",
+  "start_url": "/portal",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#135bec",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

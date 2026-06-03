@@ -10,6 +10,17 @@ const lexend = Lexend({ subsets: ["latin"], weight: ["300", "400", "500", "600",
 export const metadata: Metadata = {
   title: "Huios - Portal do Aluno",
   description: "Portal do Aluno - Huios Seminário Teológico",
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+    shortcut: '/logo.png',
+  },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Huios',
+  },
 };
 
 export default function PortalLayout({

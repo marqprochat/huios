@@ -11,6 +11,11 @@ const publicSans = Public_Sans({ subsets: ["latin"], weight: ["300", "400", "500
 export const metadata: Metadata = {
   title: "Huios - Gestão Acadêmica",
   description: "Dashboard de Gerenciamento do Seminário Teológico Huios",
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+    shortcut: '/logo.png',
+  },
 };
 
 export default function RootLayout({
