@@ -3,11 +3,22 @@
 import { useState, useEffect } from 'react';
 import { useStudent } from '../components/PortalShell';
 
+const ABSENT_FOR_FAIL = 2;
+
+interface Attendance {
+  present: number;
+  absent: number;
+  excused: number;
+  pending: number;
+  total: number;
+}
+
 interface DisciplineGrade {
   id: string;
   name: string;
+  modality: string;
   teacher: { name: string } | null;
-  courseClasses: { name: string; course: { name: string } }[];
+  courseClasses: { name: string; course: { name: string; modality: string } }[];
   grades: Array<{
     id: string;
     score: number;
@@ -17,6 +28,7 @@ interface DisciplineGrade {
     exam: { title: string } | null;
     createdAt: string;
   }>;
+  attendance: Attendance;
 }
 
 export default function BoletimPage() {
@@ -49,25 +61,36 @@ export default function BoletimPage() {
     return totalWeight > 0 ? weightedSum / totalWeight : 0;
   };
 
-  const getStatus = (media: number | null) => {
+  const getGradeStatus = (media: number | null) => {
     if (media === null) return { label: 'Aguardando', color: 'text-slate-400', bg: 'bg-slate-50' };
     if (media >= 7) return { label: 'Aprovado', color: 'text-emerald-600', bg: 'bg-emerald-50' };
     return { label: 'Reprovado', color: 'text-red-600', bg: 'bg-red-50' };
   };
 
+  const getAttendanceStatus = (att: Attendance) => {
+    if (att.total === 0) return { label: 'Aguardando', color: 'text-slate-400', bg: 'bg-slate-50' };
+    if (att.absent >= ABSENT_FOR_FAIL) return { label: 'Reprovado', color: 'text-red-600', bg: 'bg-red-50' };
+    return { label: 'Aprovado', color: 'text-emerald-600', bg: 'bg-emerald-50' };
+  };
+
   if (!data) return null;
 
-  // Overall average
-  const allGrades = disciplines.flatMap(d => d.grades);
-  const overallAvg = allGrades.length > 0 
-    ? (allGrades.reduce((a, g) => a + g.score, 0) / allGrades.length).toFixed(1) 
+  const gradeDiscs = disciplines.filter(d => d.modality !== 'POR_PRESENCA');
+  const presencaDiscs = disciplines.filter(d => d.modality === 'POR_PRESENCA');
+
+  const allGrades = gradeDiscs.flatMap(d => d.grades);
+  const overallAvg = allGrades.length > 0
+    ? (allGrades.reduce((a, g) => a + g.score, 0) / allGrades.length).toFixed(1)
     : '—';
 
-  // Pendencies
-  const pendencies = disciplines.filter(d => {
+  const gradePendencies = gradeDiscs.filter(d => {
     const m = calcMedia(d.grades);
     return m !== null && m < 7;
   });
+
+  const presencaPendencies = presencaDiscs.filter(d => d.attendance.absent >= ABSENT_FOR_FAIL);
+
+  const totalPendencies = gradePendencies.length + presencaPendencies.length;
 
   return (
     <div className="max-w-[1400px] mx-auto p-4 lg:p-8 space-y-6">
@@ -78,104 +101,199 @@ export default function BoletimPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl border border-slate-200 p-4">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Média Geral</p>
-          <p className="text-3xl font-bold text-[#135bec] mt-1">{overallAvg}</p>
-        </div>
+        {gradeDiscs.length > 0 && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-4">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Média Geral</p>
+            <p className="text-3xl font-bold text-[#135bec] mt-1">{overallAvg}</p>
+          </div>
+        )}
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Disciplinas</p>
           <p className="text-3xl font-bold text-slate-700 mt-1">{disciplines.length}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-4">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avaliações</p>
-          <p className="text-3xl font-bold text-slate-700 mt-1">{allGrades.length}</p>
-        </div>
+        {gradeDiscs.length > 0 && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-4">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avaliações</p>
+            <p className="text-3xl font-bold text-slate-700 mt-1">{allGrades.length}</p>
+          </div>
+        )}
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pendências</p>
-          <p className={`text-3xl font-bold mt-1 ${pendencies.length > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-            {pendencies.length}
+          <p className={`text-3xl font-bold mt-1 ${totalPendencies > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+            {totalPendencies}
           </p>
         </div>
       </div>
 
       {/* Pendencies Alert */}
-      {pendencies.length > 0 && (
+      {totalPendencies > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <span className="material-symbols-outlined text-red-500">warning</span>
             <h3 className="font-semibold text-red-800 text-sm">Pendências Acadêmicas</h3>
           </div>
           <p className="text-red-700 text-xs leading-relaxed">
-            Você está abaixo da média (7.0) nas seguintes disciplinas:{' '}
-            <strong>{pendencies.map(d => d.name).join(', ')}</strong>.
+            {gradePendencies.length > 0 && (
+              <>Abaixo da média (7,0): <strong>{gradePendencies.map(d => d.name).join(', ')}</strong>. </>
+            )}
+            {presencaPendencies.length > 0 && (
+              <>Excesso de faltas: <strong>{presencaPendencies.map(d => d.name).join(', ')}</strong>. </>
+            )}
             Procure o coordenador para orientações.
           </p>
         </div>
       )}
 
-      {/* Disciplines Table */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <span className="material-symbols-outlined animate-spin text-[#135bec] text-3xl">refresh</span>
         </div>
       ) : (
-        <div className="space-y-4">
-          {disciplines.map((disc) => {
-            const media = calcMedia(disc.grades);
-            const status = getStatus(media);
-
-            return (
-              <div key={disc.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                <div className="p-5 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-[#135bec]/5 rounded-xl flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[#135bec]">menu_book</span>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-slate-800">{disc.name}</h4>
-                      <p className="text-xs text-slate-400">
-                        {disc.teacher?.name ? `Prof. ${disc.teacher.name}` : 'Sem professor'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Média</p>
-                      <p className={`text-xl font-bold ${
-                        media !== null && media >= 7 ? 'text-emerald-600' :
-                        media !== null ? 'text-red-600' : 'text-slate-300'
-                      }`}>
-                        {media !== null ? media.toFixed(1) : '—'}
-                      </p>
-                    </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${status.bg} ${status.color}`}>
-                      {status.label}
-                    </span>
-                  </div>
-                </div>
-
-                {disc.grades.length > 0 && (
-                  <div className="border-t border-slate-100 p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {disc.grades.map((grade) => (
-                        <div key={grade.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                          <div>
-                            <p className="text-xs font-medium text-slate-700">{grade.title || grade.exam?.title || 'Avaliação'}</p>
-                            <p className="text-[10px] text-slate-400 capitalize">{grade.type.toLowerCase()}</p>
-                          </div>
-                          <span className={`font-bold text-sm ${
-                            grade.score >= 7 ? 'text-emerald-600' : 'text-red-600'
-                          }`}>
-                            {grade.score.toFixed(1)}
-                          </span>
+        <div className="space-y-6">
+          {/* Grade-based disciplines */}
+          {gradeDiscs.length > 0 && (
+            <div className="space-y-4">
+              {presencaDiscs.length > 0 && (
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">
+                  Avaliação por Nota
+                </h3>
+              )}
+              {gradeDiscs.map((disc) => {
+                const media = calcMedia(disc.grades);
+                const status = getGradeStatus(media);
+                return (
+                  <div key={disc.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <div className="p-5 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-[#135bec]/5 rounded-xl flex items-center justify-center">
+                          <span className="material-symbols-outlined text-[#135bec]">menu_book</span>
                         </div>
-                      ))}
+                        <div>
+                          <h4 className="font-semibold text-slate-800">{disc.name}</h4>
+                          <p className="text-xs text-slate-400">
+                            {disc.teacher?.name ? `Prof. ${disc.teacher.name}` : 'Sem professor'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">Média</p>
+                          <p className={`text-xl font-bold ${
+                            media !== null && media >= 7 ? 'text-emerald-600' :
+                            media !== null ? 'text-red-600' : 'text-slate-300'
+                          }`}>
+                            {media !== null ? media.toFixed(1) : '—'}
+                          </p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${status.bg} ${status.color}`}>
+                          {status.label}
+                        </span>
+                      </div>
                     </div>
+                    {disc.grades.length > 0 && (
+                      <div className="border-t border-slate-100 p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                          {disc.grades.map((grade) => (
+                            <div key={grade.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                              <div>
+                                <p className="text-xs font-medium text-slate-700">{grade.title || grade.exam?.title || 'Avaliação'}</p>
+                                <p className="text-[10px] text-slate-400 capitalize">{grade.type.toLowerCase()}</p>
+                              </div>
+                              <span className={`font-bold text-sm ${grade.score >= 7 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                {grade.score.toFixed(1)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
+
+          {/* Attendance-based disciplines */}
+          {presencaDiscs.length > 0 && (
+            <div className="space-y-4">
+              {gradeDiscs.length > 0 && (
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">
+                  Avaliação por Presença
+                </h3>
+              )}
+              {presencaDiscs.map((disc) => {
+                const att = disc.attendance;
+                const status = getAttendanceStatus(att);
+                const freqPct = att.total > 0
+                  ? Math.round(((att.present + att.excused) / att.total) * 100)
+                  : null;
+
+                return (
+                  <div key={disc.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <div className="p-5 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-violet-50 rounded-xl flex items-center justify-center">
+                          <span className="material-symbols-outlined text-violet-500">how_to_reg</span>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-slate-800">{disc.name}</h4>
+                          <p className="text-xs text-slate-400">
+                            {disc.teacher?.name ? `Prof. ${disc.teacher.name}` : 'Sem professor'}
+                            {' · '}
+                            <span className="text-violet-500 font-medium">Avaliação por Presença</span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        {freqPct !== null && (
+                          <div className="text-right">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Frequência</p>
+                            <p className={`text-xl font-bold ${freqPct >= 75 ? 'text-emerald-600' : 'text-red-600'}`}>
+                              {freqPct}%
+                            </p>
+                          </div>
+                        )}
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${status.bg} ${status.color}`}>
+                          {status.label}
+                        </span>
+                      </div>
+                    </div>
+
+                    {att.total > 0 && (
+                      <div className="border-t border-slate-100 p-4">
+                        <div className="grid grid-cols-4 gap-3">
+                          <div className="text-center p-3 bg-slate-50 rounded-xl">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Total</p>
+                            <p className="text-lg font-bold text-slate-700 mt-0.5">{att.total}</p>
+                          </div>
+                          <div className="text-center p-3 bg-emerald-50 rounded-xl">
+                            <p className="text-[10px] font-bold text-emerald-400 uppercase">Presente</p>
+                            <p className="text-lg font-bold text-emerald-600 mt-0.5">{att.present}</p>
+                          </div>
+                          <div className="text-center p-3 bg-red-50 rounded-xl">
+                            <p className="text-[10px] font-bold text-red-400 uppercase">Falta{att.absent !== 1 ? 's' : ''}</p>
+                            <p className={`text-lg font-bold mt-0.5 ${att.absent >= ABSENT_FOR_FAIL ? 'text-red-600' : 'text-red-400'}`}>
+                              {att.absent}
+                            </p>
+                          </div>
+                          <div className="text-center p-3 bg-blue-50 rounded-xl">
+                            <p className="text-[10px] font-bold text-blue-400 uppercase">Justif.</p>
+                            <p className="text-lg font-bold text-blue-600 mt-0.5">{att.excused}</p>
+                          </div>
+                        </div>
+                        {att.absent >= ABSENT_FOR_FAIL && (
+                          <p className="text-xs text-red-600 mt-3 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-sm">warning</span>
+                            Limite de faltas atingido ({att.absent}/{ABSENT_FOR_FAIL}). Procure a coordenação.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {disciplines.length === 0 && (
             <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">

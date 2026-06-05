@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Course" ADD COLUMN "modality" TEXT NOT NULL DEFAULT 'POR_NOTA';

@@ -32,6 +32,15 @@ export default function NovoCursoPage() {
                     </div>
 
                     <div className="space-y-2">
+                        <label htmlFor="modality" className="text-sm font-bold text-slate-700 dark:text-slate-300">Modalidade de Avaliação <span className="text-red-500">*</span></label>
+                        <select id="modality" name="modality" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white">
+                            <option value="POR_NOTA">Por Nota — aprovação por média (≥ 7,0)</option>
+                            <option value="POR_PRESENCA">Por Presença — aprovação por frequência (sem notas)</option>
+                        </select>
+                        <p className="text-xs text-slate-400">Define como os alunos serão avaliados neste curso.</p>
+                    </div>
+
+                    <div className="space-y-2">
                         <label htmlFor="status" className="text-sm font-bold text-slate-700 dark:text-slate-300">Status</label>
                         <select id="status" name="status" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white">
                             <option value="ACTIVE">Ativo</option>

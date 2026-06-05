@@ -151,6 +151,7 @@ model Course {
   description String?
   imageUrl    String?  // URL da imagem do curso
   status      String   @default("ACTIVE") // ACTIVE, INACTIVE
+  modality    String   @default("POR_NOTA") // POR_NOTA, POR_PRESENCA
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   classes     CourseClass[]

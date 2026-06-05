@@ -28,6 +28,7 @@ export async function createCourse(formData: FormData) {
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const status = formData.get('status') as string;
+    const modality = formData.get('modality') as string;
     const imageFile = formData.get('imageFile') as File;
 
     const imageUrl = await saveFile(imageFile);
@@ -42,6 +43,7 @@ export async function createCourse(formData: FormData) {
             description: description || null,
             imageUrl: imageUrl || null,
             status: status || 'ACTIVE',
+            modality: modality || 'POR_NOTA',
         }
     });
 
@@ -53,6 +55,7 @@ export async function updateCourse(id: string, formData: FormData) {
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const status = formData.get('status') as string;
+    const modality = formData.get('modality') as string;
     const imageFile = formData.get('imageFile') as File;
 
     const existingCourse = await prisma.course.findUnique({ where: { id } });
@@ -73,6 +76,7 @@ export async function updateCourse(id: string, formData: FormData) {
             description: description || null,
             imageUrl: imageUrl || null,
             status: status || 'ACTIVE',
+            modality: modality || 'POR_NOTA',
         }
     });
 
