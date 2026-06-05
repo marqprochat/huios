@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
+import { publishExam, unpublishExam } from './actions';
 
 export default async function ProvasPage() {
   const provas = await prisma.exam.findMany({
@@ -111,6 +112,22 @@ export default async function ProvasPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
+                      <form action={prova.isPublished ? unpublishExam.bind(null, prova.id) : publishExam.bind(null, prova.id)}>
+                        <button
+                          type="submit"
+                          title={prova.isPublished ? 'Despublicar' : 'Publicar'}
+                          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${
+                            prova.isPublished
+                              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-sm">
+                            {prova.isPublished ? 'visibility_off' : 'publish'}
+                          </span>
+                          {prova.isPublished ? 'Despublicar' : 'Publicar'}
+                        </button>
+                      </form>
                       <Link
                         href={`/provas/${prova.id}/questoes`}
                         className="text-slate-400 hover:text-primary transition-colors"

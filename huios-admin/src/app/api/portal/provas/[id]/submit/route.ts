@@ -76,19 +76,40 @@ export async function POST(
         // Calculate scores
         let totalScore = 0;
         let maxScore = 0;
+        const questionResults: Array<{
+            id: string;
+            statement: string;
+            isCorrect: boolean;
+            weight: number;
+            chosenLetter: string;
+            chosenText: string;
+            correctLetter: string;
+            correctText: string;
+        }> = [];
 
         for (const answer of answers) {
             const question = exam.questions.find(q => q.id === answer.questionId);
             if (!question) continue;
 
             const selectedAlt = question.alternatives.find(a => a.id === answer.alternativeId);
+            const correctAlt = question.alternatives.find(a => a.isCorrect);
             const isCorrect = selectedAlt?.isCorrect || false;
             const points = isCorrect ? question.weight : 0;
 
             totalScore += points;
             maxScore += question.weight;
 
-            // Upsert answer
+            questionResults.push({
+                id: question.id,
+                statement: question.statement,
+                isCorrect,
+                weight: question.weight,
+                chosenLetter: selectedAlt?.letter ?? '—',
+                chosenText: selectedAlt?.text ?? '—',
+                correctLetter: correctAlt?.letter ?? '—',
+                correctText: correctAlt?.text ?? '—',
+            });
+
             await prisma.studentAnswer.upsert({
                 where: {
                     submissionId_questionId: {
@@ -140,7 +161,8 @@ export async function POST(
             success: true,
             score: totalScore,
             maxScore,
-            gradeScore: Math.round(gradeScore * 10) / 10
+            gradeScore: Math.round(gradeScore * 10) / 10,
+            questions: questionResults,
         });
     } catch (error) {
         console.error('Submit exam error:', error);

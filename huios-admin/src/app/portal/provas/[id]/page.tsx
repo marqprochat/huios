@@ -42,7 +42,17 @@ export default function ResponderProvaPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ score: number; maxScore: number; gradeScore: number } | null>(null);
+  interface QuestionResult {
+    id: string;
+    statement: string;
+    isCorrect: boolean;
+    weight: number;
+    chosenLetter: string;
+    chosenText: string;
+    correctLetter: string;
+    correctText: string;
+  }
+  const [result, setResult] = useState<{ score: number; maxScore: number; gradeScore: number; questions: QuestionResult[] } | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -171,37 +181,39 @@ export default function ResponderProvaPage() {
   }
 
   if (result) {
+    const correctCount = result.questions.filter(q => q.isCorrect).length;
+    const wrongCount = result.questions.length - correctCount;
+
     return (
-      <div className="max-w-lg mx-auto p-4 lg:p-8">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
-          <div className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center ${
+      <div className="max-w-2xl mx-auto p-4 lg:p-8 space-y-6">
+        {/* Score summary */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center">
+          <div className={`w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center ${
             result.gradeScore >= 7 ? 'bg-emerald-50' : 'bg-amber-50'
           }`}>
-            <span className={`material-symbols-outlined text-4xl ${
-              result.gradeScore >= 7 ? 'text-emerald-500' : 'text-amber-500'
-            }`}>
+            <span className={`material-symbols-outlined text-3xl ${result.gradeScore >= 7 ? 'text-emerald-500' : 'text-amber-500'}`}>
               {result.gradeScore >= 7 ? 'emoji_events' : 'trending_up'}
             </span>
           </div>
-          <h2 className="text-xl font-bold text-slate-800 mb-2">
+          <h2 className="text-xl font-bold text-slate-800 mb-1">
             {result.gradeScore >= 7 ? 'Parabéns!' : 'Prova Concluída'}
           </h2>
-          <p className="text-slate-500 text-sm mb-6">{exam.title}</p>
+          <p className="text-slate-400 text-sm mb-5">{exam.title}</p>
 
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-3 mb-5">
             <div className="bg-slate-50 rounded-xl p-4">
               <p className="text-[10px] font-bold text-slate-400 uppercase">Nota</p>
               <p className={`text-2xl font-bold ${result.gradeScore >= 7 ? 'text-emerald-600' : 'text-amber-600'}`}>
                 {result.gradeScore.toFixed(1)}
               </p>
             </div>
-            <div className="bg-slate-50 rounded-xl p-4">
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Acertos</p>
-              <p className="text-2xl font-bold text-[#135bec]">{result.score}</p>
+            <div className="bg-emerald-50 rounded-xl p-4">
+              <p className="text-[10px] font-bold text-emerald-400 uppercase">Acertos</p>
+              <p className="text-2xl font-bold text-emerald-600">{correctCount}</p>
             </div>
-            <div className="bg-slate-50 rounded-xl p-4">
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Total</p>
-              <p className="text-2xl font-bold text-slate-400">{result.maxScore}</p>
+            <div className="bg-red-50 rounded-xl p-4">
+              <p className="text-[10px] font-bold text-red-400 uppercase">Erros</p>
+              <p className="text-2xl font-bold text-red-500">{wrongCount}</p>
             </div>
           </div>
 
@@ -209,6 +221,58 @@ export default function ResponderProvaPage() {
             Voltar às Provas
           </button>
         </div>
+
+        {/* Per-question breakdown */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider px-1">Gabarito</h3>
+          {result.questions.map((q, i) => (
+            <div key={q.id} className={`bg-white rounded-2xl border p-5 ${q.isCorrect ? 'border-emerald-200' : 'border-red-200'}`}>
+              <div className="flex items-start gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${q.isCorrect ? 'bg-emerald-100' : 'bg-red-100'}`}>
+                  <span className={`material-symbols-outlined text-base ${q.isCorrect ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {q.isCorrect ? 'check' : 'close'}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-slate-400 mb-1">Questão {i + 1}</p>
+                  <p className="text-sm text-slate-800 leading-relaxed mb-3">{q.statement}</p>
+
+                  {/* Chosen answer */}
+                  <div className={`flex items-start gap-2 p-3 rounded-xl text-sm mb-2 ${
+                    q.isCorrect ? 'bg-emerald-50' : 'bg-red-50'
+                  }`}>
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                      q.isCorrect ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+                    }`}>{q.chosenLetter}</span>
+                    <div>
+                      <p className={`text-xs font-bold mb-0.5 ${q.isCorrect ? 'text-emerald-700' : 'text-red-600'}`}>
+                        {q.isCorrect ? 'Sua resposta (correta)' : 'Sua resposta (incorreta)'}
+                      </p>
+                      <p className={q.isCorrect ? 'text-emerald-800' : 'text-red-700'}>{q.chosenText}</p>
+                    </div>
+                  </div>
+
+                  {/* Correct answer (only when wrong) */}
+                  {!q.isCorrect && (
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-emerald-50 text-sm">
+                      <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                        {q.correctLetter}
+                      </span>
+                      <div>
+                        <p className="text-xs font-bold text-emerald-700 mb-0.5">Resposta correta</p>
+                        <p className="text-emerald-800">{q.correctText}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={() => router.push('/portal/provas')} className="w-full bg-[#135bec] text-white py-3 rounded-xl text-sm font-semibold">
+          Voltar às Provas
+        </button>
       </div>
     );
   }
