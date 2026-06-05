@@ -28,47 +28,38 @@ async function applyAttendanceRules(studentId: string, disciplineId: string) {
   const absenceRate = totalLessons > 0 ? absentCount / totalLessons : 0;
 
   if (absentCount >= ABSENT_FOR_FAIL) {
-    // Reprovação automática — atualiza matrícula
+    // Excesso de faltas na disciplina — notifica coordenador e aluno sem reprovar a matrícula inteira
     const discipline = await prisma.discipline.findUnique({
       where: { id: disciplineId },
-      include: { courseClasses: true }
+      select: { name: true }
     });
 
-    if (discipline) {
-      const classIds = discipline.courseClasses.map(cc => cc.id);
-      const enrollment = await prisma.enrollment.findFirst({
-        where: { studentId, classId: { in: classIds }, status: 'CURSANDO' }
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { name: true, userId: true },
+    });
+
+    if (discipline && student) {
+      const alreadyNotified = await prisma.notification.findFirst({
+        where: { type: 'EXCESS_ABSENCES', relatedId: `${studentId}:${disciplineId}` }
       });
 
-      if (enrollment) {
-        await prisma.enrollment.update({
-          where: { id: enrollment.id },
+      if (!alreadyNotified) {
+        await prisma.notification.create({
           data: {
-            status: 'REPROVADO',
-            statusDate: new Date(),
-            statusReason: `Reprovado por excesso de faltas na disciplina "${discipline.name}" (${absentCount} falta(s) de ${totalLessons} aula(s) — ${Math.round(absenceRate * 100)}%)`
+            type: 'EXCESS_ABSENCES',
+            title: 'Aluno com excesso de faltas',
+            message: `${student.name} atingiu ${absentCount} falta(s) na disciplina "${discipline.name}" (${Math.round(absenceRate * 100)}% de ausência). Avalie a situação manualmente.`,
+            targetRole: 'COORDENADOR',
+            relatedId: `${studentId}:${disciplineId}`
           }
         });
 
-        const student = await prisma.student.findUnique({
-          where: { id: studentId },
-          select: { name: true, userId: true },
-        });
-        await prisma.notification.create({
-          data: {
-            type: 'AUTO_FAILED',
-            title: 'Aluno reprovado por faltas',
-            message: `${student?.name} foi reprovado automaticamente na disciplina "${discipline.name}" por excesso de faltas (${absentCount}/${totalLessons} aulas).`,
-            targetRole: 'COORDENADOR',
-            relatedId: studentId
-          }
-        });
-        // Notifica o aluno via push
-        if (student?.userId) {
+        if (student.userId) {
           await sendPushToUser(
             student.userId,
-            '⚠️ Reprovado por Faltas',
-            `Você foi reprovado na disciplina "${discipline.name}" por excesso de faltas (${absentCount}/${totalLessons} aulas).`,
+            '⚠️ Excesso de Faltas',
+            `Você atingiu ${absentCount} falta(s) na disciplina "${discipline.name}". Entre em contato com a coordenação.`,
           );
         }
       }
