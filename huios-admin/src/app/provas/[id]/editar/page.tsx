@@ -38,9 +38,12 @@ export default async function EditarProvaPage({ params }: Props) {
   });
 
   const formatDateForInput = (date: Date) => {
-    const d = new Date(date);
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().slice(0, 16);
+    // sv locale gives ISO-like "YYYY-MM-DD HH:mm" — just swap the space for T
+    return new Intl.DateTimeFormat('sv', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    }).format(new Date(date)).replace(' ', 'T');
   };
 
   return (
