@@ -67,6 +67,17 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
   ]}
   />
 
+  <NavGroup
+  label="Relatórios"
+  icon="bar_chart"
+  links={[
+    { href: "/relatorios/presenca", icon: "how_to_reg", label: "Presença" },
+    { href: "/relatorios/notas", icon: "grade", label: "Notas" },
+    { href: "/relatorios/provas", icon: "quiz", label: "Provas" },
+    { href: "/relatorios/alunos", icon: "group", label: "Alunos" },
+  ]}
+  />
+
   <div className="pt-4 mt-4 border-t border-slate-200 dark:border-slate-800">
   <NavLink href="/pendencias" icon="pending_actions" label="Pendências" />
   <NavLink href="/configuracoes" icon="settings" label="Configurações" />

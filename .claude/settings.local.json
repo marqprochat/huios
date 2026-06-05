@@ -13,7 +13,9 @@
       "PowerShell(docker exec -it huios-db psql -U postgres -c \"ALTER USER postgres WITH PASSWORD 'Edy92153474';\")",
       "PowerShell(docker exec huios-db psql -U postgres -c \"ALTER USER postgres WITH PASSWORD 'Edy92153474';\")",
       "PowerShell(docker compose -f \"p:\\\\APPS\\\\huios\\\\huios\\\\docker-compose.yml\" restart api)",
-      "PowerShell(docker exec huios-api npx prisma migrate resolve --rolled-back 20260519183000_add_status_date_and_evaluations 2>&1)"
+      "PowerShell(docker exec huios-api npx prisma migrate resolve --rolled-back 20260519183000_add_status_date_and_evaluations 2>&1)",
+      "Bash(Get-ChildItem -Path \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\src\\\\app\\\\relatorios\" -Recurse)",
+      "Bash(Select-Object FullName)"
     ]
   }
 }
