@@ -80,22 +80,21 @@ export async function updateExam(id: string, formData: FormData) {
   redirect('/provas');
 }
 
-export async function publishExam(id: string) {
+export async function publishExam(id: string): Promise<void> {
   try {
-    const exam = await prisma.exam.update({
+    await prisma.exam.update({
       where: { id },
       data: { isPublished: true }
     });
 
     revalidatePath('/provas');
-    return { success: true };
   } catch (error) {
     console.error('Error publishing exam:', error);
     throw new Error('Failed to publish exam');
   }
 }
 
-export async function unpublishExam(id: string) {
+export async function unpublishExam(id: string): Promise<void> {
   try {
     await prisma.exam.update({
       where: { id },
@@ -103,7 +102,6 @@ export async function unpublishExam(id: string) {
     });
 
     revalidatePath('/provas');
-    return { success: true };
   } catch (error) {
     console.error('Error unpublishing exam:', error);
     throw new Error('Failed to unpublish exam');
