@@ -78,6 +78,21 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
   ]}
   />
 
+  {(user?.role === 'COORDENADOR' || user?.role === 'SUPER_ADMIN') && (
+    <NavGroup
+    label="Financeiro"
+    icon="payments"
+    links={[
+      { href: "/financeiro", icon: "dashboard", label: "Visão Geral" },
+      { href: "/financeiro/contas-a-receber", icon: "arrow_downward", label: "Contas a Receber" },
+      { href: "/financeiro/contas-a-pagar", icon: "arrow_upward", label: "Contas a Pagar" },
+      { href: "/financeiro/precos-cursos", icon: "sell", label: "Preços dos Cursos" },
+      { href: "/financeiro/categorias", icon: "label", label: "Categorias" },
+      { href: "/financeiro/relatorios", icon: "bar_chart", label: "Relatórios" },
+    ]}
+    />
+  )}
+
   <div className="pt-4 mt-4 border-t border-slate-200 dark:border-slate-800">
   <NavLink href="/pendencias" icon="pending_actions" label="Pendências" />
   <NavLink href="/configuracoes" icon="settings" label="Configurações" />

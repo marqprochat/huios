@@ -47,6 +47,7 @@ model Student {
   attendances Attendance[]
   grades Grade[]
   absenceJustifications AbsenceJustification[]
+  financialTransactions FinancialTransaction[]
 }
 
 model Teacher {
@@ -62,6 +63,7 @@ model Teacher {
   updatedAt   DateTime @updatedAt
   classes     Class[]
   disciplines Discipline[]
+  financialTransactions FinancialTransaction[]
 }
 
 model TeamMember {
@@ -119,6 +121,7 @@ model Enrollment {
 
   student   Student  @relation(fields: [studentId], references: [id])
   class     CourseClass @relation(fields: [classId], references: [id])
+  financialTransactions FinancialTransaction[]
 
   @@unique([studentId, classId])
 }
@@ -145,6 +148,7 @@ model Course {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   classes     CourseClass[]
+  coursePrice CoursePrice?
 }
 
 model CourseClass {
@@ -503,4 +507,78 @@ model Notification {
   read        Boolean  @default(false)
   readAt      DateTime?
   createdAt   DateTime @default(now())
+}
+
+// ============================================================
+// MÓDULO FINANCEIRO
+// ============================================================
+
+enum FinancialType {
+  RECEITA
+  DESPESA
+}
+
+enum FinancialStatus {
+  PENDENTE
+  PAGO
+  VENCIDO
+  CANCELADO
+  ISENTO
+}
+
+enum PaymentMethod {
+  PIX
+  DINHEIRO
+  TRANSFERENCIA
+  CARTAO
+  BOLETO
+  OUTRO
+}
+
+model FinancialCategory {
+  id           String                 @id @default(cuid())
+  name         String                 @unique
+  type         FinancialType?
+  color        String?
+  isDefault    Boolean                @default(false)
+  isActive     Boolean                @default(true)
+  createdAt    DateTime               @default(now())
+  transactions FinancialTransaction[]
+}
+
+model CoursePrice {
+  id          String   @id @default(cuid())
+  courseId    String   @unique
+  course      Course   @relation(fields: [courseId], references: [id])
+  amount      Float    @default(0)
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FinancialTransaction {
+  id            String              @id @default(cuid())
+  type          FinancialType
+  status        FinancialStatus     @default(PENDENTE)
+  amount        Float
+  description   String
+  dueDate       DateTime
+  paidAt        DateTime?
+  paymentMethod PaymentMethod?
+  notes         String?
+  reference     String?
+
+  categoryId    String?
+  category      FinancialCategory?  @relation(fields: [categoryId], references: [id])
+
+  studentId     String?
+  student       Student?            @relation(fields: [studentId], references: [id])
+  enrollmentId  String?
+  enrollment    Enrollment?         @relation(fields: [enrollmentId], references: [id])
+  teacherId     String?
+  teacher       Teacher?            @relation(fields: [teacherId], references: [id])
+
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 }

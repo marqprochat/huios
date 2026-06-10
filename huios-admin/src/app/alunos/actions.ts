@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api';
 import { hashPassword } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { createEnrollmentCharge } from '@/app/financeiro/actions';
 
 interface ClassWithRelations {
     id: string;
@@ -103,13 +104,20 @@ export async function createAluno(prevState: any, formData: FormData) {
         }
 
         if (selectedClassIds.length > 0) {
-            await prisma.enrollment.createMany({
-                data: selectedClassIds.map(classId => ({
-                    studentId: student.id,
-                    classId,
-                    status: (formData.get(`status_${classId}`) as string) || 'CURSANDO',
-                })),
-            });
+            const enrollments = await prisma.$transaction(
+                selectedClassIds.map(classId =>
+                    prisma.enrollment.create({
+                        data: {
+                            studentId: student.id,
+                            classId,
+                            status: (formData.get(`status_${classId}`) as string) || 'CURSANDO',
+                        },
+                    })
+                )
+            );
+            for (const enrollment of enrollments) {
+                await createEnrollmentCharge(student.id, enrollment.id, enrollment.classId);
+            }
         }
         revalidatePath('/alunos');
         return { success: true, message: 'Aluno criado com sucesso!' };

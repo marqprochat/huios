@@ -22,16 +22,21 @@ export async function GET(req: Request) {
       discipline: { select: { id: true, name: true, courseClasses: { select: { name: true } } } },
       _count: { select: { questions: true, submissions: true } },
       submissions: {
-        where: { submittedAt: { not: null } },
-        select: { score: true, maxScore: true },
+        select: {
+          score: true,
+          maxScore: true,
+          submittedAt: true,
+          startedAt: true,
+          student: { select: { id: true, name: true } },
+        },
+        orderBy: { student: { name: 'asc' } },
       },
     },
     orderBy: { createdAt: 'desc' },
   });
 
-  // Calculate average score per exam
   const examsWithStats = exams.map(exam => {
-    const completed = exam.submissions.filter(s => s.score !== null && s.maxScore && s.maxScore > 0);
+    const completed = exam.submissions.filter(s => s.submittedAt !== null && s.score !== null && s.maxScore && s.maxScore > 0);
     const avgGrade = completed.length > 0
       ? completed.reduce((acc, s) => acc + (s.score! / s.maxScore!) * 10, 0) / completed.length
       : null;
@@ -47,6 +52,15 @@ export async function GET(req: Request) {
       submissionCount: exam._count.submissions,
       completedCount: completed.length,
       avgGrade: avgGrade !== null ? Math.round(avgGrade * 10) / 10 : null,
+      submissions: exam.submissions.map(s => ({
+        studentId: s.student.id,
+        studentName: s.student.name,
+        score: s.score !== null && s.maxScore && s.maxScore > 0
+          ? Math.round((s.score / s.maxScore) * 100) / 10
+          : null,
+        submittedAt: s.submittedAt,
+        startedAt: s.startedAt,
+      })),
     };
   });
 

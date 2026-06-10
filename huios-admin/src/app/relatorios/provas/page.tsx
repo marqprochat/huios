@@ -2,25 +2,34 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { exportCSV } from '@/lib/exportCSV';
+
+interface StudentResult {
+  studentId: string;
+  studentName: string;
+  score: number | null;
+  submittedAt: string | null;
+  startedAt: string;
+}
 
 interface ExamRow {
   id: string; title: string; isPublished: boolean;
   startDate: string; endDate: string;
   questionCount: number; submissionCount: number; completedCount: number;
   avgGrade: number | null;
+  submissions: StudentResult[];
   discipline: { id: string; name: string; courseClasses: { name: string }[] };
 }
 interface Option { id: string; name: string; courseClasses?: { name: string }[] }
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+const fmtDateTime = (d: string) => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
 
 export default function RelatorioProvasPage() {
-  const router = useRouter();
   const [exams, setExams] = useState<ExamRow[]>([]);
   const [disciplines, setDisciplines] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const [disciplineId, setDisciplineId] = useState('');
   const [published, setPublished] = useState('');
@@ -63,14 +72,23 @@ export default function RelatorioProvasPage() {
   }, [filtered]);
 
   const handleExport = () => {
-    exportCSV('provas', ['Prova', 'Disciplina', 'Turma', 'Status', 'Início', 'Fim', 'Questões', 'Submetidas', 'Concluídas', 'Média'],
-      filtered.map(e => [
-        e.title, e.discipline.name,
-        e.discipline.courseClasses.map(c => c.name).join(', '),
-        getStatus(e).label, fmtDate(e.startDate), fmtDate(e.endDate),
-        e.questionCount, e.submissionCount, e.completedCount,
-        e.avgGrade ?? '—',
-      ]));
+    const rows: (string | number)[][] = [];
+    filtered.forEach(e => {
+      const st = getStatus(e);
+      if (e.submissions.length === 0) {
+        rows.push([e.title, e.discipline.name, e.discipline.courseClasses.map(c => c.name).join(', '),
+          st.label, fmtDate(e.startDate), fmtDate(e.endDate), '—', '—', '—']);
+      } else {
+        e.submissions.forEach(s => {
+          rows.push([e.title, e.discipline.name, e.discipline.courseClasses.map(c => c.name).join(', '),
+            st.label, fmtDate(e.startDate), fmtDate(e.endDate),
+            s.studentName,
+            s.score !== null ? s.score.toFixed(1) : '—',
+            s.submittedAt ? fmtDateTime(s.submittedAt) : '—']);
+        });
+      }
+    });
+    exportCSV('provas', ['Prova', 'Disciplina', 'Turma', 'Status', 'Início', 'Fim', 'Aluno', 'Nota', 'Realizada em'], rows);
   };
 
   return (
@@ -82,7 +100,7 @@ export default function RelatorioProvasPage() {
           </Link>
           <div>
             <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Relatório de Provas</h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">Resultados, médias e taxa de conclusão</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Notas por aluno, médias e data de realização</p>
           </div>
         </div>
         {filtered.length > 0 && (
@@ -135,64 +153,93 @@ export default function RelatorioProvasPage() {
         ))}
       </div>
 
-      {/* Table */}
+      {/* List */}
       {loading ? (
         <div className="text-center py-16"><span className="material-symbols-outlined text-4xl animate-spin text-primary">refresh</span></div>
       ) : filtered.length > 0 ? (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-          <div className="p-5 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="font-bold text-slate-800 dark:text-white">{filtered.length} prova{filtered.length !== 1 ? 's' : ''}</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Clique na linha para gerenciar as questões</p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[900px]">
-              <thead className="bg-slate-50 dark:bg-slate-800/50">
-                <tr>
-                  {['Prova', 'Disciplina', 'Período', 'Status', 'Questões', 'Concluídas', 'Média'].map(h => (
-                    <th key={h} className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filtered.map(e => {
-                  const st = getStatus(e);
-                  const concPct = e.submissionCount > 0 ? Math.round((e.completedCount / e.submissionCount) * 100) : 0;
-                  return (
-                    <tr key={e.id} onClick={() => router.push(`/provas/${e.id}/questoes`)}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/30 cursor-pointer transition-colors">
-                      <td className="px-5 py-3.5">
-                        <p className="font-medium text-slate-800 dark:text-white">{e.title}</p>
-                        <p className="text-xs text-slate-400">{e.discipline.courseClasses.map(c => c.name).join(', ')}</p>
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-primary font-semibold">{e.discipline.name}</td>
-                      <td className="px-5 py-3.5 text-xs text-slate-500">
-                        <div>{fmtDate(e.startDate)}</div>
-                        <div className="text-slate-400">até {fmtDate(e.endDate)}</div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${st.color}`}>{st.label}</span>
-                      </td>
-                      <td className="px-5 py-3.5 font-bold text-slate-700">{e.questionCount}</td>
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                            <div className="h-full bg-primary rounded-full" style={{ width: `${concPct}%` }} />
-                          </div>
-                          <span className="text-sm font-bold text-slate-600">{e.completedCount}</span>
-                          <span className="text-xs text-slate-400">({concPct}%)</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        {e.avgGrade !== null
-                          ? <span className={`text-lg font-black ${e.avgGrade >= 7 ? 'text-emerald-600' : 'text-red-600'}`}>{e.avgGrade.toFixed(1)}</span>
-                          : <span className="text-slate-300">—</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+        <div className="space-y-4">
+          {filtered.map(e => {
+            const st = getStatus(e);
+            const isOpen = expandedId === e.id;
+            return (
+              <div key={e.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                {/* Exam header row */}
+                <button
+                  onClick={() => setExpandedId(isOpen ? null : e.id)}
+                  className="w-full flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors text-left"
+                >
+                  <span className={`material-symbols-outlined text-lg text-slate-400 transition-transform ${isOpen ? 'rotate-90' : ''}`}>
+                    chevron_right
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <p className="font-bold text-slate-800 dark:text-white">{e.title}</p>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${st.color}`}>{st.label}</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {e.discipline.name}
+                      {e.discipline.courseClasses.length > 0 && ` · ${e.discipline.courseClasses.map(c => c.name).join(', ')}`}
+                      {' · '}{fmtDate(e.startDate)} até {fmtDate(e.endDate)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-6 shrink-0 text-right">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Alunos</p>
+                      <p className="text-lg font-black text-slate-700">{e.completedCount}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Média</p>
+                      <p className={`text-lg font-black ${e.avgGrade === null ? 'text-slate-300' : e.avgGrade >= 7 ? 'text-emerald-600' : 'text-red-500'}`}>
+                        {e.avgGrade !== null ? e.avgGrade.toFixed(1) : '—'}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Students table */}
+                {isOpen && (
+                  <div className="border-t border-slate-100 dark:border-slate-800">
+                    {e.submissions.length === 0 ? (
+                      <div className="px-6 py-6 text-center text-slate-400 text-sm">Nenhum aluno realizou esta prova ainda.</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[500px]">
+                          <thead className="bg-slate-50 dark:bg-slate-800/50">
+                            <tr>
+                              {['Aluno', 'Nota', 'Realizada em'].map(h => (
+                                <th key={h} className="px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {e.submissions.map(s => (
+                              <tr key={s.studentId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                                <td className="px-5 py-3 font-medium text-slate-800 dark:text-white">{s.studentName}</td>
+                                <td className="px-5 py-3">
+                                  {s.score !== null ? (
+                                    <span className={`text-base font-black ${s.score >= 7 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                      {s.score.toFixed(1)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-300 text-sm">Em andamento</span>
+                                  )}
+                                </td>
+                                <td className="px-5 py-3 text-sm text-slate-500">
+                                  {s.submittedAt ? fmtDateTime(s.submittedAt) : (
+                                    <span className="text-slate-300">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-16 text-slate-400">
