@@ -87,9 +87,9 @@ export async function GET() {
     const result = Object.values(byDiscipline).map(group => {
       const absentCount = group.absences.length;
       let ruleStatus: 'OK' | 'NEEDS_JUSTIFICATION' | 'AUTO_FAILED';
-      if (absentCount >= 2) {
+      if (absentCount >= 3) {
         ruleStatus = 'AUTO_FAILED';
-      } else if (absentCount === 1) {
+      } else if (absentCount >= 2) {
         ruleStatus = 'NEEDS_JUSTIFICATION';
       } else {
         ruleStatus = 'OK';

@@ -4,10 +4,10 @@ import { sendPushToUser } from '../services/pushService';
 
 const prisma = new PrismaClient();
 
-// Regra: por disciplina, se o aluno faltar 1 aula (33,33%) precisa enviar resumo.
-// Se faltar 2+ aulas (66,67%) é reprovado automaticamente.
-const ABSENT_FOR_PENDING = 1;
-const ABSENT_FOR_FAIL = 2;
+// Regra: por disciplina, se o aluno faltar 2 aulas precisa enviar resumo.
+// Se faltar 3+ aulas é reprovado automaticamente na disciplina.
+const ABSENT_FOR_PENDING = 2;
+const ABSENT_FOR_FAIL = 3;
 
 async function applyAttendanceRules(studentId: string, disciplineId: string) {
   // Busca todas as aulas da disciplina
@@ -82,8 +82,8 @@ async function applyAttendanceRules(studentId: string, disciplineId: string) {
       await prisma.notification.create({
         data: {
           type: 'ABSENCE_PENDING_JUSTIFICATION',
-          title: 'Aluno com falta — aguardando justificativa',
-          message: `${student?.name} tem 1 falta na disciplina "${discipline?.name}". O aluno deve enviar um resumo da aula para regularização.`,
+          title: 'Aluno com faltas — aguardando resumo',
+          message: `${student?.name} tem ${absentCount} falta(s) na disciplina "${discipline?.name}". O aluno deve enviar um resumo da aula para regularização.`,
           targetRole: 'COORDENADOR',
           relatedId: absences[0].id
         }
@@ -97,8 +97,8 @@ async function applyAttendanceRules(studentId: string, disciplineId: string) {
       if (studentWithUser?.userId) {
         await sendPushToUser(
           studentWithUser.userId,
-          '📋 Falta Registrada',
-          `Você tem 1 falta na disciplina "${discipline?.name}". Envie a justificativa pelo app para regularizar.`,
+          '📋 Faltas Registradas',
+          `Você tem ${absentCount} falta(s) na disciplina "${discipline?.name}". Envie o resumo pelo app para regularizar.`,
         );
       }
     }
