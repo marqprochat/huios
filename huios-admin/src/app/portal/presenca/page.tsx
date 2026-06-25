@@ -177,11 +177,11 @@ export default function PresencaPortalPage() {
             <ul className="text-xs text-slate-600 mt-2 space-y-1">
               <li className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span>
-                <span><strong>1 falta (33,33%):</strong> Você deve enviar um resumo da aula para análise da diretoria.</span>
+                <span><strong>2 faltas:</strong> Você deve enviar um resumo da aula para análise da diretoria.</span>
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0"></span>
-                <span><strong>2 faltas (66,67%):</strong> Reprovação automática na disciplina.</span>
+                <span><strong>3 faltas:</strong> Reprovação automática na disciplina.</span>
               </li>
             </ul>
           </div>
