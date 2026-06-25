@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
 import { DeleteButton } from './DeleteButton';
+import { EnrollmentToggle } from './EnrollmentToggle';
 
 export default async function TurmasPage() {
     const turmas = await prisma.courseClass.findMany({
@@ -30,13 +31,14 @@ export default async function TurmasPage() {
                                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Curso Vinculado</th>
                                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Duração</th>
                                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Início / Fim</th>
+                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Matrícula</th>
                                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {turmas.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-slate-500">Nenhuma turma cadastrada.</td>
+                                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500">Nenhuma turma cadastrada.</td>
                                 </tr>
                             ) : null}
                             {turmas.map(turma => (
@@ -47,6 +49,9 @@ export default async function TurmasPage() {
                                     <td className="px-6 py-4 text-sm text-slate-500">
                                         {turma.startDate ? new Date(turma.startDate).toLocaleDateString('pt-BR') : '-'} 
                                         {turma.endDate ? ` até ${new Date(turma.endDate).toLocaleDateString('pt-BR')}` : ''}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <EnrollmentToggle id={turma.id} status={(turma as any).enrollmentStatus ?? 'FECHADA'} />
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">

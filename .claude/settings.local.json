@@ -17,7 +17,9 @@
       "Bash(Get-ChildItem -Path \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\src\\\\app\\\\relatorios\" -Recurse)",
       "Bash(Select-Object FullName)",
       "PowerShell(Get-ChildItem -Path \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\" -Recurse -Depth 2 -Directory | Where-Object { $_.Name -notmatch 'node_modules' } | Select-Object -First 50)",
-      "Bash(ls -la \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-api\\\\prisma\\\\migrations\\\\\\\\\")"
+      "Bash(ls -la \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-api\\\\prisma\\\\migrations\\\\\\\\\")",
+      "Bash(docker exec *)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:Edy92153474@localhost:5432/huios?schema=public\" npx prisma migrate resolve --applied 20260625120000_add_enrollment_pricing_and_payments)"
     ]
   }
 }

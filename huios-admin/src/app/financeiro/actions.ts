@@ -2,6 +2,8 @@
 
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { gerarMensalidades } from '@/lib/enrollment';
+import { resolveMonthlyPrice } from '@/lib/pricing';
 
 // ─── Categories ─────────────────────────────────────────────────────────────
 
@@ -67,16 +69,33 @@ export async function deleteCategory(id: string) {
 // ─── Course Prices ───────────────────────────────────────────────────────────
 
 export async function upsertCoursePrice(courseId: string, prevState: any, formData: FormData) {
-  const amountRaw = formData.get('amount') as string;
   const description = formData.get('description') as string;
   const isActive = formData.get('isActive') !== 'false';
-  const amount = parseFloat(amountRaw) || 0;
+
+  const num = (key: string): number | null => {
+    const raw = formData.get(key) as string;
+    if (raw == null || raw === '') return null;
+    const v = parseFloat(raw);
+    return isNaN(v) ? null : v;
+  };
+
+  const amount = num('amount') ?? 0;
 
   try {
+    const data = {
+      amount,
+      description: description || null,
+      isActive,
+      enrollmentFee: num('enrollmentFee'),
+      amountMember: num('amountMember'),
+      amountNonMember: num('amountNonMember'),
+      amountFamily: num('amountFamily'),
+      amountPartner: num('amountPartner'),
+    };
     await (prisma as any).coursePrice.upsert({
       where: { courseId },
-      create: { courseId, amount, description: description || null, isActive },
-      update: { amount, description: description || null, isActive },
+      create: { courseId, ...data },
+      update: data,
     });
     revalidatePath('/financeiro/precos-cursos');
     return { success: true, message: 'Preço salvo com sucesso!' };
@@ -215,27 +234,22 @@ export async function createEnrollmentCharge(studentId: string, enrollmentId: st
       include: { course: { include: { coursePrice: true } } }
     });
 
-    const price = (courseClass?.course as any)?.coursePrice;
-    if (!price || price.amount <= 0 || !price.isActive) return;
+    const cc = courseClass as any;
+    const price = cc?.course?.coursePrice;
+    if (!price || !price.isActive) return;
 
-    const category = await (prisma as any).financialCategory.findFirst({
-      where: { name: 'Mensalidade', isActive: true }
-    });
+    // Sem contexto de igreja/família aqui → cai no nível padrão (não-membro/base).
+    const { amount } = resolveMonthlyPrice({ coursePrice: price });
+    if (amount <= 0) return;
 
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 30);
-
-    await (prisma as any).financialTransaction.create({
-      data: {
-        type: 'RECEITA',
-        status: 'PENDENTE',
-        amount: price.amount,
-        description: `Mensalidade — ${courseClass?.course?.name}`,
-        dueDate,
-        categoryId: category?.id ?? null,
-        studentId,
-        enrollmentId,
-      }
+    await gerarMensalidades({
+      studentId,
+      enrollmentId,
+      monthlyAmount: amount,
+      installments: cc?.installments ?? 1,
+      courseName: cc?.course?.name ?? 'Curso',
+      enrollmentFee: price.enrollmentFee ?? null,
+      startDate: cc?.startDate ?? undefined,
     });
   } catch (error) {
     console.error('Erro ao gerar cobrança automática:', error);

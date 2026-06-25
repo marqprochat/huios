@@ -48,6 +48,12 @@ model Student {
   grades Grade[]
   absenceJustifications AbsenceJustification[]
   financialTransactions FinancialTransaction[]
+
+  // Vínculos de matrícula
+  familyId String?
+  family   Family?  @relation(fields: [familyId], references: [id])
+  churchId String?
+  church   Church?  @relation(fields: [churchId], references: [id])
 }
 
 model Teacher {
@@ -119,6 +125,13 @@ model Enrollment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Contexto de preço / origem da matrícula
+  priceTier     String?  // MEMBER, NON_MEMBER, FAMILY, PARTNER
+  monthlyAmount Float?   // valor da mensalidade aplicado
+  churchId      String?
+  church        Church?  @relation(fields: [churchId], references: [id])
+  origin        String   @default("ADMIN") // ADMIN, PUBLIC_LINK
+
   student   Student  @relation(fields: [studentId], references: [id])
   class     CourseClass @relation(fields: [classId], references: [id])
   financialTransactions FinancialTransaction[]
@@ -160,6 +173,13 @@ model CourseClass {
   courseId    String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // Controle de matrícula
+  enrollmentStatus   String    @default("FECHADA") // ABERTA, FECHADA
+  enrollmentOpensAt  DateTime?
+  enrollmentClosesAt DateTime?
+  installments       Int       @default(1) // qtd de mensalidades a gerar
+  vacancies          Int?      // vagas (opcional)
 
   course      Course       @relation(fields: [courseId], references: [id])
   disciplines Discipline[]
@@ -550,9 +570,17 @@ model CoursePrice {
   id          String   @id @default(cuid())
   courseId    String   @unique
   course      Course   @relation(fields: [courseId], references: [id])
-  amount      Float    @default(0)
+  amount      Float    @default(0) // base / compatibilidade (fallback)
   description String?
   isActive    Boolean  @default(true)
+
+  // Níveis de preço (mensalidade por categoria)
+  enrollmentFee   Float? // taxa de matrícula (opcional)
+  amountMember    Float? // membro da SEDE
+  amountNonMember Float? // não-membro (default / fallback = amount)
+  amountFamily    Float? // família 2+
+  amountPartner   Float? // parceira 3+
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -579,6 +607,56 @@ model FinancialTransaction {
   teacherId     String?
   teacher       Teacher?            @relation(fields: [teacherId], references: [id])
 
+  payments      Payment[]
+
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
+}
+
+// ============================================================
+// MATRÍCULA: IGREJAS, FAMÍLIAS E PAGAMENTOS (GATEWAY)
+// ============================================================
+
+model Church {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   @default("EXTERNA") // SEDE (Conviva), PARCEIRA, EXTERNA
+  isPartner   Boolean  @default(false)
+  publicSlug  String?  @unique // token do link exclusivo (parceiras)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  students    Student[]
+  enrollments Enrollment[]
+}
+
+model Family {
+  id               String   @id @default(cuid())
+  name             String   // sobrenome / nome da família
+  responsibleName  String?
+  responsiblePhone String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  members          Student[]
+}
+
+model Payment {
+  id              String               @id @default(cuid())
+  transactionId   String
+  transaction     FinancialTransaction @relation(fields: [transactionId], references: [id])
+  gateway         String               @default("PAGBANK")
+  method          String               // CREDIT_CARD, PIX, BOLETO
+  status          String               @default("WAITING") // WAITING, PAID, DECLINED, CANCELED
+  amount          Float
+  gatewayChargeId String?              @unique
+  gatewayOrderId  String?
+  pixQrCode       String?              // imagem base64/url
+  pixQrCodeText   String?              // copia-e-cola
+  boletoUrl       String?
+  boletoBarcode   String?
+  rawResponse     Json?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 }

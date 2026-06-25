@@ -9,6 +9,11 @@ interface CoursePrice {
   amount: number;
   description: string | null;
   isActive: boolean;
+  enrollmentFee: number | null;
+  amountMember: number | null;
+  amountNonMember: number | null;
+  amountFamily: number | null;
+  amountPartner: number | null;
 }
 
 interface Course {
@@ -97,7 +102,7 @@ export function PrecosCursosClient({ courses }: Props) {
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Valor (R$)</label>
+                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Valor base / padrão (R$)</label>
                       <input
                         name="amount"
                         type="number"
@@ -107,7 +112,20 @@ export function PrecosCursosClient({ courses }: Props) {
                         className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-primary/30"
                         placeholder="0.00"
                       />
-                      <p className="text-[10px] text-slate-400 mt-1">Use 0 para cursos gratuitos</p>
+                      <p className="text-[10px] text-slate-400 mt-1">Fallback quando um nível abaixo ficar vazio. 0 = gratuito.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Taxa de matrícula (R$)</label>
+                      <input
+                        name="enrollmentFee"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        defaultValue={price?.enrollmentFee ?? ''}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                        placeholder="Opcional"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">Cobrança única no ato da matrícula.</p>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Descrição</label>
@@ -119,6 +137,33 @@ export function PrecosCursosClient({ courses }: Props) {
                         placeholder="Ex: Mensal, por disciplina..."
                       />
                     </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <p className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Mensalidade por categoria</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Membro da sede</label>
+                        <input name="amountMember" type="number" min="0" step="0.01" defaultValue={price?.amountMember ?? ''} placeholder="R$"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Não-membro</label>
+                        <input name="amountNonMember" type="number" min="0" step="0.01" defaultValue={price?.amountNonMember ?? ''} placeholder="R$"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Família (2+)</label>
+                        <input name="amountFamily" type="number" min="0" step="0.01" defaultValue={price?.amountFamily ?? ''} placeholder="R$"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Parceira (3+)</label>
+                        <input name="amountPartner" type="number" min="0" step="0.01" defaultValue={price?.amountPartner ?? ''} placeholder="R$"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-2">Deixe vazio para usar o valor base. Aplica-se o menor preço elegível ao aluno.</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <label className="flex items-center gap-2 cursor-pointer">

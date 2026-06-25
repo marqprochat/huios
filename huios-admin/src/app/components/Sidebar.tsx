@@ -53,6 +53,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
     { href: "/turmas", icon: "diversity_3", label: "Turmas" },
     { href: "/disciplinas", icon: "book", label: "Disciplinas" },
     { href: "/matriculas", icon: "assignment", label: "Matrículas" },
+    { href: "/igrejas", icon: "church", label: "Igrejas" },
   ]}
   />
 

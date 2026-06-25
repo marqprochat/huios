@@ -20,9 +20,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     const isLoginPage = pathname === "/login"
     const isPortalRoute = pathname.startsWith("/portal")
+    const isPublicEnroll = pathname === "/matricula" || pathname.startsWith("/matricula/")
+    const isBare = isLoginPage || isPortalRoute || isPublicEnroll
 
     useEffect(() => {
-        if (isLoginPage || isPortalRoute) {
+        if (isBare) {
             setLoading(false)
             return
         }
@@ -42,7 +44,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }
 
         fetchUser()
-    }, [isLoginPage, isPortalRoute, pathname])
+    }, [isBare, pathname])
 
     async function handleLogout() {
         await fetch("/api/auth/logout", { method: "POST" })
@@ -51,8 +53,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         router.refresh()
     }
 
-    // Login page - render without shell
-    if (isLoginPage || isPortalRoute) {
+    // Login / portal / matrícula pública - render without shell
+    if (isBare) {
         return <>{children}</>
     }
 

@@ -68,6 +68,17 @@ export default async function EditarTurmaPage({ params }: { params: Promise<{ id
                             <label htmlFor="duration" className="text-sm font-bold text-slate-700 dark:text-slate-300">Tempo de Duração</label>
                             <input type="text" id="duration" name="duration" defaultValue={turma.duration || ''} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="Ex: 2 anos" />
                         </div>
+
+                        <div className="space-y-2">
+                            <label htmlFor="installments" className="text-sm font-bold text-slate-700 dark:text-slate-300">Mensalidades (parcelas)</label>
+                            <input type="number" min="1" id="installments" name="installments" defaultValue={(turma as any).installments ?? 12} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" />
+                            <p className="text-xs text-slate-400">Quantas mensalidades serão geradas por matrícula.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label htmlFor="vacancies" className="text-sm font-bold text-slate-700 dark:text-slate-300">Vagas (opcional)</label>
+                            <input type="number" min="1" id="vacancies" name="vacancies" defaultValue={(turma as any).vacancies ?? ''} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="Sem limite" />
+                        </div>
                     </div>
 
                     <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">

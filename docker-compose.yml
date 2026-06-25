@@ -49,6 +49,7 @@ services:
       dockerfile: Dockerfile.prod
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
+        NEXT_PUBLIC_PAGBANK_PUBLIC_KEY: ${NEXT_PUBLIC_PAGBANK_PUBLIC_KEY:-}
     container_name: huios-admin
     restart: always
     ports:
@@ -59,6 +60,10 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
       JWT_SECRET: ${JWT_SECRET:-huios-secret-key-change-in-production}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      PAGBANK_ENV: ${PAGBANK_ENV:-sandbox}
+      PAGBANK_TOKEN: ${PAGBANK_TOKEN:-}
+      PAGBANK_WEBHOOK_TOKEN: ${PAGBANK_WEBHOOK_TOKEN:-}
+      NEXT_PUBLIC_PAGBANK_PUBLIC_KEY: ${NEXT_PUBLIC_PAGBANK_PUBLIC_KEY:-}
     depends_on:
       api:
         condition: service_healthy

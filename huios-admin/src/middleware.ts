@@ -8,13 +8,18 @@ const JWT_SECRET = new TextEncoder().encode(
 
 const COOKIE_NAME = 'huios-session'
 
-const PUBLIC_PATHS = ['/login', '/portal/login', '/api/auth/', '/api/portal/', '/api/proxy/']
+const PUBLIC_PATHS = ['/login', '/portal/login', '/api/auth/', '/api/portal/', '/api/proxy/', '/api/matricula/', '/api/pagamentos/']
+
+// Matrícula pública: exato '/matricula' ou subrotas '/matricula/...', mas NÃO '/matriculas' (admin).
+function isPublicEnroll(pathname: string): boolean {
+    return pathname === '/matricula' || pathname.startsWith('/matricula/')
+}
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
 
     // Allow public paths
-    if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
+    if (PUBLIC_PATHS.some(path => pathname.startsWith(path)) || isPublicEnroll(pathname)) {
         return;
     }
 

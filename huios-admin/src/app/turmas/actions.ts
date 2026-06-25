@@ -10,6 +10,8 @@ export async function createCourseClass(formData: FormData) {
     const endDate = formData.get('endDate') as string;
     const duration = formData.get('duration') as string;
     const courseId = formData.get('courseId') as string;
+    const installments = parseInt(formData.get('installments') as string) || 1;
+    const vacanciesRaw = formData.get('vacancies') as string;
 
     if (!name || !courseId) {
         throw new Error('Nome e Curso são obrigatórios');
@@ -22,7 +24,9 @@ export async function createCourseClass(formData: FormData) {
             endDate: endDate ? new Date(endDate) : null,
             duration: duration || null,
             courseId,
-        }
+            installments,
+            vacancies: vacanciesRaw ? parseInt(vacanciesRaw) : null,
+        } as any
     });
 
     revalidatePath('/turmas');
@@ -35,6 +39,8 @@ export async function updateCourseClass(id: string, formData: FormData) {
     const endDate = formData.get('endDate') as string;
     const duration = formData.get('duration') as string;
     const courseId = formData.get('courseId') as string;
+    const installments = parseInt(formData.get('installments') as string) || 1;
+    const vacanciesRaw = formData.get('vacancies') as string;
 
     if (!name || !courseId) {
         throw new Error('Nome e Curso são obrigatórios');
@@ -48,11 +54,27 @@ export async function updateCourseClass(id: string, formData: FormData) {
             endDate: endDate ? new Date(endDate) : null,
             duration: duration || null,
             courseId,
-        }
+            installments,
+            vacancies: vacanciesRaw ? parseInt(vacanciesRaw) : null,
+        } as any
     });
 
     revalidatePath('/turmas');
     redirect('/turmas');
+}
+
+/** Abre/fecha a matrícula de uma turma. */
+export async function setEnrollmentStatus(id: string, status: 'ABERTA' | 'FECHADA') {
+    try {
+        await prisma.courseClass.update({
+            where: { id },
+            data: { enrollmentStatus: status } as any,
+        });
+        revalidatePath('/turmas');
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
 }
 
 export async function deleteCourseClass(id: string) {

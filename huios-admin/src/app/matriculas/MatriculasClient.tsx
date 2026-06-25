@@ -11,6 +11,9 @@ interface Matricula {
   status: string;
   statusDate: Date | null;
   createdAt: Date;
+  priceTier?: string | null;
+  monthlyAmount?: number | null;
+  origin?: string | null;
   student: {
     id: string;
     name: string;
@@ -23,7 +26,18 @@ interface Matricula {
       name: string;
     };
   };
+  church?: { name: string; type: string } | null;
+  financialTransactions?: { status: string }[];
 }
+
+const TIER_LABELS: Record<string, string> = {
+  MEMBER: "Membro",
+  NON_MEMBER: "Não-membro",
+  FAMILY: "Família",
+  PARTNER: "Parceira",
+};
+
+const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 interface MatriculasClientProps {
   matriculas: Matricula[];
@@ -90,6 +104,12 @@ export function MatriculasClient({ matriculas }: MatriculasClientProps) {
                   Turma / Curso
                 </th>
                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Mensalidade / Categoria
+                </th>
+                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Pagamentos
+                </th>
+                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
                   Status
                 </th>
                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -104,7 +124,7 @@ export function MatriculasClient({ matriculas }: MatriculasClientProps) {
               {filteredMatriculas.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={7}
                     className="px-6 py-12 text-center text-slate-500 font-medium italic"
                   >
                     {searchQuery
@@ -134,6 +154,33 @@ export function MatriculasClient({ matriculas }: MatriculasClientProps) {
                       <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{m.class.name}</span>
                       <span className="text-[10px] text-slate-500 uppercase font-black">{m.class.course.name}</span>
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                        {typeof m.monthlyAmount === 'number' ? fmt(m.monthlyAmount) : '-'}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {m.priceTier && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                            {TIER_LABELS[m.priceTier] || m.priceTier}
+                          </span>
+                        )}
+                        {m.church && <span className="text-[10px] text-slate-400">{m.church.name}</span>}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {(() => {
+                      const txs = m.financialTransactions || [];
+                      const pagos = txs.filter(t => t.status === 'PAGO').length;
+                      if (txs.length === 0) return <span className="text-xs text-slate-400">-</span>;
+                      return (
+                        <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                          {pagos}/{txs.length} pagas
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase border ${STATUS_COLORS[m.status] || ""}`}>
