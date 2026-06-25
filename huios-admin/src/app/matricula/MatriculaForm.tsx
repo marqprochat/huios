@@ -130,15 +130,23 @@ export function MatriculaForm({ turmas, church }: { turmas: Turma[]; church?: Ch
         </div>
       )}
 
-      <div>
-        <label className="block text-xs font-bold text-slate-600 mb-1">Turma</label>
-        <select value={classId} onChange={e => setClassId(e.target.value)} className={fieldCls} required>
-          {turmas.length === 0 && <option value="">Nenhuma turma com matrícula aberta</option>}
-          {turmas.map(t => (
-            <option key={t.id} value={t.id}>{t.courseName} — {t.name}</option>
-          ))}
-        </select>
-      </div>
+      {turmas.length === 1 ? (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Turma</p>
+          <p className="text-sm font-bold text-slate-800">{turmas[0].courseName}</p>
+          <p className="text-xs text-slate-500">{turmas[0].name}</p>
+        </div>
+      ) : (
+        <div>
+          <label className="block text-xs font-bold text-slate-600 mb-1">Turma</label>
+          <select value={classId} onChange={e => setClassId(e.target.value)} className={fieldCls} required>
+            {turmas.length === 0 && <option value="">Nenhuma turma com matrícula aberta</option>}
+            {turmas.map(t => (
+              <option key={t.id} value={t.id}>{t.courseName} — {t.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <label className="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" checked={isFamily} onChange={e => setIsFamily(e.target.checked)} className="rounded" />

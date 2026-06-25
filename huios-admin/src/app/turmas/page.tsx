@@ -2,6 +2,7 @@ import Link from 'next/link';
 import prisma from '@/lib/prisma';
 import { DeleteButton } from './DeleteButton';
 import { EnrollmentToggle } from './EnrollmentToggle';
+import { PublicEnrollLink } from './PublicEnrollLink';
 
 export default async function TurmasPage() {
     const turmas = await prisma.courseClass.findMany({
@@ -16,10 +17,13 @@ export default async function TurmasPage() {
                     <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Turmas</h2>
                     <p className="text-slate-500 dark:text-slate-400">Gerencie as turmas dos cursos</p>
                 </div>
-                <Link href="/turmas/novo" className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
-                    <span className="material-symbols-outlined text-sm">add</span>
-                    Nova Turma
-                </Link>
+                <div className="flex items-center gap-3 flex-wrap">
+                    <PublicEnrollLink />
+                    <Link href="/turmas/novo" className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
+                        <span className="material-symbols-outlined text-sm">add</span>
+                        Nova Turma
+                    </Link>
+                </div>
             </div>
 
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">

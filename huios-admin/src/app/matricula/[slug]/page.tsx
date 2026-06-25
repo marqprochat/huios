@@ -1,11 +1,12 @@
-import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
-import { MatriculaForm } from '../MatriculaForm';
+import prisma from '@/lib/prisma';
+import { MatriculaLanding } from '../MatriculaLanding';
+import { getOpenTurmas } from '../page';
 
 export const dynamic = 'force-dynamic';
 
 // Slugs reservados que NÃO são links de igreja (têm rota própria).
-const RESERVED = new Set(['pagamento']);
+const RESERVED = new Set(['pagamento', 'turma']);
 
 export default async function MatriculaSlugPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -14,34 +15,12 @@ export default async function MatriculaSlugPage({ params }: { params: Promise<{ 
   const church = await (prisma as any).church.findUnique({ where: { publicSlug: slug } });
   if (!church || !church.isActive) notFound();
 
-  const turmas = await prisma.courseClass.findMany({
-    where: { enrollmentStatus: 'ABERTA' } as any,
-    include: { course: { select: { name: true } } },
-    orderBy: { name: 'asc' },
-  });
-  const turmasData = (turmas as any[]).map(t => ({
-    id: t.id,
-    name: t.name,
-    courseName: t.course?.name ?? '',
-    startDate: t.startDate ? t.startDate.toISOString() : null,
-  }));
+  const turmas = await getOpenTurmas();
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center py-10 px-4">
-      <div className="w-full max-w-[640px]">
-        <div className="text-center mb-6">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Huios" className="h-12 mx-auto mb-3 object-contain" />
-          <h1 className="text-2xl font-black text-slate-900">Matrícula</h1>
-          <p className="text-slate-500 text-sm">Seminário Teológico Huios</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-sm">
-          <MatriculaForm
-            turmas={turmasData}
-            church={{ id: church.id, name: church.name, isPartner: church.isPartner, type: church.type }}
-          />
-        </div>
-      </div>
-    </div>
+    <MatriculaLanding
+      turmas={turmas}
+      church={{ name: church.name, isPartner: church.isPartner, slug }}
+    />
   );
 }
