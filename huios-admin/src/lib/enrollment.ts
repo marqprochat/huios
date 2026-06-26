@@ -82,6 +82,29 @@ export async function gerarMensalidades(opts: {
   return ids;
 }
 
+/**
+ * Gera as presenças PENDENTES de um aluno para TODAS as aulas já existentes
+ * da turma (CourseClass), via disciplinas vinculadas. Idempotente: usa
+ * skipDuplicates, então pode ser chamado quantas vezes for preciso.
+ *
+ * Necessário porque o sistema só cria Attendance no momento em que a aula é
+ * criada (lessonController). Sem isto, alunos matriculados DEPOIS das aulas
+ * nunca aparecem na lista de presença.
+ */
+export async function sincronizarPresencas(studentId: string, classId: string): Promise<number> {
+  const lessons = await prisma.lesson.findMany({
+    where: { disciplines: { some: { courseClasses: { some: { id: classId } } } } },
+    select: { id: true },
+  });
+  if (lessons.length === 0) return 0;
+
+  const result = await (prisma as any).attendance.createMany({
+    data: lessons.map((l) => ({ lessonId: l.id, studentId, status: 'PENDING' })),
+    skipDuplicates: true,
+  });
+  return result.count ?? 0;
+}
+
 /** Garante Student + User(ALUNO). Reaproveita registros existentes por email. */
 export async function ensureStudentAndUser(person: {
   name: string;
@@ -243,6 +266,7 @@ export async function matricularGrupo(input: MatricularGrupoInput): Promise<Matr
     // Evita matrícula duplicada (constraint @@unique studentId+classId).
     const dup = await prisma.enrollment.findFirst({ where: { studentId, classId: input.classId } });
     if (dup) {
+      await sincronizarPresencas(studentId, input.classId);
       enrollments.push({ enrollmentId: dup.id, studentId, tier, monthlyAmount: amount, transactionIds: [] });
       continue;
     }
@@ -258,6 +282,8 @@ export async function matricularGrupo(input: MatricularGrupoInput): Promise<Matr
         origin: input.origin,
       } as any,
     });
+
+    await sincronizarPresencas(studentId, input.classId);
 
     const transactionIds = await gerarMensalidades({
       studentId,

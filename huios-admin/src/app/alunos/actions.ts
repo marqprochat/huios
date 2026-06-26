@@ -6,6 +6,7 @@ import { hashPassword } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createEnrollmentCharge } from '@/app/financeiro/actions';
+import { sincronizarPresencas } from '@/lib/enrollment';
 
 interface ClassWithRelations {
     id: string;
@@ -117,6 +118,7 @@ export async function createAluno(prevState: any, formData: FormData) {
             );
             for (const enrollment of enrollments) {
                 await createEnrollmentCharge(student.id, enrollment.id, enrollment.classId);
+                await sincronizarPresencas(student.id, enrollment.classId);
             }
         }
         revalidatePath('/alunos');
@@ -193,6 +195,9 @@ export async function updateAluno(id: string, prevState: any, formData: FormData
                     status: (formData.get(`status_${classId}`) as string) || 'CURSANDO',
                 })),
             });
+            for (const classId of selectedClassIds) {
+                await sincronizarPresencas(id, classId);
+            }
         }
 
         revalidatePath('/alunos');
