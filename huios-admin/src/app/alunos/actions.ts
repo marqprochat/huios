@@ -290,14 +290,76 @@ export async function changeStudentPassword(studentId: string, newPassword: stri
 }
 
 export async function deleteAluno(id: string) {
-    // Apagar matrículas do aluno primeiro para não dar erro de foreign key
-    await prisma.enrollment.deleteMany({
-        where: { studentId: id }
-    });
+    try {
+        await prisma.$transaction(async (tx) => {
+            // Buscar o aluno (e seu usuário vinculado) + matrículas
+            const student = await tx.student.findUnique({
+                where: { id },
+                select: {
+                    userId: true,
+                    enrollments: { select: { id: true } },
+                },
+            });
 
-    await prisma.student.delete({
-        where: { id }
-    });
-    
+            if (!student) {
+                throw new Error('Aluno não encontrado.');
+            }
+
+            const enrollmentIds = student.enrollments.map((e) => e.id);
+
+            // 1) Pagamentos das transações financeiras do aluno (por aluno ou por matrícula)
+            await tx.payment.deleteMany({
+                where: {
+                    transaction: {
+                        OR: [
+                            { studentId: id },
+                            enrollmentIds.length > 0 ? { enrollmentId: { in: enrollmentIds } } : undefined,
+                        ].filter(Boolean) as any,
+                    },
+                },
+            });
+
+            // 2) Transações financeiras (liberam as matrículas)
+            await tx.financialTransaction.deleteMany({
+                where: {
+                    OR: [
+                        { studentId: id },
+                        enrollmentIds.length > 0 ? { enrollmentId: { in: enrollmentIds } } : undefined,
+                    ].filter(Boolean) as any,
+                },
+            });
+
+            // 3) Justificativas de falta (também caem em cascata via Attendance, mas removemos explicitamente)
+            await tx.absenceJustification.deleteMany({ where: { studentId: id } });
+
+            // 4) Presenças
+            await tx.attendance.deleteMany({ where: { studentId: id } });
+
+            // 5) Notas
+            await tx.grade.deleteMany({ where: { studentId: id } });
+
+            // 6) Submissões de provas (respostas caem em cascata)
+            await tx.examSubmission.deleteMany({ where: { studentId: id } });
+
+            // 7) Vínculos de equipe (membros) — desvincula o aluno
+            await tx.teamMember.deleteMany({ where: { studentId: id } });
+
+            // 8) Matrículas
+            await tx.enrollment.deleteMany({ where: { studentId: id } });
+
+            // 9) O aluno
+            await tx.student.delete({ where: { id } });
+
+            // 10) Usuário de login vinculado (se houver)
+            if (student.userId) {
+                await tx.user.delete({ where: { id: student.userId } });
+            }
+        });
+    } catch (error: any) {
+        console.error('Erro ao excluir aluno:', error);
+        return { success: false, message: 'Erro ao excluir aluno: ' + (error?.message ?? 'erro desconhecido') };
+    }
+
     revalidatePath('/alunos');
+    return { success: true, message: 'Aluno excluído com sucesso!' };
 }
