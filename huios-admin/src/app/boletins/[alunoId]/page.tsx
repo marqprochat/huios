@@ -17,6 +17,14 @@ interface Grade {
   exam: { title: string } | null;
 }
 
+interface Attendance {
+  present: number;
+  absent: number;
+  excused: number;
+  pending: number;
+  total: number;
+}
+
 interface DisciplineData {
   discipline: {
     id: string;
@@ -24,10 +32,14 @@ interface DisciplineData {
     workload: number | null;
     teacher: { name: string } | null;
   };
+  modality: string;
   grades: Grade[];
+  attendance: Attendance;
   average: number;
   status: string;
 }
+
+const ABSENT_FOR_FAIL = 2;
 
 interface StudentData {
   id: string;
@@ -189,8 +201,11 @@ export default function BoletimAlunoPage() {
     }
   };
 
-  const overallAverage = disciplines.length > 0
-    ? disciplines.reduce((sum, d) => sum + d.average, 0) / disciplines.length
+  const gradeDiscs = disciplines.filter(d => d.modality !== 'POR_PRESENCA');
+  const presencaDiscs = disciplines.filter(d => d.modality === 'POR_PRESENCA');
+
+  const overallAverage = gradeDiscs.length > 0
+    ? gradeDiscs.reduce((sum, d) => sum + d.average, 0) / gradeDiscs.length
     : 0;
 
   const stats = {
@@ -245,10 +260,12 @@ export default function BoletimAlunoPage() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-          <div className="text-3xl font-black text-primary">{overallAverage.toFixed(1)}</div>
-          <div className="text-sm text-slate-500">Média Geral</div>
-        </div>
+        {gradeDiscs.length > 0 && (
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+            <div className="text-3xl font-black text-primary">{overallAverage.toFixed(1)}</div>
+            <div className="text-sm text-slate-500">Média Geral</div>
+          </div>
+        )}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
           <div className="text-3xl font-black text-green-600">{stats.approved}</div>
           <div className="text-sm text-slate-500">Aprovados</div>
@@ -279,7 +296,7 @@ export default function BoletimAlunoPage() {
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                   <option value="">Selecione</option>
-                  {disciplines.map((d) => (
+                  {gradeDiscs.map((d) => (
                     <option key={d.discipline.id} value={d.discipline.id}>
                       {d.discipline.name}
                     </option>
@@ -376,8 +393,14 @@ export default function BoletimAlunoPage() {
         </div>
       )}
 
+      {/* Grade-based disciplines */}
       <div className="space-y-6">
-        {disciplines.map((disciplineData) => (
+        {presencaDiscs.length > 0 && gradeDiscs.length > 0 && (
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">
+            Avaliação por Nota
+          </h3>
+        )}
+        {gradeDiscs.map((disciplineData) => (
           <div
             key={disciplineData.discipline.id}
             className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
@@ -388,7 +411,7 @@ export default function BoletimAlunoPage() {
                   {disciplineData.discipline.name}
                 </h3>
                 <p className="text-sm text-slate-500">
-                  Professor: {disciplineData.discipline.teacher?.name || 'N/A'} • 
+                  Professor: {disciplineData.discipline.teacher?.name || 'N/A'} •
                   {disciplineData.discipline.workload ? ` ${disciplineData.discipline.workload}h` : ''}
                 </p>
               </div>
@@ -474,6 +497,97 @@ export default function BoletimAlunoPage() {
           </div>
         ))}
       </div>
+
+      {/* Attendance-based disciplines (POR_PRESENCA) — no grades, approval by frequency */}
+      {presencaDiscs.length > 0 && (
+        <div className="space-y-6">
+          {gradeDiscs.length > 0 && (
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">
+              Avaliação por Presença
+            </h3>
+          )}
+          {presencaDiscs.map((disciplineData) => {
+            const att = disciplineData.attendance;
+            const freqPct = att.total > 0
+              ? Math.round(((att.present + att.excused) / att.total) * 100)
+              : null;
+
+            return (
+              <div
+                key={disciplineData.discipline.id}
+                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+              >
+                <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-violet-500">how_to_reg</span>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                        {disciplineData.discipline.name}
+                      </h3>
+                      <p className="text-sm text-slate-500">
+                        Professor: {disciplineData.discipline.teacher?.name || 'N/A'}
+                        {disciplineData.discipline.workload ? ` • ${disciplineData.discipline.workload}h` : ''}
+                        {' · '}
+                        <span className="text-violet-500 font-medium">Avaliação por Presença</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {freqPct !== null && (
+                      <div className="text-right">
+                        <div className={`text-2xl font-black ${freqPct >= 75 ? 'text-green-600' : 'text-red-600'}`}>
+                          {freqPct}%
+                        </div>
+                        <div className="text-xs text-slate-500">Frequência</div>
+                      </div>
+                    )}
+                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${getStatusColor(disciplineData.status)}`}>
+                      {disciplineData.status}
+                    </span>
+                  </div>
+                </div>
+
+                {att.total > 0 ? (
+                  <div className="p-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Total de Aulas</p>
+                        <p className="text-xl font-bold text-slate-700 dark:text-slate-200 mt-0.5">{att.total}</p>
+                      </div>
+                      <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                        <p className="text-[10px] font-bold text-green-500 uppercase">Presenças</p>
+                        <p className="text-xl font-bold text-green-600 mt-0.5">{att.present}</p>
+                      </div>
+                      <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                        <p className="text-[10px] font-bold text-red-400 uppercase">Falta{att.absent !== 1 ? 's' : ''}</p>
+                        <p className={`text-xl font-bold mt-0.5 ${att.absent >= ABSENT_FOR_FAIL ? 'text-red-600' : 'text-red-400'}`}>
+                          {att.absent}
+                        </p>
+                      </div>
+                      <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                        <p className="text-[10px] font-bold text-blue-400 uppercase">Justificadas</p>
+                        <p className="text-xl font-bold text-blue-600 mt-0.5">{att.excused}</p>
+                      </div>
+                    </div>
+                    {att.absent >= ABSENT_FOR_FAIL && (
+                      <p className="text-xs text-red-600 mt-4 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm">warning</span>
+                        Limite de faltas atingido ({att.absent}/{ABSENT_FOR_FAIL}). Aluno reprovado por frequência.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-slate-500">
+                    <p>Nenhuma aula registrada para esta disciplina</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {disciplines.length === 0 && (
         <div className="text-center py-12 text-slate-500">

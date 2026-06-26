@@ -3,6 +3,8 @@
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
+const ABSENT_FOR_FAIL = 2;
+
 export async function getReportCardData(studentId: string) {
   try {
     const student = await prisma.student.findUnique({
@@ -19,10 +21,20 @@ export async function getReportCardData(studentId: string) {
       include: {
         class: {
           include: {
+            course: { select: { modality: true } },
             disciplines: {
               include: {
                 teacher: {
                   select: { name: true }
+                },
+                lessons: {
+                  select: {
+                    id: true,
+                    attendances: {
+                      where: { studentId },
+                      select: { status: true }
+                    }
+                  }
                 }
               }
             }
@@ -39,11 +51,55 @@ export async function getReportCardData(studentId: string) {
     });
 
     const reportCard: any[] = [];
+    const seenDisciplines = new Set<string>();
     enrollments.forEach(enrollment => {
       if (enrollment.class && enrollment.class.disciplines) {
+        const modality = (enrollment.class.course as any)?.modality ?? 'POR_NOTA';
         enrollment.class.disciplines.forEach(discipline => {
+          // Avoid duplicating a discipline shared across multiple enrolled classes
+          if (seenDisciplines.has(discipline.id)) return;
+          seenDisciplines.add(discipline.id);
+
+          // Attendance summary for this student
+          const attendance = (discipline.lessons || []).reduce(
+            (acc: { present: number; absent: number; excused: number; pending: number; total: number }, lesson: any) => {
+              const a = lesson.attendances[0];
+              if (!a) return acc;
+              if (a.status === 'PRESENT') acc.present++;
+              else if (a.status === 'ABSENT') acc.absent++;
+              else if (a.status === 'EXCUSED') acc.excused++;
+              else acc.pending++;
+              return acc;
+            },
+            { present: 0, absent: 0, excused: 0, pending: 0, total: (discipline.lessons || []).length }
+          );
+
+          if (modality === 'POR_PRESENCA') {
+            // Attendance-based: no grades, approval depends on frequency
+            const status = attendance.total === 0
+              ? 'Aguardando'
+              : attendance.absent >= ABSENT_FOR_FAIL
+                ? 'Reprovado'
+                : 'Aprovado';
+
+            reportCard.push({
+              discipline: {
+                id: discipline.id,
+                name: discipline.name,
+                workload: discipline.workload,
+                teacher: discipline.teacher ? { name: discipline.teacher.name } : null
+              },
+              modality,
+              grades: [],
+              attendance,
+              average: 0,
+              status
+            });
+            return;
+          }
+
           const disciplineGrades = grades.filter(g => g.disciplineId === discipline.id);
-          
+
           const totalWeight = disciplineGrades.reduce((sum, g) => sum + g.weight, 0);
           const weightedScore = disciplineGrades.reduce((sum, g) => sum + (g.score * g.weight), 0);
           const average = totalWeight > 0 ? weightedScore / totalWeight : 0;
@@ -62,7 +118,9 @@ export async function getReportCardData(studentId: string) {
               workload: discipline.workload,
               teacher: discipline.teacher ? { name: discipline.teacher.name } : null
             },
+            modality,
             grades: serializedGrades,
+            attendance,
             average: Math.round(average * 100) / 100,
             status: disciplineGrades.length === 0 ? 'Aguardando' : average >= 7 ? 'Aprovado' : 'Reprovado'
           });
