@@ -2,47 +2,55 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { exportCSV } from '@/lib/exportCSV';
+import { exportAttendanceHTML, type AttendanceDay } from '@/lib/exportAttendanceHTML';
 
-interface Discipline { id: string; name: string; courseClasses: { name: string }[] }
+interface CourseClass { id: string; name: string; course: { name: string } }
 interface StudentStat {
   student: { id: string; name: string };
   total: number; present: number; absent: number; excused: number; percentage: number;
 }
 interface Lesson {
   id: string; date: string; startTime: string | null; endTime: string | null; locationName: string | null;
+  disciplineName: string;
   attendances: { status: string; student: { id: string; name: string } }[];
 }
 
 const cls = (...c: (string | false | undefined)[]) => c.filter(Boolean).join(' ');
 
+const STATUS_UI: Record<string, { label: string; cls: string; icon: string }> = {
+  PRESENT: { label: 'Presente', cls: 'text-emerald-600 bg-emerald-100', icon: 'check_circle' },
+  ABSENT: { label: 'Falta', cls: 'text-red-600 bg-red-100', icon: 'cancel' },
+  EXCUSED: { label: 'Justificada', cls: 'text-amber-600 bg-amber-100', icon: 'event_available' },
+  PENDING: { label: 'Pendente', cls: 'text-slate-500 bg-slate-100', icon: 'schedule' },
+};
+
 export default function RelatorioPresencaPage() {
-  const router = useRouter();
-  const [disciplines, setDisciplines] = useState<Discipline[]>([]);
-  const [disciplineId, setDisciplineId] = useState('');
+  const [classes, setClasses] = useState<CourseClass[]>([]);
+  const [classId, setClassId] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [search, setSearch] = useState('');
   const [studentStats, setStudentStats] = useState<StudentStat[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(false);
+  const [detailStudent, setDetailStudent] = useState<StudentStat | null>(null);
 
   useEffect(() => {
-    fetch('/api/relatorios/presenca').then(r => r.json()).then(d => setDisciplines(d.disciplines ?? []));
+    fetch('/api/relatorios/presenca').then(r => r.json()).then(d => setClasses(d.classes ?? []));
   }, []);
 
   useEffect(() => {
-    if (!disciplineId) return;
+    if (!classId) return;
     setLoading(true);
-    const p = new URLSearchParams({ disciplineId });
+    const p = new URLSearchParams({ classId });
     if (start) p.set('start', start);
     if (end) p.set('end', end);
     fetch(`/api/relatorios/presenca?${p}`)
       .then(r => r.json())
       .then(d => { setStudentStats(d.studentStats ?? []); setLessons(d.lessons ?? []); })
       .finally(() => setLoading(false));
-  }, [disciplineId, start, end]);
+  }, [classId, start, end]);
 
   const filtered = useMemo(() =>
     studentStats.filter(s => s.student.name.toLowerCase().includes(search.toLowerCase())),
@@ -54,10 +62,41 @@ export default function RelatorioPresencaPage() {
     return total > 0 ? Math.round((pres / total) * 100) : 0;
   }, [studentStats]);
 
+  const selectedClass = classes.find(c => c.id === classId);
+  const className = selectedClass ? `${selectedClass.course.name} — ${selectedClass.name}` : 'relatorio';
+  const periodLabel = start || end ? `${start ? new Date(start).toLocaleDateString('pt-BR') : '…'} a ${end ? new Date(end).toLocaleDateString('pt-BR') : '…'}` : undefined;
+
+  // Detalhe dia-a-dia do aluno selecionado (computado a partir das aulas já carregadas)
+  const studentDays: AttendanceDay[] = useMemo(() => {
+    if (!detailStudent) return [];
+    return lessons.map(l => {
+      const att = l.attendances.find(a => a.student.id === detailStudent.student.id);
+      return {
+        date: l.date,
+        disciplineName: l.disciplineName,
+        status: (att?.status as AttendanceDay['status']) ?? 'PENDING',
+      };
+    }).sort((a, b) => +new Date(b.date) - +new Date(a.date));
+  }, [detailStudent, lessons]);
+
   const handleExport = () => {
-    const disc = disciplines.find(d => d.id === disciplineId);
-    exportCSV(`presenca-${disc?.name ?? 'relatorio'}`, ['Aluno', 'Total', 'Presente', 'Falta', 'Justificada', 'Frequência %'],
+    exportCSV(`presenca-${className}`, ['Aluno', 'Total', 'Presente', 'Falta', 'Justificada', 'Frequência %'],
       filtered.map(s => [s.student.name, s.total, s.present, s.absent, s.excused, s.percentage]));
+  };
+
+  const handleExportStudent = () => {
+    if (!detailStudent) return;
+    exportAttendanceHTML({
+      studentName: detailStudent.student.name,
+      className,
+      periodLabel,
+      total: detailStudent.total,
+      present: detailStudent.present,
+      absent: detailStudent.absent,
+      excused: detailStudent.excused,
+      percentage: detailStudent.percentage,
+      days: studentDays,
+    });
   };
 
   const freqColor = (pct: number) =>
@@ -73,7 +112,7 @@ export default function RelatorioPresencaPage() {
           </Link>
           <div>
             <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Relatório de Presença</h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">Frequência por disciplina e aluno</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Frequência por turma e aluno</p>
           </div>
         </div>
         {studentStats.length > 0 && (
@@ -88,11 +127,11 @@ export default function RelatorioPresencaPage() {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">Disciplina *</label>
-            <select value={disciplineId} onChange={e => setDisciplineId(e.target.value)}
+            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">Turma *</label>
+            <select value={classId} onChange={e => setClassId(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary/30 outline-none">
               <option value="">Selecione...</option>
-              {disciplines.map(d => <option key={d.id} value={d.id}>{d.name} — {d.courseClasses.map(c => c.name).join(', ')}</option>)}
+              {classes.map(c => <option key={c.id} value={c.id}>{c.course.name} — {c.name}</option>)}
             </select>
           </div>
           <div>
@@ -114,10 +153,10 @@ export default function RelatorioPresencaPage() {
       </div>
 
       {/* Empty state */}
-      {!disciplineId && (
+      {!classId && (
         <div className="text-center py-16 text-slate-400">
           <span className="material-symbols-outlined text-5xl mb-3">tune</span>
-          <p>Selecione uma disciplina para gerar o relatório</p>
+          <p>Selecione uma turma para gerar o relatório</p>
         </div>
       )}
 
@@ -127,7 +166,7 @@ export default function RelatorioPresencaPage() {
         </div>
       )}
 
-      {disciplineId && !loading && (
+      {classId && !loading && (
         <>
           {/* Summary */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -149,20 +188,20 @@ export default function RelatorioPresencaPage() {
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
               <div className="p-5 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="font-bold text-slate-800 dark:text-white">Presença por Aluno</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Clique na linha para ver o perfil do aluno</p>
+                <p className="text-xs text-slate-400 mt-0.5">Clique no aluno para ver o relatório detalhado dia a dia</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[600px]">
                   <thead className="bg-slate-50 dark:bg-slate-800/50">
                     <tr>
-                      {['Aluno', 'Presenças', 'Faltas', 'Justificadas', 'Frequência'].map(h => (
-                        <th key={h} className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500">{h}</th>
+                      {['Aluno', 'Presenças', 'Faltas', 'Justificadas', 'Frequência', ''].map((h, i) => (
+                        <th key={i} className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {filtered.map(s => (
-                      <tr key={s.student.id} onClick={() => router.push(`/alunos/${s.student.id}`)}
+                      <tr key={s.student.id} onClick={() => setDetailStudent(s)}
                         className="hover:bg-slate-50 dark:hover:bg-slate-800/30 cursor-pointer transition-colors">
                         <td className="px-5 py-3.5 font-medium text-slate-800 dark:text-white">{s.student.name}</td>
                         <td className="px-5 py-3.5"><span className="font-bold text-emerald-600">{s.present}</span><span className="text-slate-400 text-xs">/{s.total}</span></td>
@@ -180,13 +219,16 @@ export default function RelatorioPresencaPage() {
                             <span className={cls('font-bold text-sm', freqColor(s.percentage))}>{s.percentage}%</span>
                           </div>
                         </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <span className="material-symbols-outlined text-slate-300">chevron_right</span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
-          ) : disciplineId && (
+          ) : classId && (
             <div className="text-center py-12 text-slate-400">
               <span className="material-symbols-outlined text-4xl mb-2">event_busy</span>
               <p>Nenhum dado encontrado</p>
@@ -203,7 +245,7 @@ export default function RelatorioPresencaPage() {
                 <table className="w-full text-left border-collapse min-w-[500px]">
                   <thead className="bg-slate-50 dark:bg-slate-800/50">
                     <tr>
-                      {['Data', 'Horário', 'Local', 'Presentes', ''].map((h, i) => (
+                      {['Data', 'Disciplina', 'Horário', 'Presentes', ''].map((h, i) => (
                         <th key={i} className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500">{h}</th>
                       ))}
                     </tr>
@@ -215,12 +257,12 @@ export default function RelatorioPresencaPage() {
                       return (
                         <tr key={l.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
                           <td className="px-5 py-3.5 font-medium">{new Date(l.date).toLocaleDateString('pt-BR')}</td>
+                          <td className="px-5 py-3.5 text-sm text-slate-500">{l.disciplineName || '—'}</td>
                           <td className="px-5 py-3.5 text-sm text-slate-500">
                             {l.startTime ? new Date(l.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--'}
                             {' – '}
                             {l.endTime ? new Date(l.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--'}
                           </td>
-                          <td className="px-5 py-3.5 text-sm text-slate-500">{l.locationName ?? '—'}</td>
                           <td className="px-5 py-3.5">
                             <span className="font-bold text-emerald-600">{present}</span>
                             <span className="text-slate-400 text-xs">/{total}</span>
@@ -238,6 +280,76 @@ export default function RelatorioPresencaPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Detalhe do aluno */}
+      {detailStudent && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" onClick={() => setDetailStudent(null)}>
+          <div className="bg-white dark:bg-slate-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[92vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Modal header */}
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">{detailStudent.student.name}</h3>
+                <p className="text-xs text-slate-400 mt-0.5">{className}{periodLabel ? ` · ${periodLabel}` : ''}</p>
+              </div>
+              <button onClick={() => setDetailStudent(null)} className="text-slate-400 hover:text-slate-600">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Modal summary */}
+            <div className="grid grid-cols-4 gap-2 p-4 border-b border-slate-100 dark:border-slate-800">
+              {[
+                { label: 'Aulas', value: detailStudent.total, color: 'text-slate-700 dark:text-white' },
+                { label: 'Presenças', value: detailStudent.present, color: 'text-emerald-600' },
+                { label: 'Faltas', value: detailStudent.absent, color: 'text-red-600' },
+                { label: 'Justif.', value: detailStudent.excused, color: 'text-amber-600' },
+              ].map(c => (
+                <div key={c.label} className="text-center">
+                  <p className={`text-2xl font-black ${c.color}`}>{c.value}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{c.label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Frequência</span>
+              <span className={cls('text-xl font-black', freqColor(detailStudent.percentage))}>{detailStudent.percentage}%</span>
+            </div>
+
+            {/* Day-by-day list */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {studentDays.length === 0 && (
+                <p className="text-center text-slate-400 py-8 text-sm">Nenhuma aula registrada no período</p>
+              )}
+              {studentDays.map((d, i) => {
+                const ui = STATUS_UI[d.status] ?? STATUS_UI.PENDING;
+                return (
+                  <div key={i} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                    <div>
+                      <p className="font-semibold text-sm text-slate-800 dark:text-white">
+                        {new Date(d.date).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      </p>
+                      {d.disciplineName && <p className="text-xs text-slate-400 mt-0.5">{d.disciplineName}</p>}
+                    </div>
+                    <span className={cls('flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full', ui.cls)}>
+                      <span className="material-symbols-outlined text-sm">{ui.icon}</span>
+                      {ui.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal actions */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+              <button onClick={handleExportStudent}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all">
+                <span className="material-symbols-outlined text-base">smartphone</span>
+                Exportar para celular (HTML / PDF)
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
