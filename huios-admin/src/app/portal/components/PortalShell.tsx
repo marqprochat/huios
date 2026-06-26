@@ -49,9 +49,20 @@ const StudentContext = createContext<StudentContextType>({
 
 export const useStudent = () => useContext(StudentContext);
 
+interface FinanceSummary {
+  pendingCount: number;
+  overdueCount: number;
+  pendingTotal: number;
+  paidTotal: number;
+}
+
+const FinanceContext = createContext<FinanceSummary | null>(null);
+export const useFinanceSummary = () => useContext(FinanceContext);
+
 export default function PortalShell({ children }: { children: ReactNode }) {
   const [data, setData] = useState<StudentData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [finance, setFinance] = useState<FinanceSummary | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -80,12 +91,25 @@ export default function PortalShell({ children }: { children: ReactNode }) {
     }
   };
 
+  const fetchFinance = async () => {
+    try {
+      const res = await fetch('/api/portal/financeiro');
+      if (res.ok) {
+        const d = await res.json();
+        setFinance(d.summary ?? null);
+      }
+    } catch {
+      // silencioso
+    }
+  };
+
   useEffect(() => {
     if (isLoginPage) {
       setLoading(false);
       return;
     }
     fetchStudent();
+    fetchFinance();
   }, [isLoginPage, pathname]);
 
   if (isLoginPage) {
@@ -115,16 +139,18 @@ export default function PortalShell({ children }: { children: ReactNode }) {
 
   return (
     <StudentContext.Provider value={{ data, loading, refresh: fetchStudent }}>
-      <div className="flex min-h-screen">
-        <PortalSidebar studentName={studentName} courseName={courseName} />
-        <div className="flex-1 flex flex-col min-w-0">
-          <PortalHeader studentName={studentName} />
-          <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-            {children}
-          </main>
-          <BottomNav />
+      <FinanceContext.Provider value={finance}>
+        <div className="flex min-h-screen">
+          <PortalSidebar studentName={studentName} courseName={courseName} />
+          <div className="flex-1 flex flex-col min-w-0">
+            <PortalHeader studentName={studentName} />
+            <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
+              {children}
+            </main>
+            <BottomNav />
+          </div>
         </div>
-      </div>
+      </FinanceContext.Provider>
     </StudentContext.Provider>
   );
 }

@@ -1,12 +1,15 @@
 'use client';
 
-import { useStudent } from './components/PortalShell';
+import { useStudent, useFinanceSummary } from './components/PortalShell';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { toLocalDate } from '@/lib/date-utils';
 
+const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
 export default function PortalDashboard() {
   const { data } = useStudent();
+  const finance = useFinanceSummary();
   const [lessons, setLessons] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
   const [grades, setGrades] = useState<any[]>([]);
@@ -161,6 +164,27 @@ export default function PortalDashboard() {
           </div>
           <Link href="/portal/provas" className="text-amber-700 hover:text-amber-900 text-xs font-semibold whitespace-nowrap underline">
             Resolver
+          </Link>
+        </div>
+      )}
+
+      {/* Financial Alert */}
+      {finance && finance.pendingCount > 0 && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-start gap-4">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${finance.overdueCount > 0 ? 'bg-red-100' : 'bg-amber-100'}`}>
+            <span className={`material-symbols-outlined ${finance.overdueCount > 0 ? 'text-red-600' : 'text-amber-600'}`}>payments</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-slate-900 text-sm">
+              {finance.overdueCount > 0 ? 'Você tem cobranças vencidas' : 'Você tem cobranças em aberto'}
+            </h3>
+            <p className="text-slate-500 text-xs mt-1 leading-relaxed">
+              {finance.pendingCount} cobrança(s) · total {fmtBRL(finance.pendingTotal)}
+              {finance.overdueCount > 0 && ` · ${finance.overdueCount} vencida(s)`}. Pague online em segundos.
+            </p>
+          </div>
+          <Link href="/portal/financeiro" className={`text-xs font-bold whitespace-nowrap px-4 py-2 rounded-xl text-white ${finance.overdueCount > 0 ? 'bg-red-600' : 'bg-[#135bec]'} hover:opacity-90`}>
+            Pagar agora
           </Link>
         </div>
       )}

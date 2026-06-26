@@ -1,11 +1,15 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useFinanceSummary } from './PortalShell';
 
 export default function PortalHeader({ studentName }: { studentName: string }) {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
+  const finance = useFinanceSummary();
+  const pending = finance?.pendingCount ?? 0;
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -35,10 +39,14 @@ export default function PortalHeader({ studentName }: { studentName: string }) {
 
       {/* Right side */}
       <div className="flex items-center gap-3">
-        <button className="relative p-2 hover:bg-slate-50 rounded-xl transition-colors">
+        <Link href="/portal/financeiro" className="relative p-2 hover:bg-slate-50 rounded-xl transition-colors" title={pending > 0 ? `${pending} cobrança(s) em aberto` : 'Financeiro'}>
           <span className="material-symbols-outlined text-slate-400">notifications</span>
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-        </button>
+          {pending > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-[10px] font-bold bg-red-500 text-white">
+              {pending}
+            </span>
+          )}
+        </Link>
         <div className="hidden md:flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#135bec] to-[#0d47a1] flex items-center justify-center">
             <span className="text-white font-bold text-xs">{studentName.charAt(0)}</span>

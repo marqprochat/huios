@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useFinanceSummary } from './PortalShell';
 
 const navItems = [
   { href: '/portal', icon: 'dashboard', label: 'Visão Geral' },
@@ -11,6 +12,7 @@ const navItems = [
   { href: '/portal/presenca', icon: 'how_to_reg', label: 'Presenças' },
   { href: '/portal/boletim', icon: 'assessment', label: 'Boletim' },
   { href: '/portal/avaliacoes', icon: 'rate_review', label: 'Avaliações' },
+  { href: '/portal/financeiro', icon: 'payments', label: 'Financeiro' },
   { href: '/portal/perfil', icon: 'person', label: 'Perfil' },
 ];
 
@@ -18,6 +20,7 @@ export default function PortalSidebar({ studentName, courseName }: { studentName
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
+  const finance = useFinanceSummary();
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -78,7 +81,12 @@ export default function PortalSidebar({ studentName, courseName }: { studentName
               <span className={`material-symbols-outlined text-xl ${isActive ? 'text-white' : 'text-slate-400'}`}>
                 {item.icon}
               </span>
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.href === '/portal/financeiro' && finance && finance.pendingCount > 0 && (
+                <span className={`min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full text-[10px] font-bold ${isActive ? 'bg-white text-[#135bec]' : 'bg-red-500 text-white'}`}>
+                  {finance.pendingCount}
+                </span>
+              )}
             </Link>
           );
         })}
