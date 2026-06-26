@@ -20,7 +20,11 @@
       "Bash(ls -la \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-api\\\\prisma\\\\migrations\\\\\\\\\")",
       "Bash(docker exec *)",
       "Bash(DATABASE_URL=\"postgresql://postgres:Edy92153474@localhost:5432/huios?schema=public\" npx prisma migrate resolve --applied 20260625120000_add_enrollment_pricing_and_payments)",
-      "PowerShell(npx tsc --noEmit -p tsconfig.json 2>&1)"
+      "PowerShell(npx tsc --noEmit -p tsconfig.json 2>&1)",
+      "Bash(grep -n \"PAGBANK\\\\|PAGSEGURO\\\\|public_key\\\\|PUBLIC_KEY\" docker-compose.yml huios-admin/Dockerfile.prod)",
+      "Bash(ls -la .env)",
+      "Bash(grep -c \"PAGBANK\" .env)",
+      "Bash(grep -v '^$')"
     ]
   }
 }

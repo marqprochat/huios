@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/app/components/Toast/useToast';
+import { maskPhone, maskCpf, isValidCPF, isValidPhone } from '@/lib/masks';
 
 export default function NovoMembroPage() {
     const router = useRouter();
@@ -44,8 +45,8 @@ export default function NovoMembroPage() {
                 setFormData({
                     name: student.name,
                     email: student.email,
-                    phone: student.phone || '',
-                    cpf: student.cpf || '',
+                    phone: maskPhone(student.phone || ''),
+                    cpf: maskCpf(student.cpf || ''),
                     birthDate: student.birthDate ? new Date(student.birthDate).toISOString().split('T')[0] : '',
                     maritalStatus: student.maritalStatus || '',
                     area: '',
@@ -71,11 +72,22 @@ export default function NovoMembroPage() {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const masked = name === 'phone' ? maskPhone(value) : name === 'cpf' ? maskCpf(value) : value;
+        setFormData(prev => ({ ...prev, [name]: masked }));
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+
+        if (!formData.cpf.trim() || !isValidCPF(formData.cpf)) {
+            toast('error', 'CPF inválido', 'Informe um CPF válido.');
+            return;
+        }
+        if (formData.phone.trim() && !isValidPhone(formData.phone)) {
+            toast('error', 'Telefone inválido', 'Use o formato (99) 99999-9999.');
+            return;
+        }
+
         setIsPending(true);
 
         const data = new FormData(e.currentTarget);
@@ -151,12 +163,12 @@ export default function NovoMembroPage() {
 
                             <div className="space-y-2">
                                 <label htmlFor="phone" className="text-sm font-bold text-slate-700 dark:text-slate-300">Telefone</label>
-                                <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="(11) 99999-9999" />
+                                <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} inputMode="numeric" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="(11) 99999-9999" />
                             </div>
 
                             <div className="space-y-2">
-                                <label htmlFor="cpf" className="text-sm font-bold text-slate-700 dark:text-slate-300">CPF</label>
-                                <input type="text" id="cpf" name="cpf" value={formData.cpf} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="000.000.000-00" />
+                                <label htmlFor="cpf" className="text-sm font-bold text-slate-700 dark:text-slate-300">CPF <span className="text-red-500">*</span></label>
+                                <input type="text" id="cpf" name="cpf" value={formData.cpf} onChange={handleChange} required inputMode="numeric" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="000.000.000-00" />
                             </div>
 
                             <div className="space-y-2">

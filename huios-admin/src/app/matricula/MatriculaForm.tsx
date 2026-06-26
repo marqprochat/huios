@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { maskPhone, maskCpf, isValidCPF, isValidPhone } from '@/lib/masks';
 
 interface Turma {
   id: string;
@@ -63,6 +64,16 @@ export function MatriculaForm({ turmas, church }: { turmas: Turma[]; church?: Ch
     e.preventDefault();
     setError(null);
     if (!classId) return setError('Selecione uma turma.');
+
+    // Valida CPF (obrigatório) e telefone (se preenchido) de cada pessoa.
+    for (let i = 0; i < people.length; i++) {
+      const p = people[i];
+      const quem = people.length > 1 ? `Pessoa ${i + 1}: ` : '';
+      if (!p.cpf.trim()) return setError(`${quem}informe o CPF.`);
+      if (!isValidCPF(p.cpf)) return setError(`${quem}CPF inválido.`);
+      if (p.phone.trim() && !isValidPhone(p.phone)) return setError(`${quem}telefone inválido. Use (99) 99999-9999.`);
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/matricula/criar', {
@@ -172,8 +183,8 @@ export function MatriculaForm({ turmas, church }: { turmas: Turma[]; church?: Ch
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input value={p.name} onChange={e => updatePerson(i, { name: e.target.value })} className={fieldCls} placeholder="Nome completo *" required />
               <input value={p.email} onChange={e => updatePerson(i, { email: e.target.value })} type="email" className={fieldCls} placeholder="E-mail *" required />
-              <input value={p.phone} onChange={e => updatePerson(i, { phone: e.target.value })} className={fieldCls} placeholder="Telefone" />
-              <input value={p.cpf} onChange={e => updatePerson(i, { cpf: e.target.value })} className={fieldCls} placeholder="CPF" />
+              <input value={p.phone} onChange={e => updatePerson(i, { phone: maskPhone(e.target.value) })} className={fieldCls} placeholder="Telefone (99) 99999-9999" inputMode="numeric" />
+              <input value={p.cpf} onChange={e => updatePerson(i, { cpf: maskCpf(e.target.value) })} className={fieldCls} placeholder="CPF *" inputMode="numeric" required />
             </div>
             {!church?.isPartner && (
               <label className="flex items-center gap-2 cursor-pointer">

@@ -3,6 +3,7 @@
 import { useActionState, useEffect } from 'react';
 import { createAluno } from '../actions';
 import { useToast } from '../../components/Toast/useToast';
+import { MaskedInput } from '../../components/MaskedInput';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -43,12 +44,12 @@ export default function NovoAlunoForm({ classes }: { classes: any[] }) {
 
                     <div className="space-y-2">
                         <label htmlFor="phone" className="text-sm font-bold text-slate-700 dark:text-slate-300">Telefone</label>
-                        <input type="tel" id="phone" name="phone" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="(11) 99999-9999" />
+                        <MaskedInput mask="phone" type="tel" id="phone" name="phone" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="(11) 99999-9999" />
                     </div>
 
                     <div className="space-y-2">
-                        <label htmlFor="cpf" className="text-sm font-bold text-slate-700 dark:text-slate-300">CPF</label>
-                        <input type="text" id="cpf" name="cpf" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="000.000.000-00" />
+                        <label htmlFor="cpf" className="text-sm font-bold text-slate-700 dark:text-slate-300">CPF <span className="text-red-500">*</span></label>
+                        <MaskedInput mask="cpf" type="text" id="cpf" name="cpf" required className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="000.000.000-00" />
                     </div>
 
                     <div className="space-y-2">
