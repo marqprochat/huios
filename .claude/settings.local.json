@@ -24,7 +24,9 @@
       "Bash(grep -n \"PAGBANK\\\\|PAGSEGURO\\\\|public_key\\\\|PUBLIC_KEY\" docker-compose.yml huios-admin/Dockerfile.prod)",
       "Bash(ls -la .env)",
       "Bash(grep -c \"PAGBANK\" .env)",
-      "Bash(grep -v '^$')"
+      "Bash(grep -v '^$')",
+      "Bash(ls src/middleware*)",
+      "Bash(ls middleware*)"
     ]
   }
 }

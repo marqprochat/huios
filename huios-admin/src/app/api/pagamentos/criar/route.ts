@@ -35,8 +35,14 @@ export async function POST(request: Request) {
     if (tx.status === 'PAGO') return NextResponse.json({ error: 'Esta cobrança já foi paga.' }, { status: 409 });
 
     const amountCents = Math.round((tx.amount as number) * 100);
-    const origin = new URL(request.url).origin;
-    const notificationUrl = `${origin}/api/pagamentos/webhook/pagbank`;
+    // PagBank exige uma URL pública em HTTPS. Em ambiente local o origin vira
+    // http://localhost e a API rejeita com "invalid notification url", então
+    // priorizamos a URL pública configurada via env.
+    const requestOrigin = new URL(request.url).origin;
+    const baseUrl = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || requestOrigin).replace(/\/$/, '');
+    const notificationUrl = baseUrl.startsWith('https://')
+      ? `${baseUrl}/api/pagamentos/webhook/pagbank`
+      : undefined;
 
     const result = await createCharge({
       referenceId: tx.id,
