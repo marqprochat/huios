@@ -88,7 +88,10 @@ async function postOrder(body: any): Promise<any> {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg = data?.error_messages?.[0]?.description || data?.message || `PagBank HTTP ${res.status}`;
+    const errs = data?.error_messages;
+    const msg = Array.isArray(errs) && errs.length
+      ? errs.map((e: any) => [e.parameter_name, e.description].filter(Boolean).join(': ')).join(' | ')
+      : data?.message || `PagBank HTTP ${res.status}`;
     throw new Error(msg);
   }
   return data;
