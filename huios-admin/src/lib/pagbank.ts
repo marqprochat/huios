@@ -175,6 +175,8 @@ export async function createCharge(params: CreateChargeParams): Promise<CreateCh
       {
         reference_id: referenceId,
         description: description.slice(0, 63),
+        // Texto exibido na fatura do cartão (máx. 17 caracteres, sem acentos).
+        soft_descriptor: 'HUIOS',
         amount: { value: amountCents, currency: 'BRL' },
         payment_method: {
           type: 'CREDIT_CARD',
