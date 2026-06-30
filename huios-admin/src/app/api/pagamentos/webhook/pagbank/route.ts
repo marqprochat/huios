@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
-import { mapStatus } from '@/lib/pagbank';
+import { mapStatus, getPagBankConfig } from '@/lib/pagbank';
 
 export const dynamic = 'force-dynamic';
-
-const WEBHOOK_TOKEN = process.env.PAGBANK_WEBHOOK_TOKEN || '';
 
 const METHOD_TO_PAYMENTMETHOD: Record<string, string> = {
   CREDIT_CARD: 'CARTAO',
@@ -14,10 +12,10 @@ const METHOD_TO_PAYMENTMETHOD: Record<string, string> = {
 };
 
 /** Valida a autenticidade da notificação (x-authenticity-token = sha256(token-rawBody)). */
-function isAuthentic(rawBody: string, header: string | null): boolean {
-  if (!WEBHOOK_TOKEN) return true; // sem token configurado, não bloqueia (sandbox)
+function isAuthentic(rawBody: string, header: string | null, webhookToken: string): boolean {
+  if (!webhookToken) return true; // sem token configurado, não bloqueia (sandbox)
   if (!header) return false;
-  const expected = crypto.createHash('sha256').update(`${WEBHOOK_TOKEN}-${rawBody}`).digest('hex');
+  const expected = crypto.createHash('sha256').update(`${webhookToken}-${rawBody}`).digest('hex');
   return expected === header;
 }
 
@@ -25,7 +23,8 @@ export async function POST(request: Request) {
   try {
     const rawBody = await request.text();
     const header = request.headers.get('x-authenticity-token');
-    if (!isAuthentic(rawBody, header)) {
+    const { webhookToken } = await getPagBankConfig();
+    if (!isAuthentic(rawBody, header, webhookToken)) {
       return NextResponse.json({ error: 'Assinatura inválida.' }, { status: 401 });
     }
 

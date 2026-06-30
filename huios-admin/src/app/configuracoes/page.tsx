@@ -17,11 +17,82 @@ export default function ConfiguracoesPage() {
   const [radiusMeters, setRadiusMeters] = useState("100")
   const [checkInBufferMinutes, setCheckInBufferMinutes] = useState("30")
 
+  // Estados de pagamento (PagBank)
+  const [pagbankEnv, setPagbankEnv] = useState("sandbox")
+  const [appUrl, setAppUrl] = useState("")
+  const [pagbankToken, setPagbankToken] = useState("")
+  const [pagbankWebhookToken, setPagbankWebhookToken] = useState("")
+  const [tokenMasked, setTokenMasked] = useState<string | null>(null)
+  const [hasPublicKey, setHasPublicKey] = useState(false)
+  const [paySaving, setPaySaving] = useState(false)
+  const [payTesting, setPayTesting] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
+
+  const webhookUrl = `${(appUrl || '').replace(/\/$/, '')}/api/pagamentos/webhook/pagbank`
+
   // Carregar configurações ao montar
   useEffect(() => {
     fetchSettings()
     fetchCheckinConfig()
+    fetchPaymentConfig()
   }, [])
+
+  const fetchPaymentConfig = async () => {
+    try {
+      const res = await fetch('/api/admin/configuracoes/pagamento')
+      if (res.ok) {
+        const data = await res.json()
+        setPagbankEnv(data.pagbankEnv || 'sandbox')
+        setAppUrl(data.appUrl || '')
+        setTokenMasked(data.tokenMasked || null)
+        setHasPublicKey(!!data.hasPublicKey)
+      }
+    } catch (error) {
+      console.error('Error fetching payment config:', error)
+    }
+  }
+
+  const savePaymentConfig = async () => {
+    setPaySaving(true)
+    try {
+      const res = await fetch('/api/admin/configuracoes/pagamento', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pagbankEnv, appUrl, pagbankToken, pagbankWebhookToken }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast('success', 'Configurações salvas', 'Dados de pagamento salvos com sucesso.')
+        setPagbankToken('')
+        setPagbankWebhookToken('')
+        fetchPaymentConfig()
+      } else {
+        toast('error', 'Erro ao salvar', data.error || 'Não foi possível salvar.')
+      }
+    } catch {
+      toast('error', 'Erro ao salvar', 'Ocorreu um erro inesperado.')
+    } finally {
+      setPaySaving(false)
+    }
+  }
+
+  const testPaymentConnection = async () => {
+    setPayTesting(true)
+    try {
+      const res = await fetch('/api/admin/configuracoes/pagamento', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        toast('success', 'Conexão validada', data.message || 'Token válido e chave pública gerada.')
+        fetchPaymentConfig()
+      } else {
+        toast('error', 'Falha na validação', data.error || 'Token inválido.')
+      }
+    } catch {
+      toast('error', 'Falha na validação', 'Ocorreu um erro inesperado.')
+    } finally {
+      setPayTesting(false)
+    }
+  }
 
   const fetchSettings = async () => {
     try {
@@ -197,6 +268,17 @@ export default function ConfiguracoesPage() {
       >
         <span className="material-symbols-outlined">location_on</span>
         Localização
+      </button>
+      <button
+        onClick={() => setActiveTab("pagamentos")}
+        className={`px-6 py-4 text-left text-sm font-bold flex items-center gap-3 transition-colors ${
+          activeTab === "pagamentos"
+            ? "bg-primary/5 text-primary border-l-4 border-primary"
+            : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+        }`}
+      >
+        <span className="material-symbols-outlined">credit_card</span>
+        Pagamentos
       </button>
             </nav>
           </div>
@@ -508,6 +590,166 @@ export default function ConfiguracoesPage() {
               className="bg-primary text-white px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
             >
               Salvar Configurações de Localização
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "pagamentos" && (
+        <div className="space-y-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Pagamentos (PagBank)</h3>
+              <p className="text-sm text-slate-500 mt-1">
+                Configure a integração com o PagBank para cobrar matrículas e mensalidades online.
+              </p>
+            </div>
+            <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-bold ${
+              hasPublicKey
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+            }`}>
+              {hasPublicKey ? 'Conectado' : 'Não conectado'}
+            </span>
+          </div>
+
+          {/* Passo a passo de ajuda */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+            <button
+              type="button"
+              onClick={() => setShowHelp((v) => !v)}
+              className="w-full flex items-center justify-between gap-3 text-left"
+            >
+              <span className="flex items-center gap-2 text-sm font-bold text-blue-800 dark:text-blue-200">
+                <span className="material-symbols-outlined">help</span>
+                Como obter o Token do PagBank (passo a passo)
+              </span>
+              <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">
+                {showHelp ? 'expand_less' : 'expand_more'}
+              </span>
+            </button>
+            {showHelp && (
+              <ol className="mt-3 space-y-2 text-sm text-blue-800 dark:text-blue-200 list-decimal list-inside">
+                <li>Acesse <a href="https://minhaconta.pagbank.com.br" target="_blank" rel="noopener noreferrer" className="font-bold underline">minhaconta.pagbank.com.br</a> e faça login.</li>
+                <li>No menu, vá em <b>Venda Online</b> → <b>Integrações</b> → <b>Token de Integração</b>.</li>
+                <li>Se já existir um token, <b>copie o existente</b> (não apague). Senão, clique em <b>Gerar Token</b>.</li>
+                <li>Copie o código gerado e cole no campo <b>Token de Integração</b> abaixo.</li>
+                <li>Em <b>Notificação de transação</b>, cole a URL de notificação exibida abaixo e salve no painel do PagBank.</li>
+                <li>Selecione o ambiente <b>Produção</b>, salve, e clique em <b>Testar conexão</b>.</li>
+              </ol>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            {/* Ambiente */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Ambiente</label>
+              <div className="flex gap-3">
+                {[
+                  { v: 'sandbox', l: 'Testes (Sandbox)' },
+                  { v: 'prod', l: 'Produção' },
+                ].map((opt) => (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => setPagbankEnv(opt.v)}
+                    className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
+                      pagbankEnv === opt.v
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    {opt.l}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Use <b>Produção</b> com o token real para cobrar de verdade.</p>
+            </div>
+
+            {/* URL pública */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                URL pública do sistema
+              </label>
+              <input
+                type="url"
+                value={appUrl}
+                onChange={(e) => setAppUrl(e.target.value)}
+                placeholder="https://huios.igrejaconviva.com.br"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              />
+              <p className="text-xs text-slate-500 mt-1">Endereço HTTPS onde o sistema está hospedado. Usado para receber as notificações de pagamento.</p>
+            </div>
+
+            {/* URL de notificação (read-only, copiável) */}
+            {appUrl && (
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4">
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  URL de notificação — cadastre esta no painel do PagBank:
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs break-all text-slate-600 dark:text-slate-400">{webhookUrl}</code>
+                  <button
+                    type="button"
+                    onClick={() => { navigator.clipboard.writeText(webhookUrl); toast('success', 'Copiado', 'URL de notificação copiada.') }}
+                    className="shrink-0 text-primary text-xs font-bold inline-flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-sm">content_copy</span>Copiar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Token */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                Token de Integração
+              </label>
+              <input
+                type="password"
+                value={pagbankToken}
+                onChange={(e) => setPagbankToken(e.target.value)}
+                placeholder={tokenMasked ? `Salvo: ${tokenMasked} — preencha só para alterar` : 'Cole aqui o token do PagBank'}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                {tokenMasked ? 'Já existe um token salvo. Deixe em branco para mantê-lo.' : 'Obrigatório para ativar os pagamentos.'}
+              </p>
+            </div>
+
+            {/* Webhook token (opcional) */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                Token do Webhook <span className="font-normal text-slate-400">(opcional)</span>
+              </label>
+              <input
+                type="password"
+                value={pagbankWebhookToken}
+                onChange={(e) => setPagbankWebhookToken(e.target.value)}
+                placeholder="Usado para validar a autenticidade das notificações"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <button
+              onClick={savePaymentConfig}
+              disabled={paySaving}
+              className="bg-primary text-white px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+            >
+              {paySaving ? 'Salvando...' : 'Salvar configurações'}
+            </button>
+            <button
+              onClick={testPaymentConnection}
+              disabled={payTesting}
+              className="px-6 py-3 rounded-xl text-sm font-bold border border-primary text-primary hover:bg-primary/5 transition-all disabled:opacity-50 inline-flex items-center gap-2"
+            >
+              {payTesting ? (
+                <><span className="material-symbols-outlined animate-spin text-base">refresh</span>Testando...</>
+              ) : (
+                <><span className="material-symbols-outlined text-base">wifi_tethering</span>Testar conexão</>
+              )}
             </button>
           </div>
         </div>

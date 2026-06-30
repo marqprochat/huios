@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { createCharge, isConfigured, PagBankMethod } from '@/lib/pagbank';
+import { createCharge, isConfigured, getPagBankConfig, PagBankMethod } from '@/lib/pagbank';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +18,7 @@ const METHOD_TO_PAYMENTMETHOD: Record<PagBankMethod, string> = {
 
 export async function POST(request: Request) {
   try {
-    if (!isConfigured()) {
+    if (!(await isConfigured())) {
       return NextResponse.json({ error: 'Pagamento online não configurado. Contate a coordenação.' }, { status: 503 });
     }
 
@@ -37,9 +37,10 @@ export async function POST(request: Request) {
     const amountCents = Math.round((tx.amount as number) * 100);
     // PagBank exige uma URL pública em HTTPS. Em ambiente local o origin vira
     // http://localhost e a API rejeita com "invalid notification url", então
-    // priorizamos a URL pública configurada via env.
+    // priorizamos a URL pública configurada no painel (SystemSettings.appUrl).
+    const { appUrl } = await getPagBankConfig();
     const requestOrigin = new URL(request.url).origin;
-    const baseUrl = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || requestOrigin).replace(/\/$/, '');
+    const baseUrl = (appUrl || requestOrigin).replace(/\/$/, '');
     const notificationUrl = baseUrl.startsWith('https://')
       ? `${baseUrl}/api/pagamentos/webhook/pagbank`
       : undefined;

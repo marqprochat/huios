@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
+import { getPagBankConfig } from '@/lib/pagbank';
 import { PagamentoClient } from './PagamentoClient';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,7 @@ export default async function PagamentoPage({ params }: { params: Promise<{ tran
   });
   if (!tx) notFound();
 
-  const publicKey = process.env.NEXT_PUBLIC_PAGBANK_PUBLIC_KEY || '';
+  const { publicKey } = await getPagBankConfig();
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center py-10 px-4">

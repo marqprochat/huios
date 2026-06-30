@@ -3,12 +3,41 @@
 // o PAN nunca trafega pelo nosso servidor — recebemos apenas o cartão criptografado.
 // Docs: https://dev.pagbank.uol.com.br/reference/criar-pedido
 
-const ENV = process.env.PAGBANK_ENV || 'sandbox';
-const TOKEN = process.env.PAGBANK_TOKEN || '';
-
-const BASE_URL = ENV === 'prod' ? 'https://api.pagseguro.com' : 'https://sandbox.api.pagseguro.com';
+import prisma from '@/lib/prisma';
 
 export type PagBankMethod = 'CREDIT_CARD' | 'PIX' | 'BOLETO';
+
+export interface PagBankConfig {
+  env: string; // "sandbox" | "prod"
+  token: string;
+  publicKey: string;
+  webhookToken: string;
+  appUrl: string;
+}
+
+/**
+ * Carrega a configuração do PagBank do banco (SystemSettings), com fallback
+ * para variáveis de ambiente. Assim o coordenador configura tudo pelo painel.
+ */
+export async function getPagBankConfig(): Promise<PagBankConfig> {
+  let s: any = null;
+  try {
+    s = await (prisma as any).systemSettings.findFirst();
+  } catch {
+    s = null;
+  }
+  return {
+    env: s?.pagbankEnv || process.env.PAGBANK_ENV || 'sandbox',
+    token: s?.pagbankToken || process.env.PAGBANK_TOKEN || '',
+    publicKey: s?.pagbankPublicKey || process.env.NEXT_PUBLIC_PAGBANK_PUBLIC_KEY || '',
+    webhookToken: s?.pagbankWebhookToken || process.env.PAGBANK_WEBHOOK_TOKEN || '',
+    appUrl: s?.appUrl || process.env.APP_URL || '',
+  };
+}
+
+export function baseUrlFor(env: string): string {
+  return env === 'prod' ? 'https://api.pagseguro.com' : 'https://sandbox.api.pagseguro.com';
+}
 
 export interface CustomerInput {
   name: string;
@@ -76,11 +105,11 @@ export function mapStatus(pagbankStatus?: string): 'WAITING' | 'PAID' | 'DECLINE
   }
 }
 
-async function postOrder(body: any): Promise<any> {
-  const res = await fetch(`${BASE_URL}/orders`, {
+async function postOrder(body: any, config: PagBankConfig): Promise<any> {
+  const res = await fetch(`${baseUrlFor(config.env)}/orders`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${TOKEN}`,
+      Authorization: `Bearer ${config.token}`,
       'Content-Type': 'application/json',
       accept: 'application/json',
     },
@@ -99,6 +128,8 @@ async function postOrder(body: any): Promise<any> {
 
 export async function createCharge(params: CreateChargeParams): Promise<CreateChargeResult> {
   const { referenceId, description, amountCents, method, customer, card, notificationUrl } = params;
+  const config = await getPagBankConfig();
+  if (!config.token) throw new Error('Pagamento online não configurado.');
   const customerPayload = buildCustomer(customer);
   const items = [{ name: description.slice(0, 60), quantity: 1, unit_amount: amountCents }];
   const notification_urls = notificationUrl ? [notificationUrl] : undefined;
@@ -111,7 +142,7 @@ export async function createCharge(params: CreateChargeParams): Promise<CreateCh
       items,
       qr_codes: [{ amount: { value: amountCents }, expiration_date: expiration }],
       notification_urls,
-    });
+    }, config);
     const qr = data?.qr_codes?.[0];
     const pngLink = qr?.links?.find((l: any) => l.media === 'image/png')?.href ?? null;
     return {
@@ -150,7 +181,7 @@ export async function createCharge(params: CreateChargeParams): Promise<CreateCh
         },
       ],
       notification_urls,
-    });
+    }, config);
     const charge = data?.charges?.[0];
     const boletoLink = charge?.payment_method?.boleto?.links?.find((l: any) => l.media === 'application/pdf')?.href
       ?? charge?.links?.find((l: any) => l.rel?.includes('PDF') || l.media === 'application/pdf')?.href
@@ -188,7 +219,7 @@ export async function createCharge(params: CreateChargeParams): Promise<CreateCh
       },
     ],
     notification_urls,
-  });
+  }, config);
   const charge = data?.charges?.[0];
   return {
     orderId: data?.id ?? null,
@@ -199,14 +230,38 @@ export async function createCharge(params: CreateChargeParams): Promise<CreateCh
 }
 
 export async function getCharge(chargeId: string): Promise<any> {
-  const res = await fetch(`${BASE_URL}/charges/${chargeId}`, {
-    headers: { Authorization: `Bearer ${TOKEN}`, accept: 'application/json' },
+  const config = await getPagBankConfig();
+  const res = await fetch(`${baseUrlFor(config.env)}/charges/${chargeId}`, {
+    headers: { Authorization: `Bearer ${config.token}`, accept: 'application/json' },
   });
   return res.json().catch(() => ({}));
 }
 
-export function isConfigured(): boolean {
-  return !!TOKEN;
+export async function isConfigured(): Promise<boolean> {
+  const config = await getPagBankConfig();
+  return !!config.token;
 }
 
-export const PAGBANK_ENV = ENV;
+/**
+ * Busca a chave pública do PagBank usada para criptografar o cartão no navegador.
+ * Serve também como teste de conexão do token.
+ * Docs: https://developer.pagbank.com.br/reference/criar-chave-publica
+ */
+export async function fetchPublicKey(token: string, env: string): Promise<string> {
+  const res = await fetch(`${baseUrlFor(env)}/public-keys`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      accept: 'application/json',
+    },
+    body: JSON.stringify({ type: 'card' }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = data?.error_messages?.[0]?.description || data?.message || `PagBank HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+  if (!data?.public_key) throw new Error('Resposta sem chave pública.');
+  return data.public_key as string;
+}
