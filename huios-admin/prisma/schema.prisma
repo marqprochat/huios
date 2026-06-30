@@ -444,12 +444,24 @@ model SystemSettings {
   contactEmail String? @default("contato@huios.edu.br")
   contactPhone String? @default("(11) 1234-5678")
 
+  // Provedor de pagamento ativo: "pagbank" | "santander"
+  paymentProvider String? @default("pagbank")
+
   // Pagamentos (PagBank / PagSeguro)
   pagbankEnv          String? @default("sandbox") // "sandbox" (testes) | "prod" (produção)
   pagbankToken        String? // Token de integração (sensível)
   pagbankPublicKey    String? // Chave pública p/ criptografar o cartão no navegador (gerada via API)
   pagbankWebhookToken String? // Token p/ validar a assinatura do webhook
   appUrl              String? // URL pública base (ex: https://huios.igrejaconviva.com.br)
+
+  // Pagamentos (Santander — API Pix Bacen, autenticação OAuth2 + mTLS)
+  santanderEnv               String?  @default("sandbox") // "sandbox" | "prod"
+  santanderClientId          String?  // Client ID do app no portal do desenvolvedor Santander
+  santanderClientSecret      String?  // Client Secret (sensível)
+  santanderCertificate       String?  // Certificado de transporte em PEM (.crt/.pem)
+  santanderCertificateKey    String?  // Chave privada do certificado em PEM (.key)
+  santanderPixKey            String?  // Chave PIX recebedora (e-mail, CPF/CNPJ, telefone ou aleatória)
+  santanderWebhookConfigured Boolean? @default(false) // Webhook registrado na API do Santander
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

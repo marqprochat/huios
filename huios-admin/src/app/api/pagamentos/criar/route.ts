@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { createCharge, isConfigured, getPagBankConfig, PagBankMethod } from '@/lib/pagbank';
+import { createCharge, getPagBankConfig, PagBankMethod } from '@/lib/pagbank';
+import { createPixCharge, getActiveProvider, isActiveProviderConfigured } from '@/lib/payments';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,11 +18,12 @@ const METHOD_TO_PAYMENTMETHOD: Record<PagBankMethod, string> = {
 };
 
 // Métodos habilitados no momento. Mantém o checkout (UI) e a API alinhados.
+// PIX funciona em qualquer provedor; cartão/boleto são exclusivos do PagBank.
 const ENABLED_METHODS: PagBankMethod[] = ['PIX'];
 
 export async function POST(request: Request) {
   try {
-    if (!(await isConfigured())) {
+    if (!(await isActiveProviderConfigured())) {
       return NextResponse.json({ error: 'Pagamento online não configurado. Contate a coordenação.' }, { status: 503 });
     }
 
@@ -33,6 +35,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Método de pagamento indisponível. Use o Pix.' }, { status: 400 });
     }
 
+    const provider = await getActiveProvider();
+    // Cartão e boleto só existem no PagBank. Se o provedor ativo for outro, bloqueia.
+    if (body.method !== 'PIX' && provider !== 'pagbank') {
+      return NextResponse.json({ error: 'Método indisponível para o provedor ativo. Use o Pix.' }, { status: 400 });
+    }
+
     const tx = await (prisma as any).financialTransaction.findUnique({
       where: { id: body.transactionId },
       include: { student: true },
@@ -41,35 +49,74 @@ export async function POST(request: Request) {
     if (tx.status === 'PAGO') return NextResponse.json({ error: 'Esta cobrança já foi paga.' }, { status: 409 });
 
     const amountCents = Math.round((tx.amount as number) * 100);
-    // PagBank exige uma URL pública em HTTPS. Em ambiente local o origin vira
-    // http://localhost e a API rejeita com "invalid notification url", então
-    // priorizamos a URL pública configurada no painel (SystemSettings.appUrl).
+    const customer = {
+      name: tx.student?.name || 'Aluno',
+      email: tx.student?.email || 'sememail@huios.com.br',
+      taxId: tx.student?.cpf || null,
+      phone: tx.student?.phone || null,
+    };
+
+    // O webhook precisa de uma URL pública em HTTPS. Em ambiente local o origin
+    // vira http://localhost, então priorizamos a URL pública (SystemSettings.appUrl).
     const { appUrl } = await getPagBankConfig();
     const requestOrigin = new URL(request.url).origin;
     const baseUrl = (appUrl || requestOrigin).replace(/\/$/, '');
-    const notificationUrl = baseUrl.startsWith('https://')
+    const pagbankNotificationUrl = baseUrl.startsWith('https://')
       ? `${baseUrl}/api/pagamentos/webhook/pagbank`
       : undefined;
 
-    const result = await createCharge({
-      referenceId: tx.id,
-      description: tx.description,
-      amountCents,
-      method: body.method,
-      customer: {
-        name: tx.student?.name || 'Aluno',
-        email: tx.student?.email || 'sememail@huios.com.br',
-        taxId: tx.student?.cpf || null,
-        phone: tx.student?.phone || null,
-      },
-      card: body.card,
-      notificationUrl,
-    });
+    let gateway: 'PAGBANK' | 'SANTANDER';
+    let result: {
+      status: string;
+      chargeId: string | null;
+      orderId: string | null;
+      pixQrCode: string | null;
+      pixQrCodeText: string | null;
+      boletoUrl?: string | null;
+      boletoBarcode?: string | null;
+      raw: any;
+    };
+
+    if (body.method === 'PIX') {
+      // PIX passa pelo provedor ativo (PagBank ou Santander).
+      const r = await createPixCharge({
+        referenceId: tx.id,
+        description: tx.description,
+        amountCents,
+        customer,
+        notificationUrl: pagbankNotificationUrl,
+      });
+      gateway = r.gateway;
+      result = { ...r, boletoUrl: null, boletoBarcode: null };
+    } else {
+      // Cartão/boleto (somente PagBank).
+      const r = await createCharge({
+        referenceId: tx.id,
+        description: tx.description,
+        amountCents,
+        method: body.method,
+        customer,
+        card: body.card,
+        notificationUrl: pagbankNotificationUrl,
+      });
+      gateway = 'PAGBANK';
+      result = {
+        status: r.status,
+        chargeId: r.chargeId,
+        orderId: r.orderId,
+        pixQrCode: r.pixQrCode ?? null,
+        pixQrCodeText: r.pixQrCodeText ?? null,
+        boletoUrl: r.boletoUrl ?? null,
+        boletoBarcode: r.boletoBarcode ?? null,
+        raw: r.raw,
+      };
+    }
 
     // Registra a tentativa de pagamento.
     const payment = await (prisma as any).payment.create({
       data: {
         transactionId: tx.id,
+        gateway,
         method: body.method,
         status: result.status,
         amount: tx.amount,
@@ -106,7 +153,7 @@ export async function POST(request: Request) {
       boletoBarcode: result.boletoBarcode ?? null,
     });
   } catch (error: any) {
-    console.error('Erro ao criar pagamento PagBank:', error);
+    console.error('Erro ao criar pagamento:', error);
     return NextResponse.json({ error: error.message || 'Erro ao processar pagamento.' }, { status: 400 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { fetchPublicKey } from '@/lib/pagbank';
+import { fetchAccessToken, registerWebhook, getSantanderConfig } from '@/lib/santander';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,7 @@ async function ensureSettings(): Promise<any> {
   return s;
 }
 
-// GET — retorna a configuração SEM expor o token completo (apenas mascarado).
+// GET — retorna a configuração SEM expor os segredos (apenas mascarados).
 export async function GET() {
   const session = await getSession();
   if (!session || !ALLOWED_ROLES.includes(session.role)) {
@@ -28,16 +29,33 @@ export async function GET() {
   }
   const s = await (prisma as any).systemSettings.findFirst();
   return NextResponse.json({
-    pagbankEnv: s?.pagbankEnv || 'sandbox',
+    paymentProvider: s?.paymentProvider === 'santander' ? 'santander' : 'pagbank',
     appUrl: s?.appUrl || '',
+    // PagBank
+    pagbankEnv: s?.pagbankEnv || 'sandbox',
     tokenMasked: mask(s?.pagbankToken),
     webhookTokenMasked: mask(s?.pagbankWebhookToken),
     hasToken: !!s?.pagbankToken,
     hasPublicKey: !!s?.pagbankPublicKey,
+    // Santander
+    santanderEnv: s?.santanderEnv || 'sandbox',
+    santanderClientId: s?.santanderClientId || '',
+    santanderClientSecretMasked: mask(s?.santanderClientSecret),
+    santanderPixKey: s?.santanderPixKey || '',
+    hasSantanderCert: !!s?.santanderCertificate,
+    hasSantanderKey: !!s?.santanderCertificateKey,
+    santanderConfigured: !!(
+      s?.santanderClientId &&
+      s?.santanderClientSecret &&
+      s?.santanderCertificate &&
+      s?.santanderCertificateKey &&
+      s?.santanderPixKey
+    ),
+    santanderWebhookConfigured: !!s?.santanderWebhookConfigured,
   });
 }
 
-// PUT — salva configuração. Token/webhookToken só são atualizados se vierem preenchidos.
+// PUT — salva configuração. Segredos só são atualizados se vierem preenchidos.
 export async function PUT(req: Request) {
   const session = await getSession();
   if (!session || !ALLOWED_ROLES.includes(session.role)) {
@@ -45,20 +63,53 @@ export async function PUT(req: Request) {
   }
   try {
     const body = await req.json();
-    const { pagbankEnv, appUrl, pagbankToken, pagbankWebhookToken } = body;
+    const {
+      paymentProvider,
+      appUrl,
+      // PagBank
+      pagbankEnv,
+      pagbankToken,
+      pagbankWebhookToken,
+      // Santander
+      santanderEnv,
+      santanderClientId,
+      santanderClientSecret,
+      santanderCertificate,
+      santanderCertificateKey,
+      santanderPixKey,
+    } = body;
 
     const s = await ensureSettings();
-    const data: any = {
-      pagbankEnv: pagbankEnv === 'prod' ? 'prod' : 'sandbox',
-      appUrl: (appUrl || '').trim() || null,
-    };
-    // Só sobrescreve o token se um novo valor não-vazio for enviado (evita apagar ao salvar).
+    const data: any = {};
+
+    if (paymentProvider === 'pagbank' || paymentProvider === 'santander') {
+      data.paymentProvider = paymentProvider;
+    }
+    if (typeof appUrl === 'string') data.appUrl = appUrl.trim() || null;
+
+    // --- PagBank ---
+    if (typeof pagbankEnv === 'string') data.pagbankEnv = pagbankEnv === 'prod' ? 'prod' : 'sandbox';
     if (typeof pagbankToken === 'string' && pagbankToken.trim()) {
       data.pagbankToken = pagbankToken.trim();
       data.pagbankPublicKey = null; // invalida a chave; será gerada novamente no teste
     }
     if (typeof pagbankWebhookToken === 'string' && pagbankWebhookToken.trim()) {
       data.pagbankWebhookToken = pagbankWebhookToken.trim();
+    }
+
+    // --- Santander ---
+    if (typeof santanderEnv === 'string') data.santanderEnv = santanderEnv === 'prod' ? 'prod' : 'sandbox';
+    if (typeof santanderClientId === 'string') data.santanderClientId = santanderClientId.trim() || null;
+    if (typeof santanderPixKey === 'string') data.santanderPixKey = santanderPixKey.trim() || null;
+    if (typeof santanderClientSecret === 'string' && santanderClientSecret.trim()) {
+      data.santanderClientSecret = santanderClientSecret.trim();
+    }
+    if (typeof santanderCertificate === 'string' && santanderCertificate.trim()) {
+      data.santanderCertificate = santanderCertificate.trim();
+      data.santanderWebhookConfigured = false; // mudou o certificado → revalidar webhook
+    }
+    if (typeof santanderCertificateKey === 'string' && santanderCertificateKey.trim()) {
+      data.santanderCertificateKey = santanderCertificateKey.trim();
     }
 
     await (prisma as any).systemSettings.update({ where: { id: s.id }, data });
@@ -69,14 +120,50 @@ export async function PUT(req: Request) {
   }
 }
 
-// POST — testa o token gerando a chave pública do PagBank e a salva no banco.
-export async function POST() {
+// POST — testa a conexão do provedor informado (?provider=pagbank|santander).
+// PagBank: gera/salva a chave pública. Santander: obtém token e registra o webhook.
+export async function POST(req: Request) {
   const session = await getSession();
   if (!session || !ALLOWED_ROLES.includes(session.role)) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  const provider = new URL(req.url).searchParams.get('provider') || 'pagbank';
+
   try {
     const s = await (prisma as any).systemSettings.findFirst();
+
+    if (provider === 'santander') {
+      const config = await getSantanderConfig();
+      if (!config.clientId || !config.clientSecret || !config.certificate || !config.certificateKey || !config.pixKey) {
+        return NextResponse.json(
+          { error: 'Preencha Client ID, Client Secret, certificado, chave do certificado e chave Pix antes de testar.' },
+          { status: 400 },
+        );
+      }
+      // Testa as credenciais + certificado obtendo um token.
+      await fetchAccessToken(config);
+
+      // Tenta registrar o webhook (se houver URL pública HTTPS configurada).
+      let webhookMsg = '';
+      const base = (config.appUrl || '').replace(/\/$/, '');
+      if (base.startsWith('https://')) {
+        try {
+          await registerWebhook(config, `${base}/api/pagamentos/webhook/santander`);
+          await (prisma as any).systemSettings.update({
+            where: { id: s.id },
+            data: { santanderWebhookConfigured: true },
+          });
+          webhookMsg = ' Webhook registrado com sucesso.';
+        } catch (e: any) {
+          webhookMsg = ` Conexão OK, mas falhou ao registrar o webhook: ${e.message}`;
+        }
+      } else {
+        webhookMsg = ' Preencha a URL pública (HTTPS) para registrar o webhook automaticamente.';
+      }
+      return NextResponse.json({ success: true, message: `Conexão Santander validada.${webhookMsg}` });
+    }
+
+    // --- PagBank (padrão) ---
     if (!s?.pagbankToken) {
       return NextResponse.json({ error: 'Salve o token antes de testar a conexão.' }, { status: 400 });
     }
@@ -88,7 +175,7 @@ export async function POST() {
     });
     return NextResponse.json({ success: true, message: 'Conexão validada e chave pública gerada com sucesso.' });
   } catch (error: any) {
-    console.error('Erro ao testar conexão PagBank:', error);
-    return NextResponse.json({ error: error.message || 'Falha ao validar o token.' }, { status: 400 });
+    console.error('Erro ao testar conexão de pagamento:', error);
+    return NextResponse.json({ error: error.message || 'Falha ao validar a conexão.' }, { status: 400 });
   }
 }

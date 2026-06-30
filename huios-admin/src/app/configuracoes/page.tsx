@@ -17,18 +17,38 @@ export default function ConfiguracoesPage() {
   const [radiusMeters, setRadiusMeters] = useState("100")
   const [checkInBufferMinutes, setCheckInBufferMinutes] = useState("30")
 
-  // Estados de pagamento (PagBank)
-  const [pagbankEnv, setPagbankEnv] = useState("sandbox")
+  // Estados de pagamento (gerais)
+  const [paymentProvider, setPaymentProvider] = useState<"pagbank" | "santander">("pagbank")
+  const [editProvider, setEditProvider] = useState<"pagbank" | "santander">("pagbank")
   const [appUrl, setAppUrl] = useState("")
+  const [paySaving, setPaySaving] = useState(false)
+  const [payTesting, setPayTesting] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
+  const [showSantanderHelp, setShowSantanderHelp] = useState(false)
+
+  // PagBank
+  const [pagbankEnv, setPagbankEnv] = useState("sandbox")
   const [pagbankToken, setPagbankToken] = useState("")
   const [pagbankWebhookToken, setPagbankWebhookToken] = useState("")
   const [tokenMasked, setTokenMasked] = useState<string | null>(null)
   const [hasPublicKey, setHasPublicKey] = useState(false)
-  const [paySaving, setPaySaving] = useState(false)
-  const [payTesting, setPayTesting] = useState(false)
-  const [showHelp, setShowHelp] = useState(false)
 
-  const webhookUrl = `${(appUrl || '').replace(/\/$/, '')}/api/pagamentos/webhook/pagbank`
+  // Santander
+  const [santanderEnv, setSantanderEnv] = useState("sandbox")
+  const [santanderClientId, setSantanderClientId] = useState("")
+  const [santanderClientSecret, setSantanderClientSecret] = useState("")
+  const [santanderClientSecretMasked, setSantanderClientSecretMasked] = useState<string | null>(null)
+  const [santanderPixKey, setSantanderPixKey] = useState("")
+  const [santanderCertificate, setSantanderCertificate] = useState("")
+  const [santanderCertificateKey, setSantanderCertificateKey] = useState("")
+  const [hasSantanderCert, setHasSantanderCert] = useState(false)
+  const [hasSantanderKey, setHasSantanderKey] = useState(false)
+  const [santanderConfigured, setSantanderConfigured] = useState(false)
+  const [santanderWebhookConfigured, setSantanderWebhookConfigured] = useState(false)
+
+  const base = (appUrl || '').replace(/\/$/, '')
+  const webhookUrl = `${base}/api/pagamentos/webhook/pagbank`
+  const santanderWebhookUrl = `${base}/api/pagamentos/webhook/santander`
 
   // Carregar configurações ao montar
   useEffect(() => {
@@ -42,10 +62,23 @@ export default function ConfiguracoesPage() {
       const res = await fetch('/api/admin/configuracoes/pagamento')
       if (res.ok) {
         const data = await res.json()
-        setPagbankEnv(data.pagbankEnv || 'sandbox')
+        const provider = data.paymentProvider === 'santander' ? 'santander' : 'pagbank'
+        setPaymentProvider(provider)
+        setEditProvider(provider)
         setAppUrl(data.appUrl || '')
+        // PagBank
+        setPagbankEnv(data.pagbankEnv || 'sandbox')
         setTokenMasked(data.tokenMasked || null)
         setHasPublicKey(!!data.hasPublicKey)
+        // Santander
+        setSantanderEnv(data.santanderEnv || 'sandbox')
+        setSantanderClientId(data.santanderClientId || '')
+        setSantanderClientSecretMasked(data.santanderClientSecretMasked || null)
+        setSantanderPixKey(data.santanderPixKey || '')
+        setHasSantanderCert(!!data.hasSantanderCert)
+        setHasSantanderKey(!!data.hasSantanderKey)
+        setSantanderConfigured(!!data.santanderConfigured)
+        setSantanderWebhookConfigured(!!data.santanderWebhookConfigured)
       }
     } catch (error) {
       console.error('Error fetching payment config:', error)
@@ -58,13 +91,28 @@ export default function ConfiguracoesPage() {
       const res = await fetch('/api/admin/configuracoes/pagamento', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pagbankEnv, appUrl, pagbankToken, pagbankWebhookToken }),
+        body: JSON.stringify({
+          paymentProvider,
+          appUrl,
+          pagbankEnv,
+          pagbankToken,
+          pagbankWebhookToken,
+          santanderEnv,
+          santanderClientId,
+          santanderClientSecret,
+          santanderPixKey,
+          santanderCertificate,
+          santanderCertificateKey,
+        }),
       })
       const data = await res.json()
       if (res.ok) {
         toast('success', 'Configurações salvas', 'Dados de pagamento salvos com sucesso.')
         setPagbankToken('')
         setPagbankWebhookToken('')
+        setSantanderClientSecret('')
+        setSantanderCertificate('')
+        setSantanderCertificateKey('')
         fetchPaymentConfig()
       } else {
         toast('error', 'Erro ao salvar', data.error || 'Não foi possível salvar.')
@@ -76,22 +124,30 @@ export default function ConfiguracoesPage() {
     }
   }
 
-  const testPaymentConnection = async () => {
+  const testPaymentConnection = async (provider: "pagbank" | "santander") => {
     setPayTesting(true)
     try {
-      const res = await fetch('/api/admin/configuracoes/pagamento', { method: 'POST' })
+      const res = await fetch(`/api/admin/configuracoes/pagamento?provider=${provider}`, { method: 'POST' })
       const data = await res.json()
       if (res.ok) {
-        toast('success', 'Conexão validada', data.message || 'Token válido e chave pública gerada.')
+        toast('success', 'Conexão validada', data.message || 'Conexão validada com sucesso.')
         fetchPaymentConfig()
       } else {
-        toast('error', 'Falha na validação', data.error || 'Token inválido.')
+        toast('error', 'Falha na validação', data.error || 'Credenciais inválidas.')
       }
     } catch {
       toast('error', 'Falha na validação', 'Ocorreu um erro inesperado.')
     } finally {
       setPayTesting(false)
     }
+  }
+
+  // Lê um arquivo de certificado/chave (.pem/.crt/.key) para o estado.
+  const readFileToState = (file: File | undefined, setter: (v: string) => void) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => setter(typeof reader.result === 'string' ? reader.result : '')
+    reader.readAsText(file)
   }
 
   const fetchSettings = async () => {
@@ -597,50 +653,126 @@ export default function ConfiguracoesPage() {
 
       {activeTab === "pagamentos" && (
         <div className="space-y-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Pagamentos (PagBank)</h3>
-              <p className="text-sm text-slate-500 mt-1">
-                Configure a integração com o PagBank para cobrar matrículas e mensalidades online.
-              </p>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Pagamentos</h3>
+            <p className="text-sm text-slate-500 mt-1">
+              Configure a integração para cobrar matrículas e mensalidades online. Escolha qual provedor fica ativo.
+            </p>
+          </div>
+
+          {/* Seletor do provedor ATIVO */}
+          <div>
+            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Integração ativa</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {([
+                { v: 'pagbank', l: 'PagBank', d: 'Cartão, Pix e Boleto', ok: hasPublicKey },
+                { v: 'santander', l: 'Santander (Pix)', d: 'Pix via API do banco', ok: santanderConfigured },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => { setPaymentProvider(opt.v); setEditProvider(opt.v) }}
+                  className={`text-left p-4 rounded-xl border-2 transition-all ${
+                    paymentProvider === opt.v
+                      ? 'border-primary bg-primary/5'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-slate-900 dark:text-white">{opt.l}</span>
+                    {paymentProvider === opt.v && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary text-white">ATIVO</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">{opt.d}</p>
+                  <span className={`mt-2 inline-block text-[11px] font-bold ${opt.ok ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                    {opt.ok ? '● Configurado' : '○ Não configurado'}
+                  </span>
+                </button>
+              ))}
             </div>
-            <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-bold ${
-              hasPublicKey
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-            }`}>
-              {hasPublicKey ? 'Conectado' : 'Não conectado'}
-            </span>
+            <p className="text-xs text-slate-500 mt-2">
+              O provedor <b>ativo</b> é o que será usado para gerar as cobranças. Lembre-se de clicar em <b>Salvar configurações</b>.
+            </p>
           </div>
 
-          {/* Passo a passo de ajuda */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
-            <button
-              type="button"
-              onClick={() => setShowHelp((v) => !v)}
-              className="w-full flex items-center justify-between gap-3 text-left"
-            >
-              <span className="flex items-center gap-2 text-sm font-bold text-blue-800 dark:text-blue-200">
-                <span className="material-symbols-outlined">help</span>
-                Como obter o Token do PagBank (passo a passo)
-              </span>
-              <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">
-                {showHelp ? 'expand_less' : 'expand_more'}
-              </span>
-            </button>
-            {showHelp && (
-              <ol className="mt-3 space-y-2 text-sm text-blue-800 dark:text-blue-200 list-decimal list-inside">
-                <li>Acesse <a href="https://minhaconta.pagbank.com.br" target="_blank" rel="noopener noreferrer" className="font-bold underline">minhaconta.pagbank.com.br</a> e faça login.</li>
-                <li>No menu, vá em <b>Venda Online</b> → <b>Integrações</b> → <b>Token de Integração</b>.</li>
-                <li>Se já existir um token, <b>copie o existente</b> (não apague). Senão, clique em <b>Gerar Token</b>.</li>
-                <li>Copie o código gerado e cole no campo <b>Token de Integração</b> abaixo.</li>
-                <li>Em <b>Notificação de transação</b>, cole a URL de notificação exibida abaixo e salve no painel do PagBank.</li>
-                <li>Selecione o ambiente <b>Produção</b>, salve, e clique em <b>Testar conexão</b>.</li>
-              </ol>
-            )}
+          {/* URL pública (compartilhada) */}
+          <div>
+            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+              URL pública do sistema
+            </label>
+            <input
+              type="url"
+              value={appUrl}
+              onChange={(e) => setAppUrl(e.target.value)}
+              placeholder="https://huios.igrejaconviva.com.br"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+            />
+            <p className="text-xs text-slate-500 mt-1">Endereço HTTPS onde o sistema está hospedado. Usado para receber as notificações de pagamento.</p>
           </div>
 
-          <div className="space-y-4">
+          {/* Sub-abas: qual provedor configurar */}
+          <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700">
+            {([
+              { v: 'pagbank', l: 'PagBank' },
+              { v: 'santander', l: 'Santander' },
+            ] as const).map((opt) => (
+              <button
+                key={opt.v}
+                type="button"
+                onClick={() => setEditProvider(opt.v)}
+                className={`px-4 py-2 text-sm font-bold border-b-2 -mb-px transition-colors ${
+                  editProvider === opt.v
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                Configurar {opt.l}
+              </button>
+            ))}
+          </div>
+
+          {/* ===== Configuração PagBank ===== */}
+          {editProvider === 'pagbank' && (
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-sm text-slate-500">Token de integração do PagBank (cartão, Pix e boleto).</p>
+              <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-bold ${
+                hasPublicKey
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+              }`}>
+                {hasPublicKey ? 'Conectado' : 'Não conectado'}
+              </span>
+            </div>
+
+            {/* Passo a passo de ajuda */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+              <button
+                type="button"
+                onClick={() => setShowHelp((v) => !v)}
+                className="w-full flex items-center justify-between gap-3 text-left"
+              >
+                <span className="flex items-center gap-2 text-sm font-bold text-blue-800 dark:text-blue-200">
+                  <span className="material-symbols-outlined">help</span>
+                  Como obter o Token do PagBank (passo a passo)
+                </span>
+                <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">
+                  {showHelp ? 'expand_less' : 'expand_more'}
+                </span>
+              </button>
+              {showHelp && (
+                <ol className="mt-3 space-y-2 text-sm text-blue-800 dark:text-blue-200 list-decimal list-inside">
+                  <li>Acesse <a href="https://minhaconta.pagbank.com.br" target="_blank" rel="noopener noreferrer" className="font-bold underline">minhaconta.pagbank.com.br</a> e faça login.</li>
+                  <li>No menu, vá em <b>Venda Online</b> → <b>Integrações</b> → <b>Token de Integração</b>.</li>
+                  <li>Se já existir um token, <b>copie o existente</b> (não apague). Senão, clique em <b>Gerar Token</b>.</li>
+                  <li>Copie o código gerado e cole no campo <b>Token de Integração</b> abaixo.</li>
+                  <li>Em <b>Notificação de transação</b>, cole a URL de notificação exibida abaixo e salve no painel do PagBank.</li>
+                  <li>Selecione o ambiente <b>Produção</b>, salve, e clique em <b>Testar conexão</b>.</li>
+                </ol>
+              )}
+            </div>
+
             {/* Ambiente */}
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Ambiente</label>
@@ -664,21 +796,6 @@ export default function ConfiguracoesPage() {
                 ))}
               </div>
               <p className="text-xs text-slate-500 mt-1">Use <b>Produção</b> com o token real para cobrar de verdade.</p>
-            </div>
-
-            {/* URL pública */}
-            <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                URL pública do sistema
-              </label>
-              <input
-                type="url"
-                value={appUrl}
-                onChange={(e) => setAppUrl(e.target.value)}
-                placeholder="https://huios.igrejaconviva.com.br"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-              />
-              <p className="text-xs text-slate-500 mt-1">Endereço HTTPS onde o sistema está hospedado. Usado para receber as notificações de pagamento.</p>
             </div>
 
             {/* URL de notificação (read-only, copiável) */}
@@ -730,28 +847,214 @@ export default function ConfiguracoesPage() {
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
               />
             </div>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
-            <button
-              onClick={savePaymentConfig}
-              disabled={paySaving}
-              className="bg-primary text-white px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
-            >
-              {paySaving ? 'Salvando...' : 'Salvar configurações'}
-            </button>
-            <button
-              onClick={testPaymentConnection}
-              disabled={payTesting}
-              className="px-6 py-3 rounded-xl text-sm font-bold border border-primary text-primary hover:bg-primary/5 transition-all disabled:opacity-50 inline-flex items-center gap-2"
-            >
-              {payTesting ? (
-                <><span className="material-symbols-outlined animate-spin text-base">refresh</span>Testando...</>
-              ) : (
-                <><span className="material-symbols-outlined text-base">wifi_tethering</span>Testar conexão</>
-              )}
-            </button>
+            <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+              <button
+                onClick={savePaymentConfig}
+                disabled={paySaving}
+                className="bg-primary text-white px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+              >
+                {paySaving ? 'Salvando...' : 'Salvar configurações'}
+              </button>
+              <button
+                onClick={() => testPaymentConnection('pagbank')}
+                disabled={payTesting}
+                className="px-6 py-3 rounded-xl text-sm font-bold border border-primary text-primary hover:bg-primary/5 transition-all disabled:opacity-50 inline-flex items-center gap-2"
+              >
+                {payTesting ? (
+                  <><span className="material-symbols-outlined animate-spin text-base">refresh</span>Testando...</>
+                ) : (
+                  <><span className="material-symbols-outlined text-base">wifi_tethering</span>Testar conexão</>
+                )}
+              </button>
+            </div>
           </div>
+          )}
+
+          {/* ===== Configuração Santander ===== */}
+          {editProvider === 'santander' && (
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-sm text-slate-500">Integração Pix via API do Santander (Cobrança Pix / padrão Bacen).</p>
+              <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-bold ${
+                santanderConfigured
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+              }`}>
+                {santanderConfigured ? 'Conectado' : 'Não conectado'}
+              </span>
+            </div>
+
+            {/* Passo a passo de ajuda */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+              <button
+                type="button"
+                onClick={() => setShowSantanderHelp((v) => !v)}
+                className="w-full flex items-center justify-between gap-3 text-left"
+              >
+                <span className="flex items-center gap-2 text-sm font-bold text-blue-800 dark:text-blue-200">
+                  <span className="material-symbols-outlined">help</span>
+                  Como configurar o Pix do Santander (passo a passo)
+                </span>
+                <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">
+                  {showSantanderHelp ? 'expand_less' : 'expand_more'}
+                </span>
+              </button>
+              {showSantanderHelp && (
+                <ol className="mt-3 space-y-2 text-sm text-blue-800 dark:text-blue-200 list-decimal list-inside">
+                  <li>Tenha uma <b>conta PJ no Santander</b> com o <b>Pix ativado</b> e ao menos uma <b>chave Pix</b> cadastrada (e-mail, CNPJ, telefone ou aleatória).</li>
+                  <li>Acesse o <a href="https://developer.santander.com.br" target="_blank" rel="noopener noreferrer" className="font-bold underline">Portal do Desenvolvedor Santander</a> e faça login com a conta do banco.</li>
+                  <li>Em <b>Meus Aplicativos</b>, clique em <b>Criar aplicação</b> e assine o produto <b>Pix</b> (Cobrança Pix / API Pix).</li>
+                  <li>Gere o <b>certificado de transporte</b> (mTLS): baixe os arquivos <b>.crt</b> (certificado) e <b>.key</b> (chave privada). Guarde-os em local seguro.</li>
+                  <li>Copie o <b>Client ID</b> e o <b>Client Secret</b> da aplicação criada.</li>
+                  <li>Volte aqui: selecione o ambiente, cole o <b>Client ID</b>, o <b>Client Secret</b>, a <b>chave Pix recebedora</b> e envie os arquivos <b>.crt</b> e <b>.key</b> nos campos abaixo.</li>
+                  <li>Confira a <b>URL de notificação</b> exibida abaixo (ela é registrada automaticamente ao testar a conexão).</li>
+                  <li>Selecione <b>Produção</b>, clique em <b>Salvar configurações</b> e depois em <b>Testar conexão</b>. Por fim, marque o Santander como <b>integração ativa</b> no topo.</li>
+                </ol>
+              )}
+            </div>
+
+            {/* Ambiente */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Ambiente</label>
+              <div className="flex gap-3">
+                {[
+                  { v: 'sandbox', l: 'Testes (Sandbox)' },
+                  { v: 'prod', l: 'Produção' },
+                ].map((opt) => (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => setSantanderEnv(opt.v)}
+                    className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
+                      santanderEnv === opt.v
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    {opt.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Client ID */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Client ID</label>
+              <input
+                type="text"
+                value={santanderClientId}
+                onChange={(e) => setSantanderClientId(e.target.value)}
+                placeholder="Client ID da aplicação no portal Santander"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              />
+            </div>
+
+            {/* Client Secret */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Client Secret</label>
+              <input
+                type="password"
+                value={santanderClientSecret}
+                onChange={(e) => setSantanderClientSecret(e.target.value)}
+                placeholder={santanderClientSecretMasked ? `Salvo: ${santanderClientSecretMasked} — preencha só para alterar` : 'Client Secret da aplicação'}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              />
+            </div>
+
+            {/* Chave Pix recebedora */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Chave Pix recebedora</label>
+              <input
+                type="text"
+                value={santanderPixKey}
+                onChange={(e) => setSantanderPixKey(e.target.value)}
+                placeholder="e-mail, CNPJ, telefone ou chave aleatória"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              />
+              <p className="text-xs text-slate-500 mt-1">A chave Pix da conta Santander que vai receber os pagamentos.</p>
+            </div>
+
+            {/* Certificado (.crt) */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                Certificado de transporte (.crt / .pem)
+                {hasSantanderCert && <span className="ml-2 text-[11px] font-bold text-green-600 dark:text-green-400">● enviado</span>}
+              </label>
+              <input
+                type="file"
+                accept=".crt,.pem,.cer,.txt"
+                onChange={(e) => readFileToState(e.target.files?.[0], setSantanderCertificate)}
+                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+              />
+              {santanderCertificate && <p className="text-xs text-green-600 dark:text-green-400 mt-1">Novo certificado carregado (será salvo).</p>}
+              <p className="text-xs text-slate-500 mt-1">
+                {hasSantanderCert ? 'Já existe um certificado salvo. Envie um novo apenas para substituir.' : 'Arquivo do certificado gerado no portal Santander.'}
+              </p>
+            </div>
+
+            {/* Chave do certificado (.key) */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                Chave privada do certificado (.key)
+                {hasSantanderKey && <span className="ml-2 text-[11px] font-bold text-green-600 dark:text-green-400">● enviada</span>}
+              </label>
+              <input
+                type="file"
+                accept=".key,.pem,.txt"
+                onChange={(e) => readFileToState(e.target.files?.[0], setSantanderCertificateKey)}
+                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+              />
+              {santanderCertificateKey && <p className="text-xs text-green-600 dark:text-green-400 mt-1">Nova chave carregada (será salva).</p>}
+              <p className="text-xs text-slate-500 mt-1">
+                {hasSantanderKey ? 'Já existe uma chave salva. Envie uma nova apenas para substituir.' : 'Arquivo da chave privada gerada com o certificado.'}
+              </p>
+            </div>
+
+            {/* URL de notificação (read-only, copiável) */}
+            {appUrl && (
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4">
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  URL de notificação (webhook) — registrada automaticamente ao testar a conexão:
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs break-all text-slate-600 dark:text-slate-400">{santanderWebhookUrl}</code>
+                  <button
+                    type="button"
+                    onClick={() => { navigator.clipboard.writeText(santanderWebhookUrl); toast('success', 'Copiado', 'URL de notificação copiada.') }}
+                    className="shrink-0 text-primary text-xs font-bold inline-flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-sm">content_copy</span>Copiar
+                  </button>
+                </div>
+                {santanderWebhookConfigured && (
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-2 font-bold">✓ Webhook registrado no Santander.</p>
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+              <button
+                onClick={savePaymentConfig}
+                disabled={paySaving}
+                className="bg-primary text-white px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+              >
+                {paySaving ? 'Salvando...' : 'Salvar configurações'}
+              </button>
+              <button
+                onClick={() => testPaymentConnection('santander')}
+                disabled={payTesting}
+                className="px-6 py-3 rounded-xl text-sm font-bold border border-primary text-primary hover:bg-primary/5 transition-all disabled:opacity-50 inline-flex items-center gap-2"
+              >
+                {payTesting ? (
+                  <><span className="material-symbols-outlined animate-spin text-base">refresh</span>Testando...</>
+                ) : (
+                  <><span className="material-symbols-outlined text-base">wifi_tethering</span>Testar conexão</>
+                )}
+              </button>
+            </div>
+          </div>
+          )}
         </div>
       )}
           </div>

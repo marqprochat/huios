@@ -29,7 +29,9 @@
       "Bash(ls middleware*)",
       "WebSearch",
       "WebFetch(domain:developer.pagbank.com.br)",
-      "Bash(openssl rand *)"
+      "Bash(openssl rand *)",
+      "Bash(npx eslint *)",
+      "Bash(npx next *)"
     ]
   }
 }
