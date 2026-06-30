@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { formatDateBR } from '@/lib/date-utils';
 
 interface Item {
   id: string;
@@ -26,7 +27,7 @@ interface Summary {
 }
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '—');
+const fmtDate = (iso: string | null) => (iso ? formatDateBR(iso) : '—');
 
 export default function PortalFinanceiroPage() {
   const [items, setItems] = useState<Item[]>([]);

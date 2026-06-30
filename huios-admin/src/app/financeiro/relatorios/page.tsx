@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { exportCSV } from '@/lib/exportCSV';
+import { formatDateBR } from '@/lib/date-utils';
 
 interface Row {
   month: string;
@@ -27,7 +28,7 @@ interface CatRow {
 }
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR');
+const fmtDate = (d: string) => formatDateBR(d);
 
 export default function RelatoriosFinanceiroPage() {
   const [tab, setTab] = useState<'mensal' | 'inadimplencia' | 'categorias'>('mensal');

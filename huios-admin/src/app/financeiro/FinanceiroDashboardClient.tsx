@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { formatDateBR } from '@/lib/date-utils';
 
 interface KPIs {
   totalReceita: number;
@@ -36,7 +37,7 @@ interface Props {
 }
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR');
+const fmtDate = (d: string) => formatDateBR(d);
 
 const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }> = {
   PENDENTE: { bg: 'bg-amber-100', color: 'text-amber-700', label: 'Pendente' },

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { markAsPaid, deleteTransaction } from '../actions';
 import { TransactionForm } from '../TransactionForm';
 import { exportCSV } from '@/lib/exportCSV';
+import { formatDateBR } from '@/lib/date-utils';
 
 interface Category { id: string; name: string; color: string | null }
 interface Student { id: string; name: string }
@@ -39,7 +40,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }
 };
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR');
+const fmtDate = (d: string) => formatDateBR(d);
 
 export function ContasReceberClient({ transactions: initial, categories, students }: Props) {
   const [transactions, setTransactions] = useState(initial);
