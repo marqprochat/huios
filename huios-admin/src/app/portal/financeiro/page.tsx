@@ -123,7 +123,7 @@ export default function PortalFinanceiroPage() {
                       <p className="font-bold text-slate-800 text-sm">{fmt(i.amount)}</p>
                       <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${b.cls}`}>{b.label}</span>
                     </div>
-                    <Link href={`/matricula/pagamento/${i.id}`} className="bg-[#135bec] text-white px-4 py-2 rounded-xl text-xs font-bold hover:opacity-90 whitespace-nowrap">
+                    <Link href={`/matricula/pagamento/${i.id}?retorno=/portal/financeiro`} className="bg-[#135bec] text-white px-4 py-2 rounded-xl text-xs font-bold hover:opacity-90 whitespace-nowrap">
                       Pagar
                     </Link>
                   </div>

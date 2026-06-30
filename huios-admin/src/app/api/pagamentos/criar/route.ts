@@ -16,6 +16,9 @@ const METHOD_TO_PAYMENTMETHOD: Record<PagBankMethod, string> = {
   BOLETO: 'BOLETO',
 };
 
+// Métodos habilitados no momento. Mantém o checkout (UI) e a API alinhados.
+const ENABLED_METHODS: PagBankMethod[] = ['PIX'];
+
 export async function POST(request: Request) {
   try {
     if (!(await isConfigured())) {
@@ -25,6 +28,9 @@ export async function POST(request: Request) {
     const body = (await request.json()) as Body;
     if (!body.transactionId || !body.method) {
       return NextResponse.json({ error: 'Dados incompletos.' }, { status: 400 });
+    }
+    if (!ENABLED_METHODS.includes(body.method)) {
+      return NextResponse.json({ error: 'Método de pagamento indisponível. Use o Pix.' }, { status: 400 });
     }
 
     const tx = await (prisma as any).financialTransaction.findUnique({

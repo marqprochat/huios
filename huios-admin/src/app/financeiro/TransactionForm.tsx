@@ -12,8 +12,8 @@ interface Transaction {
   status: string;
   amount: number;
   description: string;
-  dueDate: string;
-  paidAt: string | null;
+  dueDate: string | Date;
+  paidAt: string | Date | null;
   paymentMethod: string | null;
   notes: string | null;
   categoryId?: string | null;
@@ -67,8 +67,10 @@ export function TransactionForm({ type, transaction, categories, students = [], 
     });
   };
 
-  const toDateInput = (iso: string | null | undefined) => {
-    if (!iso) return '';
+  // dueDate/paidAt podem chegar como Date (vindos do Prisma via RSC) ou string.
+  const toDateInput = (value: string | Date | null | undefined) => {
+    if (!value) return '';
+    const iso = typeof value === 'string' ? value : new Date(value).toISOString();
     return iso.slice(0, 10);
   };
 

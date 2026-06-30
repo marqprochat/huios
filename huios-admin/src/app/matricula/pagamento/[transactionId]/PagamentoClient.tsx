@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 
 declare global {
   interface Window {
@@ -13,6 +14,10 @@ const SDK_URL = 'https://assets.pagseguro.com.br/checkout-sdk-js/rc/dist/browser
 
 type Tab = 'CREDIT_CARD' | 'PIX' | 'BOLETO';
 
+// Métodos de pagamento habilitados no checkout. Por ora apenas Pix está ativo
+// (Cartão/Boleto exigem liberação adicional na conta PagBank).
+const ENABLED_METHODS: Tab[] = ['PIX'];
+
 interface Props {
   transactionId: string;
   description: string;
@@ -20,10 +25,12 @@ interface Props {
   studentName: string;
   alreadyPaid: boolean;
   publicKey: string;
+  redirectTo?: string | null;
 }
 
-export function PagamentoClient({ transactionId, description, amount, studentName, alreadyPaid, publicKey }: Props) {
-  const [tab, setTab] = useState<Tab>('CREDIT_CARD');
+export function PagamentoClient({ transactionId, description, amount, studentName, alreadyPaid, publicKey, redirectTo }: Props) {
+  const router = useRouter();
+  const [tab, setTab] = useState<Tab>(ENABLED_METHODS[0]);
   const [sdkReady, setSdkReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,16 +126,7 @@ export function PagamentoClient({ transactionId, description, amount, studentNam
   };
 
   if (paid) {
-    return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-sm">
-        <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4">
-          <span className="material-symbols-outlined text-4xl">check_circle</span>
-        </div>
-        <h3 className="text-xl font-black text-slate-900">Pagamento confirmado!</h3>
-        <p className="text-sm text-slate-500 mt-1">{description}</p>
-        <p className="text-2xl font-black text-slate-900 mt-3">{fmt(amount)}</p>
-      </div>
-    );
+    return <PaidScreen description={description} amount={amount} redirectTo={redirectTo} router={router} />;
   }
 
   const inputCls = 'w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:ring-2 focus:ring-primary/30';
@@ -141,14 +139,16 @@ export function PagamentoClient({ transactionId, description, amount, studentNam
         <p className="text-3xl font-black text-slate-900 mt-1">{fmt(amount)}</p>
       </div>
 
-      <div className="flex gap-2">
-        {(['CREDIT_CARD', 'PIX', 'BOLETO'] as Tab[]).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${tab === t ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'}`}>
-            {t === 'CREDIT_CARD' ? 'Cartão' : t === 'PIX' ? 'PIX' : 'Boleto'}
-          </button>
-        ))}
-      </div>
+      {ENABLED_METHODS.length > 1 && (
+        <div className="flex gap-2">
+          {ENABLED_METHODS.map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${tab === t ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'}`}>
+              {t === 'CREDIT_CARD' ? 'Cartão' : t === 'PIX' ? 'PIX' : 'Boleto'}
+            </button>
+          ))}
+        </div>
+      )}
 
       {error && <p className="text-sm font-bold text-red-600">{error}</p>}
 
@@ -213,6 +213,51 @@ export function PagamentoClient({ transactionId, description, amount, studentNam
               <p className="text-xs text-slate-400">O pagamento é confirmado em até alguns dias úteis.</p>
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const REDIRECT_SECONDS = 5;
+
+function PaidScreen({
+  description,
+  amount,
+  redirectTo,
+  router,
+}: {
+  description: string;
+  amount: number;
+  redirectTo?: string | null;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const [count, setCount] = useState(REDIRECT_SECONDS);
+
+  useEffect(() => {
+    if (!redirectTo) return;
+    const tick = setInterval(() => setCount(c => Math.max(0, c - 1)), 1000);
+    const go = setTimeout(() => router.push(redirectTo), REDIRECT_SECONDS * 1000);
+    return () => { clearInterval(tick); clearTimeout(go); };
+  }, [redirectTo, router]);
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-sm">
+      <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4">
+        <span className="material-symbols-outlined text-4xl">check_circle</span>
+      </div>
+      <h3 className="text-xl font-black text-slate-900">Pagamento confirmado!</h3>
+      <p className="text-sm text-slate-500 mt-1">{description}</p>
+      <p className="text-2xl font-black text-slate-900 mt-3">{fmt(amount)}</p>
+      {redirectTo && (
+        <div className="mt-6 space-y-2">
+          <button
+            onClick={() => router.push(redirectTo)}
+            className="w-full bg-primary text-white py-3 rounded-xl text-sm font-bold hover:opacity-90"
+          >
+            Voltar ao financeiro
+          </button>
+          <p className="text-xs text-slate-400">Redirecionando em {count}s...</p>
         </div>
       )}
     </div>

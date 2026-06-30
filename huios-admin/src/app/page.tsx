@@ -128,7 +128,7 @@ export default function Home() {
               </div>
               <h3 className="font-black text-lg text-slate-800 dark:text-slate-100">Pendências Acadêmicas</h3>
             </div>
-            <Link href="/relatorios/pendencias" className="text-[#135bec] text-xs font-bold hover:underline">Ver todas</Link>
+            <Link href="/pendencias" className="text-[#135bec] text-xs font-bold hover:underline">Ver todas</Link>
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">

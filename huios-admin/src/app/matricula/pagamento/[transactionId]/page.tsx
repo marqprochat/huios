@@ -5,8 +5,17 @@ import { PagamentoClient } from './PagamentoClient';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PagamentoPage({ params }: { params: Promise<{ transactionId: string }> }) {
+export default async function PagamentoPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ transactionId: string }>;
+  searchParams: Promise<{ retorno?: string }>;
+}) {
   const { transactionId } = await params;
+  const { retorno } = await searchParams;
+  // Só aceitamos caminhos internos para evitar open redirect.
+  const redirectTo = retorno && retorno.startsWith('/') ? retorno : null;
 
   const tx = await (prisma as any).financialTransaction.findUnique({
     where: { id: transactionId },
@@ -32,6 +41,7 @@ export default async function PagamentoPage({ params }: { params: Promise<{ tran
           studentName={tx.student?.name ?? ''}
           alreadyPaid={tx.status === 'PAGO'}
           publicKey={publicKey}
+          redirectTo={redirectTo}
         />
       </div>
     </div>

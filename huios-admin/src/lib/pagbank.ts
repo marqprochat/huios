@@ -259,6 +259,10 @@ export async function fetchPublicKey(token: string, env: string): Promise<string
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (res.status === 401) {
+      const amb = env === 'prod' ? 'Produção' : 'Testes (Sandbox)';
+      throw new Error(`Token inválido para o ambiente "${amb}". Verifique se o token está completo e se o ambiente selecionado corresponde ao tipo do token.`);
+    }
     const msg = data?.error_messages?.[0]?.description || data?.message || `PagBank HTTP ${res.status}`;
     throw new Error(msg);
   }

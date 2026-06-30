@@ -9,6 +9,11 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ARG NEXT_PUBLIC_PAGBANK_PUBLIC_KEY
 ENV NEXT_PUBLIC_PAGBANK_PUBLIC_KEY=${NEXT_PUBLIC_PAGBANK_PUBLIC_KEY}
 
+# Chave estável para os IDs/criptografia das Server Actions. Sem ela, cada build
+# gera IDs novos e abas abertas quebram com "Failed to find Server Action".
+ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
+ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
+
 COPY package*.json ./
 COPY prisma ./prisma/
 
@@ -29,6 +34,10 @@ ENV NODE_ENV=production
 # Environment variables for runtime
 ENV INTERNAL_API_URL=http://api:3001/api
 ENV NEXT_PUBLIC_API_URL=http://localhost:3001/api
+
+# Mesma chave usada no build, agora em runtime (precisa ser idêntica).
+ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
+ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
 
 # Copy standalone output (includes server.js and minimal node_modules)
 COPY --from=builder /app/.next/standalone ./
