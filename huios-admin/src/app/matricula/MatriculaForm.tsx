@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { maskPhone, maskCpf, isValidCPF, isValidPhone } from '@/lib/masks';
+import { maskPhone, maskCpf, maskCep, onlyDigits, isValidCPF, isValidPhone } from '@/lib/masks';
 
 interface Turma {
   id: string;
@@ -24,6 +24,24 @@ interface Person {
   phone: string;
   cpf: string;
   isMemberOfSede: boolean;
+  // Dados pessoais
+  birthDate: string;
+  maritalStatus: string;
+  // Endereço (montado a partir do CEP / ViaCEP)
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  cepLoading: boolean;
+  // Vida cristã
+  conversionTime: string;
+  churchName: string;
+  churchMembershipTime: string;
+  isBaptized: boolean;
+  baptismTime: string;
 }
 
 interface SummaryItem {
@@ -42,7 +60,24 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const emptyPerson = (): Person => ({ name: '', email: '', phone: '', cpf: '', isMemberOfSede: false });
+
+const emptyPerson = (): Person => ({
+  name: '', email: '', phone: '', cpf: '', isMemberOfSede: false,
+  birthDate: '', maritalStatus: '',
+  cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '', cepLoading: false,
+  conversionTime: '', churchName: '', churchMembershipTime: '', isBaptized: false, baptismTime: '',
+});
+
+/** Junta as partes do endereço em um único texto para gravar no campo `address`. */
+function buildAddress(p: Person): string {
+  const linha = [p.logradouro, p.numero].filter(Boolean).join(', ');
+  const comComp = p.complemento ? `${linha} - ${p.complemento}` : linha;
+  const cidadeUf = [p.cidade, p.uf].filter(Boolean).join(' - ');
+  const partes = [comComp, p.bairro, cidadeUf].filter(Boolean);
+  let addr = partes.join(', ');
+  if (p.cep) addr += (addr ? ', ' : '') + `CEP ${p.cep}`;
+  return addr.trim();
+}
 
 export function MatriculaForm({ turmas, church }: { turmas: Turma[]; church?: ChurchInfo | null }) {
   const [classId, setClassId] = useState(turmas[0]?.id ?? '');
@@ -59,6 +94,30 @@ export function MatriculaForm({ turmas, church }: { turmas: Turma[]; church?: Ch
   const removePerson = (i: number) => setPeople(ps => ps.filter((_, idx) => idx !== i));
 
   const fieldCls = 'w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:ring-2 focus:ring-primary/30';
+  const labelCls = 'block text-xs font-bold text-slate-600 mb-1';
+
+  // Busca endereço pelo CEP (ViaCEP) e autopreenche os campos.
+  const lookupCep = async (i: number, cep: string) => {
+    const digits = onlyDigits(cep);
+    if (digits.length !== 8) return;
+    updatePerson(i, { cepLoading: true });
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        updatePerson(i, {
+          logradouro: data.logradouro || '',
+          bairro: data.bairro || '',
+          cidade: data.localidade || '',
+          uf: data.uf || '',
+        });
+      }
+    } catch {
+      /* silencioso: usuário pode preencher manualmente */
+    } finally {
+      updatePerson(i, { cepLoading: false });
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +144,21 @@ export function MatriculaForm({ turmas, church }: { turmas: Turma[]; church?: Ch
           churchId: church?.id ?? null,
           isFamily: isFamily && people.length > 1,
           family: isFamily ? { name: familyName } : null,
-          people,
+          people: people.map(p => ({
+            name: p.name,
+            email: p.email,
+            phone: p.phone,
+            cpf: p.cpf,
+            isMemberOfSede: p.isMemberOfSede,
+            birthDate: p.birthDate || null,
+            maritalStatus: p.maritalStatus || null,
+            address: buildAddress(p) || null,
+            conversionTime: p.conversionTime || null,
+            churchName: p.churchName || null,
+            churchMembershipTime: p.churchMembershipTime || null,
+            isBaptized: p.isBaptized,
+            baptismTime: p.baptismTime || null,
+          })),
         }),
       });
       const data = await res.json();
@@ -171,21 +244,136 @@ export function MatriculaForm({ turmas, church }: { turmas: Turma[]; church?: Ch
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {people.map((p, i) => (
-          <div key={i} className="border border-slate-200 rounded-xl p-4 space-y-3">
+          <div key={i} className="border border-slate-200 rounded-xl p-4 space-y-5">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-black uppercase tracking-wider text-slate-400">Pessoa {i + 1}</p>
+              <p className="text-xs font-black uppercase tracking-wider text-slate-400">
+                {people.length > 1 ? `Pessoa ${i + 1}` : 'Dados do aluno'}
+              </p>
               {people.length > 1 && (
                 <button type="button" onClick={() => removePerson(i)} className="text-red-500 text-xs font-bold">Remover</button>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input value={p.name} onChange={e => updatePerson(i, { name: e.target.value })} className={fieldCls} placeholder="Nome completo *" required />
-              <input value={p.email} onChange={e => updatePerson(i, { email: e.target.value })} type="email" className={fieldCls} placeholder="E-mail *" required />
-              <input value={p.phone} onChange={e => updatePerson(i, { phone: maskPhone(e.target.value) })} className={fieldCls} placeholder="Telefone (99) 99999-9999" inputMode="numeric" />
-              <input value={p.cpf} onChange={e => updatePerson(i, { cpf: maskCpf(e.target.value) })} className={fieldCls} placeholder="CPF *" inputMode="numeric" required />
+
+            {/* Dados pessoais */}
+            <div className="space-y-3">
+              <p className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1">
+                <span className="material-symbols-outlined text-[16px]">person</span> Dados pessoais
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <label className={labelCls}>Nome completo *</label>
+                  <input value={p.name} onChange={e => updatePerson(i, { name: e.target.value })} className={fieldCls} placeholder="Nome completo" required />
+                </div>
+                <div>
+                  <label className={labelCls}>E-mail *</label>
+                  <input value={p.email} onChange={e => updatePerson(i, { email: e.target.value })} type="email" className={fieldCls} placeholder="email@exemplo.com" required />
+                </div>
+                <div>
+                  <label className={labelCls}>Telefone</label>
+                  <input value={p.phone} onChange={e => updatePerson(i, { phone: maskPhone(e.target.value) })} className={fieldCls} placeholder="(99) 99999-9999" inputMode="numeric" />
+                </div>
+                <div>
+                  <label className={labelCls}>CPF *</label>
+                  <input value={p.cpf} onChange={e => updatePerson(i, { cpf: maskCpf(e.target.value) })} className={fieldCls} placeholder="000.000.000-00" inputMode="numeric" required />
+                </div>
+                <div>
+                  <label className={labelCls}>Data de nascimento</label>
+                  <input value={p.birthDate} onChange={e => updatePerson(i, { birthDate: e.target.value })} type="date" className={fieldCls} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className={labelCls}>Estado civil</label>
+                  <select value={p.maritalStatus} onChange={e => updatePerson(i, { maritalStatus: e.target.value })} className={fieldCls}>
+                    <option value="">Selecione...</option>
+                    <option value="SOLTEIRO">Solteiro(a)</option>
+                    <option value="CASADO">Casado(a)</option>
+                    <option value="DIVORCIADO">Divorciado(a)</option>
+                    <option value="VIUVO">Viúvo(a)</option>
+                  </select>
+                </div>
+              </div>
             </div>
+
+            {/* Endereço */}
+            <div className="space-y-3">
+              <p className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1">
+                <span className="material-symbols-outlined text-[16px]">home</span> Endereço
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>CEP</label>
+                  <div className="relative">
+                    <input
+                      value={p.cep}
+                      onChange={e => updatePerson(i, { cep: maskCep(e.target.value) })}
+                      onBlur={e => lookupCep(i, e.target.value)}
+                      className={fieldCls}
+                      placeholder="00000-000"
+                      inputMode="numeric"
+                    />
+                    {p.cepLoading && (
+                      <span className="material-symbols-outlined text-[18px] text-slate-400 animate-spin absolute right-3 top-2.5">progress_activity</span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">Digite o CEP para preencher o endereço automaticamente.</p>
+                </div>
+                <div>
+                  <label className={labelCls}>Número</label>
+                  <input value={p.numero} onChange={e => updatePerson(i, { numero: e.target.value })} className={fieldCls} placeholder="Ex: 123" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className={labelCls}>Logradouro (rua/avenida)</label>
+                  <input value={p.logradouro} onChange={e => updatePerson(i, { logradouro: e.target.value })} className={fieldCls} placeholder="Rua / Avenida" />
+                </div>
+                <div>
+                  <label className={labelCls}>Complemento</label>
+                  <input value={p.complemento} onChange={e => updatePerson(i, { complemento: e.target.value })} className={fieldCls} placeholder="Apto, bloco..." />
+                </div>
+                <div>
+                  <label className={labelCls}>Bairro</label>
+                  <input value={p.bairro} onChange={e => updatePerson(i, { bairro: e.target.value })} className={fieldCls} placeholder="Bairro" />
+                </div>
+                <div>
+                  <label className={labelCls}>Cidade</label>
+                  <input value={p.cidade} onChange={e => updatePerson(i, { cidade: e.target.value })} className={fieldCls} placeholder="Cidade" />
+                </div>
+                <div>
+                  <label className={labelCls}>UF</label>
+                  <input value={p.uf} onChange={e => updatePerson(i, { uf: e.target.value.toUpperCase().slice(0, 2) })} className={fieldCls} placeholder="UF" maxLength={2} />
+                </div>
+              </div>
+            </div>
+
+            {/* Vida cristã */}
+            <div className="space-y-3">
+              <p className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1">
+                <span className="material-symbols-outlined text-[16px]">church</span> Vida cristã
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>É convertido(a) há quanto tempo?</label>
+                  <input value={p.conversionTime} onChange={e => updatePerson(i, { conversionTime: e.target.value })} className={fieldCls} placeholder="Ex: 5 anos" />
+                </div>
+                <div>
+                  <label className={labelCls}>Qual igreja você frequenta?</label>
+                  <input value={p.churchName} onChange={e => updatePerson(i, { churchName: e.target.value })} className={fieldCls} placeholder="Ex: Igreja Conviva" disabled={church?.isPartner} />
+                </div>
+                <div>
+                  <label className={labelCls}>Há quanto tempo é membro da igreja?</label>
+                  <input value={p.churchMembershipTime} onChange={e => updatePerson(i, { churchMembershipTime: e.target.value })} className={fieldCls} placeholder="Ex: 3 anos" />
+                </div>
+                <div>
+                  <label className={labelCls}>Há quanto tempo é batizado(a)?</label>
+                  <input value={p.baptismTime} onChange={e => updatePerson(i, { baptismTime: e.target.value })} className={fieldCls} placeholder="Ex: 2 anos" />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={p.isBaptized} onChange={e => updatePerson(i, { isBaptized: e.target.checked })} className="rounded" />
+                <span className="text-xs font-bold text-slate-600">Sou batizado(a)</span>
+              </label>
+            </div>
+
             {!church?.isPartner && (
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={p.isMemberOfSede} onChange={e => updatePerson(i, { isMemberOfSede: e.target.checked })} className="rounded" />

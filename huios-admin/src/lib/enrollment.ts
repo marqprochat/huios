@@ -114,8 +114,29 @@ export async function ensureStudentAndUser(person: {
   familyId?: string | null;
   churchId?: string | null;
   churchName?: string | null;
+  // Dados pessoais e de vida cristã (formulário completo de matrícula)
+  birthDate?: Date | null;
+  maritalStatus?: string | null;
+  address?: string | null;
+  conversionTime?: string | null;
+  churchMembershipTime?: string | null;
+  isBaptized?: boolean | null;
+  baptismTime?: string | null;
 }): Promise<{ studentId: string }> {
   const email = person.email.trim().toLowerCase();
+
+  // Campos pessoais/espirituais (só inclui o que veio preenchido).
+  const profileData = {
+    ...(person.phone ? { phone: person.phone } : {}),
+    ...(person.cpf ? { cpf: person.cpf } : {}),
+    ...(person.birthDate ? { birthDate: person.birthDate } : {}),
+    ...(person.maritalStatus ? { maritalStatus: person.maritalStatus } : {}),
+    ...(person.address ? { address: person.address } : {}),
+    ...(person.conversionTime ? { conversionTime: person.conversionTime } : {}),
+    ...(person.churchMembershipTime ? { churchMembershipTime: person.churchMembershipTime } : {}),
+    ...(typeof person.isBaptized === 'boolean' ? { isBaptized: person.isBaptized } : {}),
+    ...(person.baptismTime ? { baptismTime: person.baptismTime } : {}),
+  };
 
   // Reaproveita aluno existente pelo email.
   const existing = await prisma.student.findUnique({ where: { email } });
@@ -123,6 +144,7 @@ export async function ensureStudentAndUser(person: {
     await prisma.student.update({
       where: { id: existing.id },
       data: {
+        ...profileData,
         ...(person.familyId ? { familyId: person.familyId } : {}),
         ...(person.churchId ? { churchId: person.churchId } : {}),
         ...(person.churchName ? { churchName: person.churchName } : {}),
@@ -140,6 +162,7 @@ export async function ensureStudentAndUser(person: {
       churchName: person.churchName || null,
       familyId: person.familyId || null,
       churchId: person.churchId || null,
+      ...profileData,
     } as any,
   });
 
@@ -169,6 +192,16 @@ export interface PersonInput {
   phone?: string | null;
   cpf?: string | null;
   isMemberOfSede?: boolean; // declarado na matrícula genérica
+  // Dados pessoais
+  birthDate?: string | null; // ISO (yyyy-mm-dd)
+  maritalStatus?: string | null;
+  address?: string | null; // endereço completo já montado (a partir do CEP)
+  // Vida cristã
+  conversionTime?: string | null;
+  churchName?: string | null; // igreja que frequenta
+  churchMembershipTime?: string | null;
+  isBaptized?: boolean | null;
+  baptismTime?: string | null;
 }
 
 export interface MatricularGrupoInput {
@@ -260,7 +293,15 @@ export async function matricularGrupo(input: MatricularGrupoInput): Promise<Matr
       cpf: person.cpf,
       familyId,
       churchId: church?.id ?? null,
-      churchName: church?.name ?? null,
+      // Igreja vinculada (link parceira) tem prioridade; senão usa a declarada pela pessoa.
+      churchName: church?.name ?? person.churchName ?? null,
+      birthDate: person.birthDate ? new Date(person.birthDate) : null,
+      maritalStatus: person.maritalStatus ?? null,
+      address: person.address ?? null,
+      conversionTime: person.conversionTime ?? null,
+      churchMembershipTime: person.churchMembershipTime ?? null,
+      isBaptized: typeof person.isBaptized === 'boolean' ? person.isBaptized : null,
+      baptismTime: person.baptismTime ?? null,
     });
 
     // Evita matrícula duplicada (constraint @@unique studentId+classId).

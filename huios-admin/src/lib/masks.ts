@@ -19,6 +19,13 @@ export function maskPhone(value: string): string {
     .replace(/(\d{5})(\d{1,4})$/, '$1-$2');
 }
 
+/** Formata como 00000-000 (CEP). */
+export function maskCep(value: string): string {
+  return onlyDigits(value)
+    .slice(0, 8)
+    .replace(/(\d{5})(\d{1,3})$/, '$1-$2');
+}
+
 /** Formata como 000.000.000-00. */
 export function maskCpf(value: string): string {
   return onlyDigits(value)
