@@ -29,7 +29,9 @@ export function MatriculaLanding({ turmas, church }: { turmas: LandingTurma[]; c
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, white 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
         <div className="relative max-w-5xl mx-auto px-6 py-16 md:py-24 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Huios" className="h-16 mx-auto mb-6 object-contain brightness-0 invert" />
+          <div className="inline-flex items-center justify-center rounded-3xl bg-white p-5 mb-6 shadow-2xl shadow-black/20">
+            <img src="/logo.png" alt="Huios" className="h-48 w-auto object-contain" />
+          </div>
           {church?.isPartner && (
             <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur px-4 py-1.5 rounded-full text-sm font-bold mb-5">
               <span className="material-symbols-outlined text-[18px]">handshake</span>
@@ -69,15 +71,13 @@ export function MatriculaLanding({ turmas, church }: { turmas: LandingTurma[]; c
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {turmas.map(t => (
-                <div key={t.id} className="group rounded-2xl border border-slate-200 overflow-hidden hover:border-primary hover:shadow-xl transition-all flex flex-col">
-                  <div className="h-32 bg-gradient-to-br from-slate-100 to-slate-200 relative overflow-hidden">
+                <div key={t.id} className="group rounded-2xl border border-slate-200 overflow-hidden hover:border-primary hover:shadow-xl transition-all flex items-stretch">
+                  <div className="shrink-0 self-stretch w-28 sm:w-36 md:w-44 bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-3 sm:p-4">
                     {t.courseImageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={t.courseImageUrl} alt={t.courseName} className="w-full h-full object-cover" />
+                      <img src={t.courseImageUrl} alt={t.courseName} className="w-full aspect-square object-contain" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="material-symbols-outlined text-5xl text-slate-300">menu_book</span>
-                      </div>
+                      <span className="material-symbols-outlined text-5xl text-slate-300">menu_book</span>
                     )}
                   </div>
                   <div className="p-5 flex-1 flex flex-col">

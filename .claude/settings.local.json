@@ -31,7 +31,9 @@
       "WebFetch(domain:developer.pagbank.com.br)",
       "Bash(openssl rand *)",
       "Bash(npx eslint *)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(ls -1 docker-compose*.yml docker-compose*.yaml)",
+      "Bash(ls -1 huios-admin/Dockerfile*)"
     ]
   }
 }
