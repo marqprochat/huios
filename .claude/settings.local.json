@@ -26,7 +26,9 @@
       "Bash(grep -c \"PAGBANK\" .env)",
       "Bash(grep -v '^$')",
       "Bash(ls src/middleware*)",
-      "Bash(ls middleware*)"
+      "Bash(ls middleware*)",
+      "WebSearch",
+      "WebFetch(domain:developer.pagbank.com.br)"
     ]
   }
 }
