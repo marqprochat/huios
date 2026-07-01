@@ -159,7 +159,7 @@ export async function fetchAccessToken(
   const form = `client_id=${encodeURIComponent(config.clientId)}&client_secret=${encodeURIComponent(
     config.clientSecret,
   )}&grant_type=client_credentials&scope=${encodeURIComponent(scope)}`;
-  const res = await mtlsRequest(`${base}/api/v1/oauth`, {
+  const res = await mtlsRequest(`${base}/auth/oauth/v2/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
