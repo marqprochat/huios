@@ -153,17 +153,16 @@ export async function fetchAccessToken(
   scope = 'cob.write',
 ): Promise<string> {
   const base = baseUrlFor(config.env);
-  // Token endpoint desta API é /api/v1/oauth (ver doc "Pix - Geração de QR Code").
-  // As credenciais vão via HTTP Basic Auth; o grant_type/scope no corpo. Sem o
-  // header Authorization o gateway responde "Missing Authentication Token". O
-  // escopo (cob.write) é o que autoriza a criação da cobrança — sem ele o recurso
-  // devolve "Access Denied".
-  const basic = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64');
-  const form = `grant_type=client_credentials&scope=${encodeURIComponent(scope)}`;
-  const res = await mtlsRequest(`${base}/api/v1/oauth`, {
+  // Endpoint de token que funciona: /auth/oauth/v2/token (o /api/v1/oauth está
+  // atrás de um gateway AWS que exige assinatura SigV4). Credenciais no corpo.
+  // O escopo (cob.write) é o que autoriza a criação da cobrança; scope inválido
+  // junto (ex.: cob.read) pode invalidar o grant e resultar em "Access Denied".
+  const form = `client_id=${encodeURIComponent(config.clientId)}&client_secret=${encodeURIComponent(
+    config.clientSecret,
+  )}&grant_type=client_credentials&scope=${encodeURIComponent(scope)}`;
+  const res = await mtlsRequest(`${base}/auth/oauth/v2/token`, {
     method: 'POST',
     headers: {
-      Authorization: `Basic ${basic}`,
       'Content-Type': 'application/x-www-form-urlencoded',
       Accept: 'application/json',
       'Content-Length': Buffer.byteLength(form).toString(),
@@ -305,7 +304,7 @@ export async function getCob(txid: string): Promise<any> {
  * O Santander vincula o webhook à chave Pix recebedora.
  */
 export async function registerWebhook(config: SantanderConfig, webhookUrl: string): Promise<void> {
-  const token = await fetchAccessToken(config, 'webhook.write webhook.read');
+  const token = await fetchAccessToken(config, 'webhook.write');
   const base = baseUrlFor(config.env);
   const payload = JSON.stringify({ webhookUrl });
   const res = await mtlsRequest(`${base}/api/v1/webhook/${encodeURIComponent(config.pixKey)}`, {
