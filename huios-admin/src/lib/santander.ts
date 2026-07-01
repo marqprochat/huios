@@ -24,15 +24,30 @@ export interface SantanderConfig {
   appUrl: string;
 }
 
-// Hosts da API Pix do Santander. Centralizados aqui para fácil ajuste caso o
-// banco altere os endpoints. O ambiente é escolhido pelo coordenador no painel.
-const HOSTS: Record<string, string> = {
-  prod: 'https://trust-pix.santander.com.br',
+// Hosts do Santander. Atenção: a autenticação (OAuth) e os recursos do Pix ficam
+// em domínios DIFERENTES. O ambiente é escolhido pelo coordenador no painel.
+//
+// - OAuth (client_credentials sobre mTLS): host "trust-open"/"trust-sandbox".
+// - Recursos Pix Bacen (cob, webhook): host "trust-pix"/"trust-pix-h".
+//   Homologação usa o sufixo "-h" (trust-pix-h), NÃO o host trust-sandbox.
+const AUTH_HOSTS: Record<string, string> = {
+  prod: 'https://trust-open.api.santander.com.br',
   sandbox: 'https://trust-sandbox.api.santander.com.br',
 };
 
+const PIX_HOSTS: Record<string, string> = {
+  prod: 'https://trust-pix.santander.com.br',
+  sandbox: 'https://trust-pix-h.santander.com.br',
+};
+
+/** Host do endpoint de autenticação OAuth (client_credentials sobre mTLS). */
+export function authUrlFor(env: string): string {
+  return AUTH_HOSTS[env] || AUTH_HOSTS.sandbox;
+}
+
+/** Host dos recursos Pix Bacen (cob, webhook). */
 export function baseUrlFor(env: string): string {
-  return HOSTS[env] || HOSTS.sandbox;
+  return PIX_HOSTS[env] || PIX_HOSTS.sandbox;
 }
 
 /** Carrega a configuração do Santander do banco (SystemSettings). */
@@ -117,19 +132,19 @@ function parseJson(body: string): any {
   }
 }
 
-function describeError(data: any, status: number): string {
+function describeError(data: any, status: number, rawBody?: string): string {
   // A API Pix (Bacen) devolve erros em formatos variados: { violacoes: [...] },
   // { detail }, { message } ou { error_description }.
   if (Array.isArray(data?.violacoes) && data.violacoes.length) {
     return data.violacoes.map((v: any) => v.razao || v.propriedade).filter(Boolean).join(' | ');
   }
-  return (
-    data?.detail ||
-    data?.message ||
-    data?.error_description ||
-    data?.error ||
-    `Santander HTTP ${status}`
-  );
+  const structured =
+    data?.detail || data?.message || data?.error_description || data?.error || data?.fault?.faultstring;
+  if (structured) return structured;
+  // Sem campo estruturado: inclui um trecho do corpo bruto para facilitar o
+  // diagnóstico (ex.: 401 com texto simples ou HTML do gateway).
+  const snippet = (rawBody || '').trim().replace(/\s+/g, ' ').slice(0, 200);
+  return snippet ? `Santander HTTP ${status}: ${snippet}` : `Santander HTTP ${status}`;
 }
 
 /**
@@ -137,7 +152,7 @@ function describeError(data: any, status: number): string {
  * Serve também como teste de conexão das credenciais + certificado.
  */
 export async function fetchAccessToken(config: SantanderConfig): Promise<string> {
-  const base = baseUrlFor(config.env);
+  const base = authUrlFor(config.env); // OAuth fica no host trust-open/trust-sandbox
   const form = `client_id=${encodeURIComponent(config.clientId)}&client_secret=${encodeURIComponent(
     config.clientSecret,
   )}&grant_type=client_credentials`;
@@ -158,7 +173,7 @@ export async function fetchAccessToken(config: SantanderConfig): Promise<string>
     if (res.status === 401) {
       throw new Error('Credenciais inválidas. Verifique Client ID, Client Secret e o ambiente selecionado.');
     }
-    throw new Error(describeError(data, res.status));
+    throw new Error(describeError(data, res.status, res.body));
   }
   if (!data?.access_token) throw new Error('Resposta sem access_token. Verifique o certificado de transporte (mTLS).');
   return data.access_token as string;
@@ -232,6 +247,9 @@ export async function createPixCharge(params: SantanderPixParams): Promise<Santa
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,
+      // Endpoints de recurso do Pix Santander exigem a Application Key (Client ID)
+      // além do Bearer; sem ela a API responde 401 (o endpoint de token não exige).
+      'X-Application-Key': config.clientId,
       'Content-Type': 'application/json',
       Accept: 'application/json',
       'Content-Length': Buffer.byteLength(payload).toString(),
@@ -243,7 +261,7 @@ export async function createPixCharge(params: SantanderPixParams): Promise<Santa
   });
   const data = parseJson(res.body);
   if (res.status < 200 || res.status >= 300) {
-    throw new Error(describeError(data, res.status));
+    throw new Error(describeError(data, res.status, res.body));
   }
 
   const copiaECola: string | null = data?.pixCopiaECola ?? null;
@@ -272,7 +290,7 @@ export async function getCob(txid: string): Promise<any> {
   const base = baseUrlFor(config.env);
   const res = await mtlsRequest(`${base}/api/v1/cob/${txid}`, {
     method: 'GET',
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    headers: { Authorization: `Bearer ${token}`, 'X-Application-Key': config.clientId, Accept: 'application/json' },
     cert: config.certificate,
     key: config.certificateKey,
     passphrase: config.certificatePassphrase,
@@ -292,6 +310,9 @@ export async function registerWebhook(config: SantanderConfig, webhookUrl: strin
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,
+      // Endpoints de recurso do Pix Santander exigem a Application Key (Client ID)
+      // além do Bearer; sem ela a API responde 401 (o endpoint de token não exige).
+      'X-Application-Key': config.clientId,
       'Content-Type': 'application/json',
       Accept: 'application/json',
       'Content-Length': Buffer.byteLength(payload).toString(),
@@ -303,6 +324,6 @@ export async function registerWebhook(config: SantanderConfig, webhookUrl: strin
   });
   if (res.status < 200 || res.status >= 300) {
     const data = parseJson(res.body);
-    throw new Error(describeError(data, res.status));
+    throw new Error(describeError(data, res.status, res.body));
   }
 }

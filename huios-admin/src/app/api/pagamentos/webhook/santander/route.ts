@@ -9,6 +9,13 @@ export const dynamic = 'force-dynamic';
 // Cada item confirmado marca o Payment (e a FinancialTransaction) como pago.
 // O txid corresponde ao gatewayChargeId gravado na criação da cobrança.
 
+// Antes de cadastrar o webhook, o Santander faz uma chamada GET de validação nesta
+// URL. Ela precisa existir e responder 200 (aceitando qualquer requisição), senão
+// o cadastro (PUT /webhook/{chave}) é recusado.
+export async function GET() {
+  return NextResponse.json({ status: 'ok' });
+}
+
 export async function POST(request: Request) {
   try {
     const data = await request.json().catch(() => ({} as any));
