@@ -150,18 +150,20 @@ function describeError(data: any, status: number, rawBody?: string): string {
  */
 export async function fetchAccessToken(
   config: SantanderConfig,
-  scope = 'cob.write cob.read',
+  scope = 'cob.write',
 ): Promise<string> {
   const base = baseUrlFor(config.env);
-  // O escopo é obrigatório para autorizar as operações (ex.: cob.write para criar
-  // cobrança). Sem ele o token é emitido, mas a chamada de recurso volta 401
-  // "Access Denied".
-  const form = `client_id=${encodeURIComponent(config.clientId)}&client_secret=${encodeURIComponent(
-    config.clientSecret,
-  )}&grant_type=client_credentials&scope=${encodeURIComponent(scope)}`;
-  const res = await mtlsRequest(`${base}/auth/oauth/v2/token`, {
+  // Token endpoint desta API é /api/v1/oauth (ver doc "Pix - Geração de QR Code").
+  // As credenciais vão via HTTP Basic Auth; o grant_type/scope no corpo. Sem o
+  // header Authorization o gateway responde "Missing Authentication Token". O
+  // escopo (cob.write) é o que autoriza a criação da cobrança — sem ele o recurso
+  // devolve "Access Denied".
+  const basic = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64');
+  const form = `grant_type=client_credentials&scope=${encodeURIComponent(scope)}`;
+  const res = await mtlsRequest(`${base}/api/v1/oauth`, {
     method: 'POST',
     headers: {
+      Authorization: `Basic ${basic}`,
       'Content-Type': 'application/x-www-form-urlencoded',
       Accept: 'application/json',
       'Content-Length': Buffer.byteLength(form).toString(),
