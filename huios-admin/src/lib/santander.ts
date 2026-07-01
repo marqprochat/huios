@@ -246,7 +246,7 @@ export async function createPixCharge(params: SantanderPixParams): Promise<Santa
   }
   const payload = JSON.stringify(body);
 
-  const res = await mtlsRequest(`${base}/cob/${txid}`, {
+  const res = await mtlsRequest(`${base}/api/v1/cob/${txid}`, {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -291,7 +291,7 @@ export async function getCob(txid: string): Promise<any> {
   const config = await getSantanderConfig();
   const token = await fetchAccessToken(config);
   const base = baseUrlFor(config.env);
-  const res = await mtlsRequest(`${base}/cob/${txid}`, {
+  const res = await mtlsRequest(`${base}/api/v1/cob/${txid}`, {
     method: 'GET',
     headers: { Authorization: `Bearer ${token}`, ...appKeyHeader(config), Accept: 'application/json' },
     cert: config.certificate,
