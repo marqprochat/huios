@@ -41,6 +41,7 @@ export async function GET() {
     santanderEnv: s?.santanderEnv || 'sandbox',
     santanderClientId: s?.santanderClientId || '',
     santanderClientSecretMasked: mask(s?.santanderClientSecret),
+    santanderApplicationKey: s?.santanderApplicationKey || '',
     santanderPixKey: s?.santanderPixKey || '',
     hasSantanderCert: !!s?.santanderCertificate,
     hasSantanderKey: !!s?.santanderCertificateKey,
@@ -75,6 +76,7 @@ export async function PUT(req: Request) {
       santanderEnv,
       santanderClientId,
       santanderClientSecret,
+      santanderApplicationKey,
       santanderCertificate,
       santanderCertificateKey,
       santanderCertificatePassphrase,
@@ -102,6 +104,7 @@ export async function PUT(req: Request) {
     // --- Santander ---
     if (typeof santanderEnv === 'string') data.santanderEnv = santanderEnv === 'prod' ? 'prod' : 'sandbox';
     if (typeof santanderClientId === 'string') data.santanderClientId = santanderClientId.trim() || null;
+    if (typeof santanderApplicationKey === 'string') data.santanderApplicationKey = santanderApplicationKey.trim() || null;
     if (typeof santanderPixKey === 'string') data.santanderPixKey = santanderPixKey.trim() || null;
     if (typeof santanderClientSecret === 'string' && santanderClientSecret.trim()) {
       data.santanderClientSecret = santanderClientSecret.trim();

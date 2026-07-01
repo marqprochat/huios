@@ -17,6 +17,7 @@ export interface SantanderConfig {
   env: string; // "sandbox" | "prod"
   clientId: string;
   clientSecret: string;
+  applicationKey: string; // Application Key / Developer API Key (header X-Application-Key)
   certificate: string; // PEM do certificado de transporte
   certificateKey: string; // PEM da chave privada
   certificatePassphrase: string; // senha da chave privada (se estiver cifrada)
@@ -24,30 +25,25 @@ export interface SantanderConfig {
   appUrl: string;
 }
 
-// Hosts do Santander. Atenção: a autenticação (OAuth) e os recursos do Pix ficam
-// em domínios DIFERENTES. O ambiente é escolhido pelo coordenador no painel.
-//
-// - OAuth (client_credentials sobre mTLS): host "trust-open"/"trust-sandbox".
-// - Recursos Pix Bacen (cob, webhook): host "trust-pix"/"trust-pix-h".
-//   Homologação usa o sufixo "-h" (trust-pix-h), NÃO o host trust-sandbox.
-const AUTH_HOSTS: Record<string, string> = {
-  prod: 'https://trust-open.api.santander.com.br',
-  sandbox: 'https://trust-sandbox.api.santander.com.br',
-};
-
-const PIX_HOSTS: Record<string, string> = {
+// Hosts da API Pix do Santander. Autenticação (OAuth) e recursos Pix (cob, webhook)
+// ficam no MESMO host por ambiente — o token só é válido no host que o emitiu.
+// Produção: trust-pix. Homologação: trust-pix-h (sufixo "-h", NÃO "trust-sandbox").
+const HOSTS: Record<string, string> = {
   prod: 'https://trust-pix.santander.com.br',
   sandbox: 'https://trust-pix-h.santander.com.br',
 };
 
-/** Host do endpoint de autenticação OAuth (client_credentials sobre mTLS). */
-export function authUrlFor(env: string): string {
-  return AUTH_HOSTS[env] || AUTH_HOSTS.sandbox;
+export function baseUrlFor(env: string): string {
+  return HOSTS[env] || HOSTS.sandbox;
 }
 
-/** Host dos recursos Pix Bacen (cob, webhook). */
-export function baseUrlFor(env: string): string {
-  return PIX_HOSTS[env] || PIX_HOSTS.sandbox;
+/**
+ * Header `X-Application-Key` (Application Key / Developer API Key do app no portal).
+ * Só é enviado quando configurado — mandar um valor errado (ex.: o Client ID) pode
+ * fazer o gateway responder 401 "Access Denied".
+ */
+function appKeyHeader(config: SantanderConfig): Record<string, string> {
+  return config.applicationKey ? { 'X-Application-Key': config.applicationKey } : {};
 }
 
 /** Carrega a configuração do Santander do banco (SystemSettings). */
@@ -62,6 +58,7 @@ export async function getSantanderConfig(): Promise<SantanderConfig> {
     env: s?.santanderEnv || 'sandbox',
     clientId: s?.santanderClientId || '',
     clientSecret: s?.santanderClientSecret || '',
+    applicationKey: s?.santanderApplicationKey || '',
     certificate: s?.santanderCertificate || '',
     certificateKey: s?.santanderCertificateKey || '',
     certificatePassphrase: s?.santanderCertificatePassphrase || '',
@@ -152,7 +149,7 @@ function describeError(data: any, status: number, rawBody?: string): string {
  * Serve também como teste de conexão das credenciais + certificado.
  */
 export async function fetchAccessToken(config: SantanderConfig): Promise<string> {
-  const base = authUrlFor(config.env); // OAuth fica no host trust-open/trust-sandbox
+  const base = baseUrlFor(config.env);
   const form = `client_id=${encodeURIComponent(config.clientId)}&client_secret=${encodeURIComponent(
     config.clientSecret,
   )}&grant_type=client_credentials`;
@@ -247,9 +244,7 @@ export async function createPixCharge(params: SantanderPixParams): Promise<Santa
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,
-      // Endpoints de recurso do Pix Santander exigem a Application Key (Client ID)
-      // além do Bearer; sem ela a API responde 401 (o endpoint de token não exige).
-      'X-Application-Key': config.clientId,
+      ...appKeyHeader(config),
       'Content-Type': 'application/json',
       Accept: 'application/json',
       'Content-Length': Buffer.byteLength(payload).toString(),
@@ -290,7 +285,7 @@ export async function getCob(txid: string): Promise<any> {
   const base = baseUrlFor(config.env);
   const res = await mtlsRequest(`${base}/api/v1/cob/${txid}`, {
     method: 'GET',
-    headers: { Authorization: `Bearer ${token}`, 'X-Application-Key': config.clientId, Accept: 'application/json' },
+    headers: { Authorization: `Bearer ${token}`, ...appKeyHeader(config), Accept: 'application/json' },
     cert: config.certificate,
     key: config.certificateKey,
     passphrase: config.certificatePassphrase,
@@ -310,9 +305,7 @@ export async function registerWebhook(config: SantanderConfig, webhookUrl: strin
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,
-      // Endpoints de recurso do Pix Santander exigem a Application Key (Client ID)
-      // além do Bearer; sem ela a API responde 401 (o endpoint de token não exige).
-      'X-Application-Key': config.clientId,
+      ...appKeyHeader(config),
       'Content-Type': 'application/json',
       Accept: 'application/json',
       'Content-Length': Buffer.byteLength(payload).toString(),

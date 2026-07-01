@@ -458,6 +458,7 @@ model SystemSettings {
   santanderEnv               String?  @default("sandbox") // "sandbox" | "prod"
   santanderClientId          String?  // Client ID do app no portal do desenvolvedor Santander
   santanderClientSecret      String?  // Client Secret (sensível)
+  santanderApplicationKey    String?  // Application Key / Developer API Key (header X-Application-Key)
   santanderCertificate       String?  // Certificado de transporte em PEM (.crt/.pem)
   santanderCertificateKey    String?  // Chave privada do certificado em PEM (.key)
   santanderCertificatePassphrase String? // Senha da chave privada, quando cifrada

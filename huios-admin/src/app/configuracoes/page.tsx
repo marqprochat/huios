@@ -38,6 +38,7 @@ export default function ConfiguracoesPage() {
   const [santanderClientId, setSantanderClientId] = useState("")
   const [santanderClientSecret, setSantanderClientSecret] = useState("")
   const [santanderClientSecretMasked, setSantanderClientSecretMasked] = useState<string | null>(null)
+  const [santanderApplicationKey, setSantanderApplicationKey] = useState("")
   const [santanderPixKey, setSantanderPixKey] = useState("")
   const [santanderCertificate, setSantanderCertificate] = useState("")
   const [santanderCertificateKey, setSantanderCertificateKey] = useState("")
@@ -76,6 +77,7 @@ export default function ConfiguracoesPage() {
         setSantanderEnv(data.santanderEnv || 'sandbox')
         setSantanderClientId(data.santanderClientId || '')
         setSantanderClientSecretMasked(data.santanderClientSecretMasked || null)
+        setSantanderApplicationKey(data.santanderApplicationKey || '')
         setSantanderPixKey(data.santanderPixKey || '')
         setHasSantanderCert(!!data.hasSantanderCert)
         setHasSantanderKey(!!data.hasSantanderKey)
@@ -103,6 +105,7 @@ export default function ConfiguracoesPage() {
           santanderEnv,
           santanderClientId,
           santanderClientSecret,
+          santanderApplicationKey,
           santanderPixKey,
           santanderCertificate,
           santanderCertificateKey,
@@ -964,6 +967,21 @@ export default function ConfiguracoesPage() {
                 placeholder={santanderClientSecretMasked ? `Salvo: ${santanderClientSecretMasked} — preencha só para alterar` : 'Client Secret da aplicação'}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
               />
+            </div>
+
+            {/* Application Key (Developer API Key) */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Application Key</label>
+              <input
+                type="text"
+                value={santanderApplicationKey}
+                onChange={(e) => setSantanderApplicationKey(e.target.value)}
+                placeholder="Application Key / Developer API Key do app (diferente do Client ID)"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                No portal do Santander, na tela de credenciais do app, além do Client ID/Secret costuma existir uma <b>Application Key</b> (ou <b>Developer API Key</b>). Ela vai no header <code>X-Application-Key</code>. Deixe em branco se o seu app não tiver esse valor.
+              </p>
             </div>
 
             {/* Chave Pix recebedora */}
