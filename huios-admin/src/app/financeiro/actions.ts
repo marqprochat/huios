@@ -81,12 +81,19 @@ export async function upsertCoursePrice(courseId: string, prevState: any, formDa
 
   const amount = num('amount') ?? 0;
 
+  const enrollmentFeeDueDateRaw = formData.get('enrollmentFeeDueDate') as string;
+  const enrollmentFeeDueDate =
+    enrollmentFeeDueDateRaw && enrollmentFeeDueDateRaw !== ''
+      ? new Date(`${enrollmentFeeDueDateRaw}T12:00:00`)
+      : null;
+
   try {
     const data = {
       amount,
       description: description || null,
       isActive,
       enrollmentFee: num('enrollmentFee'),
+      enrollmentFeeDueDate,
       amountMember: num('amountMember'),
       amountNonMember: num('amountNonMember'),
       amountFamily: num('amountFamily'),

@@ -15,6 +15,7 @@ export const TIER_LABELS: Record<PriceTier, string> = {
 export interface CoursePriceTiers {
   amount: number; // base / fallback
   enrollmentFee?: number | null;
+  enrollmentFeeDueDate?: Date | string | null;
   amountMember?: number | null;
   amountNonMember?: number | null;
   amountFamily?: number | null;

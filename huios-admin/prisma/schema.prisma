@@ -596,7 +596,8 @@ model CoursePrice {
   isActive    Boolean  @default(true)
 
   // Níveis de preço (mensalidade por categoria)
-  enrollmentFee   Float? // taxa de matrícula (opcional)
+  enrollmentFee        Float?    // taxa de matrícula (opcional)
+  enrollmentFeeDueDate DateTime? // vencimento da taxa de matrícula (data fixa); vazio = 7 dias após a matrícula
   amountMember    Float? // membro da SEDE
   amountNonMember Float? // não-membro (default / fallback = amount)
   amountFamily    Float? // família 2+

@@ -10,6 +10,7 @@ interface CoursePrice {
   description: string | null;
   isActive: boolean;
   enrollmentFee: number | null;
+  enrollmentFeeDueDate: string | Date | null;
   amountMember: number | null;
   amountNonMember: number | null;
   amountFamily: number | null;
@@ -27,6 +28,13 @@ interface Course {
 interface Props { courses: Course[] }
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+/** Converte Date/ISO em `yyyy-mm-dd` para o input[type=date]. */
+const toDateInput = (v: string | Date | null): string => {
+  if (!v) return '';
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+};
 
 export function PrecosCursosClient({ courses }: Props) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -126,6 +134,16 @@ export function PrecosCursosClient({ courses }: Props) {
                         placeholder="Opcional"
                       />
                       <p className="text-[10px] text-slate-400 mt-1">Cobrança única no ato da matrícula.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Vencimento da taxa de matrícula</label>
+                      <input
+                        name="enrollmentFeeDueDate"
+                        type="date"
+                        defaultValue={toDateInput(price?.enrollmentFeeDueDate ?? null)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">Data fixa de vencimento. Vazio = 7 dias após a matrícula.</p>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Descrição</label>

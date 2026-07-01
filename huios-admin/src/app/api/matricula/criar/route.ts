@@ -42,22 +42,27 @@ export async function POST(request: Request) {
         : null,
     });
 
-    // Monta resumo para a tela de sucesso (primeira cobrança a pagar de cada pessoa).
-    const summary = [] as { studentName: string; tier: string; monthlyAmount: number; transactionId: string | null; amount: number | null }[];
+    // Monta resumo para a tela de sucesso. Destaca a taxa de matrícula (se
+    // houver) como a cobrança a pagar agora; as mensalidades ficam para o portal.
+    const summary = [] as {
+      studentName: string;
+      tier: string;
+      monthlyAmount: number;
+      enrollmentFeeTransactionId: string | null;
+      enrollmentFeeAmount: number | null;
+    }[];
     for (const en of result.enrollments) {
       const student = await prisma.student.findUnique({ where: { id: en.studentId }, select: { name: true } });
-      const firstTxId = en.transactionIds[0] ?? null;
-      let amount: number | null = null;
-      if (firstTxId) {
-        const tx = await (prisma as any).financialTransaction.findUnique({ where: { id: firstTxId }, select: { amount: true } });
-        amount = tx?.amount ?? null;
-      }
+      const feeTx = await (prisma as any).financialTransaction.findFirst({
+        where: { enrollmentId: en.enrollmentId, description: { startsWith: 'Taxa de matrícula' } },
+        select: { id: true, amount: true },
+      });
       summary.push({
         studentName: student?.name ?? '',
         tier: en.tier,
         monthlyAmount: en.monthlyAmount,
-        transactionId: firstTxId,
-        amount,
+        enrollmentFeeTransactionId: feeTx?.id ?? null,
+        enrollmentFeeAmount: feeTx?.amount ?? null,
       });
     }
 

@@ -31,6 +31,7 @@ export async function gerarMensalidades(opts: {
   installments: number;
   courseName: string;
   enrollmentFee?: number | null;
+  enrollmentFeeDueDate?: Date | string | null;
   startDate?: Date;
 }): Promise<string[]> {
   const { studentId, enrollmentId, monthlyAmount, courseName } = opts;
@@ -40,11 +41,17 @@ export async function gerarMensalidades(opts: {
 
   const mensalidadeCat = await findCategoryId('Mensalidade');
 
-  // Taxa de matrícula (opcional) — vence em 7 dias.
+  // Taxa de matrícula (opcional) — vencimento: data fixa configurada no
+  // Financeiro (Preços dos Cursos); se não houver, cai em 7 dias após hoje.
   if (opts.enrollmentFee && opts.enrollmentFee > 0) {
     const matriculaCat = (await findCategoryId('Matrícula')) ?? mensalidadeCat;
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 7);
+    let dueDate: Date;
+    if (opts.enrollmentFeeDueDate) {
+      dueDate = new Date(opts.enrollmentFeeDueDate);
+    } else {
+      dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 7);
+    }
     const fee = await (prisma as any).financialTransaction.create({
       data: {
         type: 'RECEITA',
@@ -333,6 +340,7 @@ export async function matricularGrupo(input: MatricularGrupoInput): Promise<Matr
       installments,
       courseName,
       enrollmentFee: coursePrice?.enrollmentFee ?? null,
+      enrollmentFeeDueDate: coursePrice?.enrollmentFeeDueDate ?? null,
       startDate: cc.startDate ?? undefined,
     });
 
@@ -432,6 +440,7 @@ export async function matricularAlunoExistente(studentId: string, classId: strin
     installments,
     courseName,
     enrollmentFee: coursePrice?.enrollmentFee ?? null,
+    enrollmentFeeDueDate: coursePrice?.enrollmentFeeDueDate ?? null,
     startDate: cc.startDate ?? undefined,
   });
 

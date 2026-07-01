@@ -48,9 +48,11 @@ interface SummaryItem {
   studentName: string;
   tier: string;
   monthlyAmount: number;
-  transactionId: string | null;
-  amount: number | null;
+  enrollmentFeeTransactionId: string | null;
+  enrollmentFeeAmount: number | null;
 }
+
+const PORTAL_URL = 'https://huios.igrejaconviva.com.br/portal';
 
 const TIER_LABELS: Record<string, string> = {
   MEMBER: 'Membro da sede',
@@ -172,6 +174,7 @@ export function MatriculaForm({ turmas, church }: { turmas: Turma[]; church?: Ch
   };
 
   if (summary) {
+    const temTaxa = summary.some(s => s.enrollmentFeeTransactionId);
     return (
       <div className="space-y-4">
         <div className="text-center">
@@ -179,26 +182,55 @@ export function MatriculaForm({ turmas, church }: { turmas: Turma[]; church?: Ch
             <span className="material-symbols-outlined text-3xl">check_circle</span>
           </div>
           <h3 className="text-xl font-black text-slate-900">Matrícula realizada!</h3>
-          <p className="text-sm text-slate-500">Conclua o pagamento da primeira mensalidade de cada aluno.</p>
+          <p className="text-sm text-slate-500">
+            {temTaxa
+              ? 'Deseja pagar a taxa de matrícula agora?'
+              : 'Cadastro concluído com sucesso.'}
+          </p>
         </div>
+
         <div className="space-y-3">
           {summary.map((s, i) => (
-            <div key={i} className="border border-slate-200 rounded-xl p-4 flex items-center justify-between gap-3">
+            <div key={i} className="border border-slate-200 rounded-xl p-4 space-y-3">
               <div>
                 <p className="font-bold text-slate-800">{s.studentName}</p>
                 <p className="text-xs text-slate-500">
                   Mensalidade {fmt(s.monthlyAmount)} · {TIER_LABELS[s.tier] || s.tier}
                 </p>
               </div>
-              {s.transactionId ? (
-                <Link href={`/matricula/pagamento/${s.transactionId}`} className="bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold hover:opacity-90 whitespace-nowrap">
-                  Pagar {s.amount != null ? fmt(s.amount) : ''}
-                </Link>
+              {s.enrollmentFeeTransactionId ? (
+                <div className="rounded-xl bg-amber-50 border border-amber-100 p-3 space-y-2">
+                  <p className="text-sm font-bold text-amber-800">
+                    Taxa de matrícula: {s.enrollmentFeeAmount != null ? fmt(s.enrollmentFeeAmount) : ''}
+                  </p>
+                  <Link
+                    href={`/matricula/pagamento/${s.enrollmentFeeTransactionId}`}
+                    className="block w-full text-center bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold hover:opacity-90"
+                  >
+                    Pagar taxa de matrícula agora
+                  </Link>
+                </div>
               ) : (
-                <span className="text-xs text-slate-400">Sem cobrança</span>
+                <p className="text-xs text-slate-400">Sem taxa de matrícula.</p>
               )}
             </div>
           ))}
+        </div>
+
+        {/* Pagar depois pelo portal */}
+        <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-4 text-sm text-indigo-800 space-y-1">
+          <p className="font-bold flex items-center gap-1">
+            <span className="material-symbols-outlined text-[18px]">schedule</span>
+            {temTaxa ? 'Prefere pagar depois?' : 'Como acessar seus pagamentos'}
+          </p>
+          <p className="text-xs leading-relaxed">
+            Você pode acessar o portal em{' '}
+            <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="font-bold underline">
+              huios.igrejaconviva.com.br/portal
+            </a>{' '}
+            usando seu <strong>e-mail</strong> e a senha é o seu <strong>CPF</strong>. Lá dentro você poderá
+            acessar e pagar {temTaxa ? 'a taxa de matrícula e as mensalidades' : 'as mensalidades'} quando quiser.
+          </p>
         </div>
       </div>
     );
