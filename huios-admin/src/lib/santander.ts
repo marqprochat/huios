@@ -159,7 +159,7 @@ export async function fetchAccessToken(
   const form = `client_id=${encodeURIComponent(config.clientId)}&client_secret=${encodeURIComponent(
     config.clientSecret,
   )}&grant_type=client_credentials&scope=${encodeURIComponent(scope)}`;
-  const res = await mtlsRequest(`${base}/auth/oauth/v2/token`, {
+  const res = await mtlsRequest(`${base}/api/v1/oauth`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -173,12 +173,9 @@ export async function fetchAccessToken(
   });
   const data = parseJson(res.body);
   if (res.status < 200 || res.status >= 300) {
-    if (res.status === 401) {
-      throw new Error('Credenciais inválidas. Verifique Client ID, Client Secret e o ambiente selecionado.');
-    }
-    throw new Error(describeError(data, res.status, res.body));
+    throw new Error('OAuth: ' + describeError(data, res.status, res.body));
   }
-  if (!data?.access_token) throw new Error('Resposta sem access_token. Verifique o certificado de transporte (mTLS).');
+  if (!data?.access_token) throw new Error('OAuth: resposta sem access_token. Verifique o certificado de transporte (mTLS).');
   return data.access_token as string;
 }
 
@@ -262,7 +259,7 @@ export async function createPixCharge(params: SantanderPixParams): Promise<Santa
   });
   const data = parseJson(res.body);
   if (res.status < 200 || res.status >= 300) {
-    throw new Error(describeError(data, res.status, res.body));
+    throw new Error('Cobrança (cob): ' + describeError(data, res.status, res.body));
   }
 
   // O "copia e cola" (EMV) pode vir como pixCopiaECola/emv; alguns retornos trazem
