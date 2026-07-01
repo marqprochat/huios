@@ -38,12 +38,13 @@ export function baseUrlFor(env: string): string {
 }
 
 /**
- * Header `X-Application-Key` (Application Key / Developer API Key do app no portal).
- * Só é enviado quando configurado — mandar um valor errado (ex.: o Client ID) pode
- * fazer o gateway responder 401 "Access Denied".
+ * Header `X-Application-Key` — identifica o app para o gateway Sensedia checar o
+ * plano nas chamadas de recurso. Usa a Application Key dedicada, se houver; caso
+ * contrário cai para o Client ID (padrão dos apps Santander que só têm ID+Secret).
  */
 function appKeyHeader(config: SantanderConfig): Record<string, string> {
-  return config.applicationKey ? { 'X-Application-Key': config.applicationKey } : {};
+  const key = config.applicationKey || config.clientId;
+  return key ? { 'X-Application-Key': key } : {};
 }
 
 /** Carrega a configuração do Santander do banco (SystemSettings). */
