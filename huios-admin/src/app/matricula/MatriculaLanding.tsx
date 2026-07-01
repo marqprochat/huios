@@ -52,6 +52,13 @@ export function MatriculaLanding({ turmas, church }: { turmas: LandingTurma[]; c
               <span className="material-symbols-outlined text-[18px]">arrow_downward</span>
             </a>
           )}
+          <p className="text-sm text-white/70 mt-6">
+            Já é aluno?{' '}
+            <Link href="/portal/login" className="font-bold text-white underline underline-offset-2 hover:text-white/90">
+              Entre no portal
+            </Link>{' '}
+            para matricular-se em uma nova turma.
+          </p>
         </div>
       </header>
 

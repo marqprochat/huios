@@ -13,6 +13,7 @@ const navItems = [
   { href: '/portal/boletim', icon: 'assessment', label: 'Boletim' },
   { href: '/portal/avaliacoes', icon: 'rate_review', label: 'Avaliações' },
   { href: '/portal/financeiro', icon: 'payments', label: 'Financeiro' },
+  { href: '/portal/matricula', icon: 'app_registration', label: 'Nova Matrícula' },
   { href: '/portal/perfil', icon: 'person', label: 'Perfil' },
 ];
 

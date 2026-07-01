@@ -13,6 +13,7 @@ export default function PortalDashboard() {
   const [lessons, setLessons] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
   const [grades, setGrades] = useState<any[]>([]);
+  const [openTurmasCount, setOpenTurmasCount] = useState(0);
   const [loadingLessons, setLoadingLessons] = useState(true);
   const [loadingExams, setLoadingExams] = useState(true);
 
@@ -20,7 +21,20 @@ export default function PortalDashboard() {
     fetchLessons();
     fetchExams();
     fetchGrades();
+    fetchOpenTurmas();
   }, []);
+
+  const fetchOpenTurmas = async () => {
+    try {
+      const res = await fetch('/api/portal/matricula');
+      if (res.ok) {
+        const data = await res.json();
+        setOpenTurmasCount((data.turmas || []).length);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchLessons = async () => {
     try {
@@ -147,6 +161,29 @@ export default function PortalDashboard() {
           </span>
         </div>
       </div>
+
+      {/* Matrículas abertas */}
+      {openTurmasCount > 0 && (
+        <div className="bg-gradient-to-br from-[#135bec] to-indigo-700 rounded-2xl p-5 flex items-start gap-4 text-white shadow-xl shadow-[#135bec]/20">
+          <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
+            <span className="material-symbols-outlined">app_registration</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-sm">Matrículas abertas</h3>
+            <p className="text-white/80 text-xs mt-1 leading-relaxed">
+              {openTurmasCount === 1
+                ? 'Há 1 turma com inscrições abertas. Matricule-se em poucos cliques.'
+                : `Há ${openTurmasCount} turmas com inscrições abertas. Matricule-se em poucos cliques.`}
+            </p>
+          </div>
+          <Link
+            href="/portal/matricula"
+            className="text-[#135bec] bg-white text-xs font-bold whitespace-nowrap px-4 py-2 rounded-xl hover:bg-white/90"
+          >
+            Matricular
+          </Link>
+        </div>
+      )}
 
       {/* Pendencies Alert */}
       {hasPendencies && (

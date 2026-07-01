@@ -341,3 +341,99 @@ export async function matricularGrupo(input: MatricularGrupoInput): Promise<Matr
 
   return { enrollments };
 }
+
+export interface AutoMatriculaResultado {
+  enrollmentId: string;
+  alreadyEnrolled: boolean;
+  tier: PriceTier;
+  monthlyAmount: number;
+  transactionIds: string[];
+}
+
+/**
+ * Auto-matrícula de um aluno JÁ EXISTENTE (logado no portal) em uma turma com
+ * matrículas abertas. Reaproveita o Student/User e resolve o preço a partir da
+ * igreja já vinculada ao aluno. Idempotente: se já matriculado, apenas
+ * sincroniza presenças e retorna a matrícula existente.
+ */
+export async function matricularAlunoExistente(studentId: string, classId: string): Promise<AutoMatriculaResultado> {
+  const student = await prisma.student.findUnique({
+    where: { id: studentId },
+    include: { church: true } as any,
+  });
+  if (!student) throw new Error('Aluno não encontrado.');
+
+  const courseClass = await prisma.courseClass.findUnique({
+    where: { id: classId },
+    include: { course: { include: { coursePrice: true } } },
+  });
+  if (!courseClass) throw new Error('Turma não encontrada.');
+
+  const cc = courseClass as any;
+  if (cc.enrollmentStatus !== 'ABERTA') throw new Error('As matrículas desta turma estão fechadas.');
+  const now = new Date();
+  if (cc.enrollmentOpensAt && now < new Date(cc.enrollmentOpensAt)) throw new Error('As matrículas ainda não abriram.');
+  if (cc.enrollmentClosesAt && now > new Date(cc.enrollmentClosesAt)) throw new Error('O período de matrícula encerrou.');
+
+  // Já matriculado nesta turma? (constraint @@unique studentId+classId)
+  const dup = await prisma.enrollment.findFirst({ where: { studentId, classId } });
+  if (dup) {
+    await sincronizarPresencas(studentId, classId);
+    return {
+      enrollmentId: dup.id,
+      alreadyEnrolled: true,
+      tier: ((dup as any).priceTier as PriceTier) ?? 'NON_MEMBER',
+      monthlyAmount: (dup as any).monthlyAmount ?? 0,
+      transactionIds: [],
+    };
+  }
+
+  const coursePrice = (cc.course?.coursePrice ?? null) as CoursePriceTiers | null;
+  const courseName = cc.course?.name ?? 'Curso';
+  const installments = cc.installments ?? 1;
+
+  const church = (student as any).church;
+  const isPartnerChurch = !!church?.isPartner;
+  const churchType = church?.type ?? null;
+
+  // Contagem do grupo parceiro = já matriculados nesta turma + este aluno.
+  let partnerGroupCount = 1;
+  if (isPartnerChurch && church) {
+    const existing = await prisma.enrollment.count({ where: { classId, churchId: church.id } as any });
+    partnerGroupCount = existing + 1;
+  }
+
+  const { amount, tier } = resolveMonthlyPrice({
+    coursePrice,
+    churchType,
+    isPartnerChurch,
+    familyCount: 0,
+    partnerGroupCount,
+  });
+
+  const enrollment = await prisma.enrollment.create({
+    data: {
+      studentId,
+      classId,
+      status: 'CURSANDO',
+      priceTier: tier,
+      monthlyAmount: amount,
+      churchId: church?.id ?? null,
+      origin: 'PORTAL',
+    } as any,
+  });
+
+  await sincronizarPresencas(studentId, classId);
+
+  const transactionIds = await gerarMensalidades({
+    studentId,
+    enrollmentId: enrollment.id,
+    monthlyAmount: amount,
+    installments,
+    courseName,
+    enrollmentFee: coursePrice?.enrollmentFee ?? null,
+    startDate: cc.startDate ?? undefined,
+  });
+
+  return { enrollmentId: enrollment.id, alreadyEnrolled: false, tier, monthlyAmount: amount, transactionIds };
+}

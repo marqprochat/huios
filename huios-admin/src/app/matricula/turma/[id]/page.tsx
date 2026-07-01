@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 import { MatriculaForm } from '../../MatriculaForm';
 
 export const dynamic = 'force-dynamic';
@@ -14,6 +15,10 @@ export default async function MatriculaTurmaPage({
 }) {
   const { id } = await params;
   const { church: churchSlug } = await searchParams;
+
+  // Aluno já logado: encaminha para a matrícula dentro do portal.
+  const session = await getSession();
+  if (session?.role === 'ALUNO') redirect('/portal/matricula');
 
   const turma = await prisma.courseClass.findUnique({
     where: { id },
