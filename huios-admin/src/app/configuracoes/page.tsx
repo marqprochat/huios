@@ -41,8 +41,10 @@ export default function ConfiguracoesPage() {
   const [santanderPixKey, setSantanderPixKey] = useState("")
   const [santanderCertificate, setSantanderCertificate] = useState("")
   const [santanderCertificateKey, setSantanderCertificateKey] = useState("")
+  const [santanderCertificatePassphrase, setSantanderCertificatePassphrase] = useState("")
   const [hasSantanderCert, setHasSantanderCert] = useState(false)
   const [hasSantanderKey, setHasSantanderKey] = useState(false)
+  const [hasSantanderPassphrase, setHasSantanderPassphrase] = useState(false)
   const [santanderConfigured, setSantanderConfigured] = useState(false)
   const [santanderWebhookConfigured, setSantanderWebhookConfigured] = useState(false)
 
@@ -77,6 +79,7 @@ export default function ConfiguracoesPage() {
         setSantanderPixKey(data.santanderPixKey || '')
         setHasSantanderCert(!!data.hasSantanderCert)
         setHasSantanderKey(!!data.hasSantanderKey)
+        setHasSantanderPassphrase(!!data.hasSantanderPassphrase)
         setSantanderConfigured(!!data.santanderConfigured)
         setSantanderWebhookConfigured(!!data.santanderWebhookConfigured)
       }
@@ -103,6 +106,7 @@ export default function ConfiguracoesPage() {
           santanderPixKey,
           santanderCertificate,
           santanderCertificateKey,
+          santanderCertificatePassphrase,
         }),
       })
       const data = await res.json()
@@ -1008,6 +1012,25 @@ export default function ConfiguracoesPage() {
               {santanderCertificateKey && <p className="text-xs text-green-600 dark:text-green-400 mt-1">Nova chave carregada (será salva).</p>}
               <p className="text-xs text-slate-500 mt-1">
                 {hasSantanderKey ? 'Já existe uma chave salva. Envie uma nova apenas para substituir.' : 'Arquivo da chave privada gerada com o certificado.'}
+              </p>
+            </div>
+
+            {/* Senha da chave privada (quando cifrada) */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                Senha da chave privada
+                {hasSantanderPassphrase && <span className="ml-2 text-[11px] font-bold text-green-600 dark:text-green-400">● salva</span>}
+              </label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={santanderCertificatePassphrase}
+                onChange={(e) => setSantanderCertificatePassphrase(e.target.value)}
+                placeholder={hasSantanderPassphrase ? '•••••••• (deixe em branco para manter)' : 'Somente se a chave (.key) tiver senha'}
+                className="block w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Preencha apenas se a chave privada estiver protegida por senha (começa com <code>ENCRYPTED PRIVATE KEY</code>). Deixe em branco para chaves sem proteção — senha incorreta causa o erro <code>bad decrypt</code>.
               </p>
             </div>
 

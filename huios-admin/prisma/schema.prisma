@@ -460,6 +460,7 @@ model SystemSettings {
   santanderClientSecret      String?  // Client Secret (sensível)
   santanderCertificate       String?  // Certificado de transporte em PEM (.crt/.pem)
   santanderCertificateKey    String?  // Chave privada do certificado em PEM (.key)
+  santanderCertificatePassphrase String? // Senha da chave privada, quando cifrada
   santanderPixKey            String?  // Chave PIX recebedora (e-mail, CPF/CNPJ, telefone ou aleatória)
   santanderWebhookConfigured Boolean? @default(false) // Webhook registrado na API do Santander
 

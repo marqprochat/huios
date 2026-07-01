@@ -19,6 +19,7 @@ export interface SantanderConfig {
   clientSecret: string;
   certificate: string; // PEM do certificado de transporte
   certificateKey: string; // PEM da chave privada
+  certificatePassphrase: string; // senha da chave privada (se estiver cifrada)
   pixKey: string; // chave Pix recebedora
   appUrl: string;
 }
@@ -48,6 +49,7 @@ export async function getSantanderConfig(): Promise<SantanderConfig> {
     clientSecret: s?.santanderClientSecret || '',
     certificate: s?.santanderCertificate || '',
     certificateKey: s?.santanderCertificateKey || '',
+    certificatePassphrase: s?.santanderCertificatePassphrase || '',
     pixKey: s?.santanderPixKey || '',
     appUrl: s?.appUrl || process.env.APP_URL || '',
   };
@@ -70,7 +72,7 @@ interface HttpResult {
  */
 function mtlsRequest(
   urlStr: string,
-  opts: { method: string; headers: Record<string, string>; body?: string; cert: string; key: string },
+  opts: { method: string; headers: Record<string, string>; body?: string; cert: string; key: string; passphrase?: string },
 ): Promise<HttpResult> {
   return new Promise((resolve, reject) => {
     let u: URL;
@@ -88,6 +90,9 @@ function mtlsRequest(
         headers: opts.headers,
         cert: opts.cert,
         key: opts.key,
+        // Só informa a passphrase quando a chave privada está cifrada. Passar uma
+        // string vazia para uma chave não cifrada também dispara "bad decrypt".
+        ...(opts.passphrase ? { passphrase: opts.passphrase } : {}),
         // O canal usa o certificado de transporte do cliente; a cadeia do servidor
         // continua sendo validada normalmente.
       },
@@ -146,6 +151,7 @@ export async function fetchAccessToken(config: SantanderConfig): Promise<string>
     body: form,
     cert: config.certificate,
     key: config.certificateKey,
+    passphrase: config.certificatePassphrase,
   });
   const data = parseJson(res.body);
   if (res.status < 200 || res.status >= 300) {
@@ -233,6 +239,7 @@ export async function createPixCharge(params: SantanderPixParams): Promise<Santa
     body: payload,
     cert: config.certificate,
     key: config.certificateKey,
+    passphrase: config.certificatePassphrase,
   });
   const data = parseJson(res.body);
   if (res.status < 200 || res.status >= 300) {
@@ -268,6 +275,7 @@ export async function getCob(txid: string): Promise<any> {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
     cert: config.certificate,
     key: config.certificateKey,
+    passphrase: config.certificatePassphrase,
   });
   return parseJson(res.body);
 }
@@ -291,6 +299,7 @@ export async function registerWebhook(config: SantanderConfig, webhookUrl: strin
     body: payload,
     cert: config.certificate,
     key: config.certificateKey,
+    passphrase: config.certificatePassphrase,
   });
   if (res.status < 200 || res.status >= 300) {
     const data = parseJson(res.body);

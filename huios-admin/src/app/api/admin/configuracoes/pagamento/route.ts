@@ -44,6 +44,7 @@ export async function GET() {
     santanderPixKey: s?.santanderPixKey || '',
     hasSantanderCert: !!s?.santanderCertificate,
     hasSantanderKey: !!s?.santanderCertificateKey,
+    hasSantanderPassphrase: !!s?.santanderCertificatePassphrase,
     santanderConfigured: !!(
       s?.santanderClientId &&
       s?.santanderClientSecret &&
@@ -76,6 +77,7 @@ export async function PUT(req: Request) {
       santanderClientSecret,
       santanderCertificate,
       santanderCertificateKey,
+      santanderCertificatePassphrase,
       santanderPixKey,
     } = body;
 
@@ -110,6 +112,16 @@ export async function PUT(req: Request) {
     }
     if (typeof santanderCertificateKey === 'string' && santanderCertificateKey.trim()) {
       data.santanderCertificateKey = santanderCertificateKey.trim();
+      // Troca de chave: se nenhuma senha nova vier junto, zera a senha antiga para
+      // não tentar decifrar a nova chave com a passphrase errada ("bad decrypt").
+      if (typeof santanderCertificatePassphrase !== 'string' || !santanderCertificatePassphrase) {
+        data.santanderCertificatePassphrase = null;
+      }
+    }
+    // Senha da chave: string vazia limpa a senha (chave sem proteção); string com
+    // conteúdo define a senha. Não usamos .trim() — senhas podem ter espaços.
+    if (typeof santanderCertificatePassphrase === 'string') {
+      data.santanderCertificatePassphrase = santanderCertificatePassphrase || null;
     }
 
     await (prisma as any).systemSettings.update({ where: { id: s.id }, data });
