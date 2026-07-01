@@ -38,7 +38,8 @@
       "Bash(ls huios-admin/Dockerfile*)",
       "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('prisma:', \\(p.devDependencies&&p.devDependencies.prisma\\)||\\(p.dependencies&&p.dependencies.prisma\\)\\); console.log\\('@prisma/client:', \\(p.dependencies&&p.dependencies['@prisma/client']\\)\\); console.log\\('prismaConfig:', JSON.stringify\\(p.prisma||null\\)\\)\")",
       "WebFetch(domain:developer.santander.com.br)",
-      "WebFetch(domain:developers.openpix.com.br)"
+      "WebFetch(domain:developers.openpix.com.br)",
+      "Bash(grep -n \"\\\\${base}/cob\\\\|/api/v1/webhook\\\\|auth/oauth\" src/lib/santander.ts)"
     ]
   }
 }

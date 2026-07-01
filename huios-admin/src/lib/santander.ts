@@ -148,11 +148,17 @@ function describeError(data: any, status: number, rawBody?: string): string {
  * Obtém um access token via OAuth2 (client_credentials) sobre mTLS.
  * Serve também como teste de conexão das credenciais + certificado.
  */
-export async function fetchAccessToken(config: SantanderConfig): Promise<string> {
+export async function fetchAccessToken(
+  config: SantanderConfig,
+  scope = 'cob.write cob.read',
+): Promise<string> {
   const base = baseUrlFor(config.env);
+  // O escopo é obrigatório para autorizar as operações (ex.: cob.write para criar
+  // cobrança). Sem ele o token é emitido, mas a chamada de recurso volta 401
+  // "Access Denied".
   const form = `client_id=${encodeURIComponent(config.clientId)}&client_secret=${encodeURIComponent(
     config.clientSecret,
-  )}&grant_type=client_credentials`;
+  )}&grant_type=client_credentials&scope=${encodeURIComponent(scope)}`;
   const res = await mtlsRequest(`${base}/auth/oauth/v2/token`, {
     method: 'POST',
     headers: {
@@ -240,13 +246,13 @@ export async function createPixCharge(params: SantanderPixParams): Promise<Santa
   }
   const payload = JSON.stringify(body);
 
-  const res = await mtlsRequest(`${base}/api/v1/cob/${txid}`, {
+  const res = await mtlsRequest(`${base}/cob/${txid}`, {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,
       ...appKeyHeader(config),
       'Content-Type': 'application/json',
-      Accept: 'application/json',
+      Accept: 'application/json, application/problem+json',
       'Content-Length': Buffer.byteLength(payload).toString(),
     },
     body: payload,
@@ -259,7 +265,9 @@ export async function createPixCharge(params: SantanderPixParams): Promise<Santa
     throw new Error(describeError(data, res.status, res.body));
   }
 
-  const copiaECola: string | null = data?.pixCopiaECola ?? null;
+  // O "copia e cola" (EMV) pode vir como pixCopiaECola/emv; alguns retornos trazem
+  // apenas o "location" (URL do payload do QR), usado como fallback para o texto.
+  const copiaECola: string | null = data?.pixCopiaECola ?? data?.emv ?? data?.location ?? null;
   let qrImage: string | null = null;
   if (copiaECola) {
     try {
@@ -283,7 +291,7 @@ export async function getCob(txid: string): Promise<any> {
   const config = await getSantanderConfig();
   const token = await fetchAccessToken(config);
   const base = baseUrlFor(config.env);
-  const res = await mtlsRequest(`${base}/api/v1/cob/${txid}`, {
+  const res = await mtlsRequest(`${base}/cob/${txid}`, {
     method: 'GET',
     headers: { Authorization: `Bearer ${token}`, ...appKeyHeader(config), Accept: 'application/json' },
     cert: config.certificate,
@@ -298,7 +306,7 @@ export async function getCob(txid: string): Promise<any> {
  * O Santander vincula o webhook à chave Pix recebedora.
  */
 export async function registerWebhook(config: SantanderConfig, webhookUrl: string): Promise<void> {
-  const token = await fetchAccessToken(config);
+  const token = await fetchAccessToken(config, 'webhook.write webhook.read');
   const base = baseUrlFor(config.env);
   const payload = JSON.stringify({ webhookUrl });
   const res = await mtlsRequest(`${base}/api/v1/webhook/${encodeURIComponent(config.pixKey)}`, {
