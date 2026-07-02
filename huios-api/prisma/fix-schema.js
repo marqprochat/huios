@@ -108,6 +108,20 @@ async function fixSchema() {
       console.log('  ℹ️  Migration já está registrada');
     }
 
+    // 7.1 Adicionar enrollmentFeeDueDate na tabela CoursePrice (se não existir)
+    const hasFeeDueDate = await prisma.$queryRaw`
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+      AND table_name = 'CoursePrice'
+      AND column_name = 'enrollmentFeeDueDate'
+    `;
+    if (hasFeeDueDate.length === 0) {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "CoursePrice" ADD COLUMN "enrollmentFeeDueDate" TIMESTAMP(3)`);
+      console.log('  ✅ Coluna enrollmentFeeDueDate adicionada à tabela CoursePrice');
+    } else {
+      console.log('  ℹ️  Coluna enrollmentFeeDueDate já existe');
+    }
+
     // 8. Criar tabela Coupon (se não existir)
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "Coupon" (
