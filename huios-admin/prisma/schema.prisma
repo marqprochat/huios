@@ -439,7 +439,8 @@ model SystemSettings {
   latitude Float?
   longitude Float?
   radiusMeters Int @default(100) // Raio de tolerância em metros
-  
+  checkInBufferMinutes Int @default(30) // Tolerância (min) antes/depois do horário da aula p/ check-in
+
   // Configurações de contato
   contactEmail String? @default("contato@huios.edu.br")
   contactPhone String? @default("(11) 1234-5678")

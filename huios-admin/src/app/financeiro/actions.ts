@@ -227,7 +227,13 @@ export async function markAsPaid(id: string, paymentMethod?: string) {
 }
 
 export async function deleteTransaction(id: string) {
-  await (prisma as any).financialTransaction.delete({ where: { id } });
+  // A conta pode ter pagamentos (Payment) vinculados — ex.: conta paga via gateway.
+  // A FK Payment_transactionId_fkey impede excluir a conta antes dos pagamentos,
+  // então removemos os dependentes na mesma transação de banco.
+  await (prisma as any).$transaction([
+    (prisma as any).payment.deleteMany({ where: { transactionId: id } }),
+    (prisma as any).financialTransaction.delete({ where: { id } }),
+  ]);
   revalidatePath('/financeiro/contas-a-receber');
   revalidatePath('/financeiro/contas-a-pagar');
   revalidatePath('/financeiro');

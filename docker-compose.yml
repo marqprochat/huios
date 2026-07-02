@@ -7,8 +7,11 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
+    # Publica o Postgres SOMENTE em localhost do host (não na internet). O api/admin
+    # acessam o banco pela rede interna do Docker (db:5432); a porta abaixo serve
+    # apenas para ferramentas locais no próprio servidor (ex.: psql/DBeaver via túnel SSH).
     ports:
-      - "${DB_PORT}:5432"
+      - "127.0.0.1:${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

@@ -62,19 +62,12 @@ export async function POST(
         const end = lesson.endTime ? new Date(lesson.endTime) : null;
 
         // Limites configuráveis. Por padrão, 30 minutos antes de começar e 30 minutos depois de terminar.
-        // Lendo do arquivo json criado para segurar as configurações do buffer
-        let bufferMinutes = 30; // fallback default
+        // Tolerância de check-in vem do SystemSettings (banco); fallback de 30 min.
+        let bufferMinutes = 30;
         try {
-            const fs = require('fs');
-            const path = require('path');
-            const configPath = path.join(process.cwd(), 'checkin-config.json');
-            if (fs.existsSync(configPath)) {
-                const configRaw = fs.readFileSync(configPath, 'utf-8');
-                const parsed = JSON.parse(configRaw);
-                const globalConfig = Array.isArray(parsed) ? parsed.find(c => c.id === 'global') : parsed;
-                if (globalConfig && globalConfig.checkInBufferMinutes) {
-                    bufferMinutes = globalConfig.checkInBufferMinutes;
-                }
+            const settings = await (prisma as any).systemSettings.findFirst();
+            if (settings?.checkInBufferMinutes != null) {
+                bufferMinutes = settings.checkInBufferMinutes;
             }
         } catch (e) {
             console.error("Could not read checkin config, using default 30 min", e);

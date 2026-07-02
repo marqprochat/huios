@@ -50,7 +50,9 @@
       "Read(//p/APPS/huios/huios-api/prisma/**)",
       "Bash(find ../huios-api/prisma -maxdepth 2 2>/dev/null | grep -v node_modules | head -40; echo \"=== fix-schema location ===\"; find .. -name \"fix-schema.js\" 2>/dev/null | grep -v node_modules)",
       "Read(//p/APPS/huios/huios-api/**)",
-      "Read(//p/APPS/huios/**)"
+      "Read(//p/APPS/huios/**)",
+      "Bash(ls *.yml *.yaml)",
+      "Bash(ls huios-admin/*.yml huios-admin/*.yaml huios-admin/Dockerfile)"
     ]
   }
 }
