@@ -209,6 +209,12 @@ export default function NovoAlunoForm({ classes }: { classes: any[] }) {
                         ))}
                     </div>
                 )}
+
+                <div className="mt-4 max-w-xs">
+                    <label htmlFor="couponCode" className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">Cupom de desconto (opcional)</label>
+                    <input type="text" id="couponCode" name="couponCode" className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm uppercase focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="EX: BOLSA2026" />
+                    <p className="text-[10px] text-slate-400 mt-1">Aplicado às turmas selecionadas (isenção de taxa e/ou desconto na mensalidade).</p>
+                </div>
             </div>
 
             {/* ───── BOTÕES ───── */}

@@ -682,3 +682,46 @@ model Payment {
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 }
+
+// ============================================================
+// CUPONS DE DESCONTO / ISENÇÃO DE TAXA
+// ============================================================
+
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String   @unique // código normalizado em MAIÚSCULAS
+  description String?
+  isActive    Boolean  @default(true)
+
+  // Efeitos do cupom
+  waiveEnrollmentFee Boolean @default(false) // isenta a taxa de matrícula
+  discountType       String? // "PERCENT" | "FIXED" | null (só isenta taxa)
+  discountValue      Float?  // percentual (0-100) ou valor em R$
+  discountMonths     Int?    // nº de mensalidades com desconto; null/0 = todas
+
+  // Restrições de uso
+  validFrom     DateTime?
+  validUntil    DateTime?
+  maxUses       Int?     // limite total de usos; null = ilimitado
+  usedCount     Int      @default(0)
+  onePerStudent Boolean  @default(false)
+  courseIds     String[] @default([]) // vazio = todos os cursos
+  classIds      String[] @default([]) // vazio = todas as turmas
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  redemptions CouponRedemption[]
+}
+
+model CouponRedemption {
+  id           String   @id @default(cuid())
+  couponId     String
+  coupon       Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  code         String
+  studentId    String?
+  enrollmentId String?
+  createdAt    DateTime @default(now())
+
+  @@index([couponId, studentId])
+}

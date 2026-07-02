@@ -48,8 +48,16 @@ interface SummaryItem {
   studentName: string;
   tier: string;
   monthlyAmount: number;
+  discountedMonthlyAmount: number;
+  appliedCouponCode: string | null;
   enrollmentFeeTransactionId: string | null;
   enrollmentFeeAmount: number | null;
+}
+
+interface CouponInfo {
+  code: string;
+  description: string;
+  waiveEnrollmentFee: boolean;
 }
 
 const PORTAL_URL = 'https://huios.igrejaconviva.com.br/portal';
@@ -89,6 +97,43 @@ export function MatriculaForm({ turmas, church }: { turmas: Turma[]; church?: Ch
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<SummaryItem[] | null>(null);
+
+  // Cupom
+  const [couponCode, setCouponCode] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [coupon, setCoupon] = useState<CouponInfo | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+
+  const applyCoupon = async () => {
+    const code = couponCode.trim();
+    if (!code) return;
+    setCouponLoading(true);
+    setCouponError(null);
+    setCoupon(null);
+    try {
+      const res = await fetch('/api/cupons/validar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, classId }),
+      });
+      const data = await res.json();
+      if (!data.valid) {
+        setCouponError(data.error || 'Cupom inválido.');
+        return;
+      }
+      setCoupon({ code: data.code, description: data.description, waiveEnrollmentFee: data.waiveEnrollmentFee });
+    } catch {
+      setCouponError('Erro ao validar o cupom.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const clearCoupon = () => {
+    setCoupon(null);
+    setCouponCode('');
+    setCouponError(null);
+  };
 
   const updatePerson = (i: number, patch: Partial<Person>) =>
     setPeople(ps => ps.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
@@ -146,6 +191,7 @@ export function MatriculaForm({ turmas, church }: { turmas: Turma[]; church?: Ch
           churchId: church?.id ?? null,
           isFamily: isFamily && people.length > 1,
           family: isFamily ? { name: familyName } : null,
+          couponCode: coupon?.code ?? (couponCode.trim() || null),
           people: people.map(p => ({
             name: p.name,
             email: p.email,
@@ -194,9 +240,22 @@ export function MatriculaForm({ turmas, church }: { turmas: Turma[]; church?: Ch
             <div key={i} className="border border-slate-200 rounded-xl p-4 space-y-3">
               <div>
                 <p className="font-bold text-slate-800">{s.studentName}</p>
-                <p className="text-xs text-slate-500">
-                  Mensalidade {fmt(s.monthlyAmount)} · {TIER_LABELS[s.tier] || s.tier}
-                </p>
+                {s.appliedCouponCode && s.discountedMonthlyAmount < s.monthlyAmount ? (
+                  <p className="text-xs text-slate-500">
+                    Mensalidade <span className="line-through text-slate-400">{fmt(s.monthlyAmount)}</span>{' '}
+                    <span className="font-bold text-emerald-600">{fmt(s.discountedMonthlyAmount)}</span> · {TIER_LABELS[s.tier] || s.tier}
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    Mensalidade {fmt(s.monthlyAmount)} · {TIER_LABELS[s.tier] || s.tier}
+                  </p>
+                )}
+                {s.appliedCouponCode && (
+                  <p className="text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-0.5">
+                    <span className="material-symbols-outlined text-[14px]">sell</span>
+                    Cupom {s.appliedCouponCode} aplicado
+                  </p>
+                )}
               </div>
               {s.enrollmentFeeTransactionId ? (
                 <div className="rounded-xl bg-amber-50 border border-amber-100 p-3 space-y-2">
@@ -418,6 +477,45 @@ export function MatriculaForm({ turmas, church }: { turmas: Turma[]; church?: Ch
           <button type="button" onClick={addPerson} className="text-sm font-bold text-primary flex items-center gap-1">
             <span className="material-symbols-outlined text-[18px]">add</span>Adicionar pessoa
           </button>
+        )}
+      </div>
+
+      {/* Cupom de desconto */}
+      <div>
+        <label className={labelCls}>Cupom de desconto (opcional)</label>
+        {coupon ? (
+          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 flex items-start justify-between gap-2">
+            <div>
+              <p className="text-sm font-bold text-emerald-800 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[18px]">sell</span>
+                Cupom {coupon.code} aplicado
+              </p>
+              <p className="text-xs text-emerald-700 mt-0.5">{coupon.description}</p>
+            </div>
+            <button type="button" onClick={clearCoupon} className="text-emerald-700 hover:text-red-500 shrink-0">
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex gap-2">
+              <input
+                value={couponCode}
+                onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                className={`${fieldCls} uppercase`}
+                placeholder="Ex: BOLSA2026"
+              />
+              <button
+                type="button"
+                onClick={applyCoupon}
+                disabled={couponLoading || !couponCode.trim() || !classId}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 text-white text-sm font-bold hover:opacity-90 disabled:opacity-50 shrink-0"
+              >
+                {couponLoading ? '...' : 'Aplicar'}
+              </button>
+            </div>
+            {couponError && <p className="text-xs font-bold text-red-600 mt-1">{couponError}</p>}
+          </>
         )}
       </div>
 

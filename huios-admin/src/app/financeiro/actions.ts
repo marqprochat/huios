@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { gerarMensalidades } from '@/lib/enrollment';
 import { resolveMonthlyPrice } from '@/lib/pricing';
+import { validateCoupon, redeemCoupon, type CouponEffect } from '@/lib/coupons';
 
 // ─── Categories ─────────────────────────────────────────────────────────────
 
@@ -234,7 +235,7 @@ export async function deleteTransaction(id: string) {
 
 // ─── Auto-charge helper (called from alunos/actions.ts) ──────────────────────
 
-export async function createEnrollmentCharge(studentId: string, enrollmentId: string, classId: string) {
+export async function createEnrollmentCharge(studentId: string, enrollmentId: string, classId: string, couponCode?: string | null) {
   try {
     const courseClass = await prisma.courseClass.findUnique({
       where: { id: classId },
@@ -249,6 +250,13 @@ export async function createEnrollmentCharge(studentId: string, enrollmentId: st
     const { amount } = resolveMonthlyPrice({ coursePrice: price });
     if (amount <= 0) return;
 
+    // Cupom (opcional): valida e aplica isenção de taxa / desconto.
+    let couponEffect: CouponEffect | null = null;
+    if (couponCode) {
+      const v = await validateCoupon(couponCode, { classId, studentId });
+      if (v.ok) couponEffect = v.effect;
+    }
+
     await gerarMensalidades({
       studentId,
       enrollmentId,
@@ -257,7 +265,10 @@ export async function createEnrollmentCharge(studentId: string, enrollmentId: st
       courseName: cc?.course?.name ?? 'Curso',
       enrollmentFee: price.enrollmentFee ?? null,
       startDate: cc?.startDate ?? undefined,
+      coupon: couponEffect,
     });
+
+    if (couponEffect) await redeemCoupon(couponEffect, { studentId, enrollmentId });
   } catch (error) {
     console.error('Erro ao gerar cobrança automática:', error);
   }

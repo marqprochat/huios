@@ -18,6 +18,8 @@ interface Success {
   courseName: string;
   className: string;
   monthlyAmount: number;
+  discountedMonthlyAmount: number;
+  appliedCouponCode: string | null;
   alreadyEnrolled: boolean;
   transactionId: string | null;
   amount: number | null;
@@ -33,6 +35,7 @@ export default function PortalMatriculaPage() {
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<Success | null>(null);
+  const [coupons, setCoupons] = useState<Record<string, string>>({});
 
   const fetchTurmas = async () => {
     try {
@@ -59,7 +62,7 @@ export default function PortalMatriculaPage() {
       const res = await fetch('/api/portal/matricula', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ classId: t.id }),
+        body: JSON.stringify({ classId: t.id, couponCode: coupons[t.id]?.trim() || null }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Erro ao matricular.');
@@ -67,6 +70,8 @@ export default function PortalMatriculaPage() {
         courseName: t.courseName,
         className: t.name,
         monthlyAmount: d.monthlyAmount ?? 0,
+        discountedMonthlyAmount: d.discountedMonthlyAmount ?? d.monthlyAmount ?? 0,
+        appliedCouponCode: d.appliedCouponCode ?? null,
         alreadyEnrolled: !!d.alreadyEnrolled,
         transactionId: d.transactionId ?? null,
         amount: d.amount ?? null,
@@ -93,7 +98,21 @@ export default function PortalMatriculaPage() {
           </p>
           {!success.alreadyEnrolled && (
             <p className="text-sm text-slate-500 mt-3">
-              Mensalidade: <span className="font-bold text-slate-800">{fmtBRL(success.monthlyAmount)}</span>
+              Mensalidade:{' '}
+              {success.appliedCouponCode && success.discountedMonthlyAmount < success.monthlyAmount ? (
+                <>
+                  <span className="line-through text-slate-400">{fmtBRL(success.monthlyAmount)}</span>{' '}
+                  <span className="font-bold text-emerald-600">{fmtBRL(success.discountedMonthlyAmount)}</span>
+                </>
+              ) : (
+                <span className="font-bold text-slate-800">{fmtBRL(success.monthlyAmount)}</span>
+              )}
+            </p>
+          )}
+          {success.appliedCouponCode && (
+            <p className="text-xs font-bold text-emerald-600 mt-1 inline-flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]">sell</span>
+              Cupom {success.appliedCouponCode} aplicado
             </p>
           )}
 
@@ -183,10 +202,16 @@ export default function PortalMatriculaPage() {
                     </span>
                   )}
                 </div>
+                <input
+                  value={coupons[t.id] ?? ''}
+                  onChange={e => setCoupons(c => ({ ...c, [t.id]: e.target.value.toUpperCase() }))}
+                  className="mt-5 w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm uppercase outline-none focus:ring-2 focus:ring-[#135bec]/30"
+                  placeholder="Cupom de desconto (opcional)"
+                />
                 <button
                   onClick={() => enroll(t)}
                   disabled={enrollingId !== null}
-                  className="mt-5 w-full text-center bg-[#135bec] text-white py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50"
+                  className="mt-3 w-full text-center bg-[#135bec] text-white py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50"
                 >
                   {enrollingId === t.id ? 'Matriculando...' : 'Matricular nesta turma'}
                 </button>

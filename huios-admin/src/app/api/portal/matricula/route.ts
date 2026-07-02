@@ -60,10 +60,10 @@ export async function POST(request: Request) {
   if ('error' in ctx) return NextResponse.json({ error: ctx.error }, { status: ctx.status });
 
   try {
-    const { classId } = (await request.json()) as { classId?: string };
+    const { classId, couponCode } = (await request.json()) as { classId?: string; couponCode?: string | null };
     if (!classId) return NextResponse.json({ error: 'Turma não informada.' }, { status: 400 });
 
-    const result = await matricularAlunoExistente(ctx.student.id, classId);
+    const result = await matricularAlunoExistente(ctx.student.id, classId, couponCode ?? null);
 
     const firstTxId = result.transactionIds[0] ?? null;
     let amount: number | null = null;
@@ -80,6 +80,8 @@ export async function POST(request: Request) {
       alreadyEnrolled: result.alreadyEnrolled,
       tier: result.tier,
       monthlyAmount: result.monthlyAmount,
+      discountedMonthlyAmount: result.discountedMonthlyAmount,
+      appliedCouponCode: result.appliedCouponCode,
       transactionId: firstTxId,
       amount,
     });

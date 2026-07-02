@@ -5,6 +5,7 @@
 import prisma from './prisma';
 import { hashPassword } from './auth';
 import { resolveMonthlyPrice, PriceTier, CoursePriceTiers } from './pricing';
+import { CouponEffect, discountedMonthly, redeemCoupon, validateCoupon } from './coupons';
 
 function addMonths(date: Date, months: number): Date {
   const d = new Date(date);
@@ -33,17 +34,20 @@ export async function gerarMensalidades(opts: {
   enrollmentFee?: number | null;
   enrollmentFeeDueDate?: Date | string | null;
   startDate?: Date;
+  /** cupom já validado a aplicar (isenção de taxa / desconto na mensalidade). */
+  coupon?: CouponEffect | null;
 }): Promise<string[]> {
   const { studentId, enrollmentId, monthlyAmount, courseName } = opts;
   const installments = Math.max(1, opts.installments || 1);
   const base = opts.startDate ? new Date(opts.startDate) : new Date();
+  const coupon = opts.coupon ?? null;
   const ids: string[] = [];
 
   const mensalidadeCat = await findCategoryId('Mensalidade');
 
-  // Taxa de matrícula (opcional) — vencimento: data fixa configurada no
-  // Financeiro (Preços dos Cursos); se não houver, cai em 7 dias após hoje.
-  if (opts.enrollmentFee && opts.enrollmentFee > 0) {
+  // Taxa de matrícula (opcional) — isenta se o cupom cobrir. Vencimento: data
+  // fixa configurada no Financeiro (Preços dos Cursos); senão, 7 dias após hoje.
+  if (opts.enrollmentFee && opts.enrollmentFee > 0 && !coupon?.waiveEnrollmentFee) {
     const matriculaCat = (await findCategoryId('Matrícula')) ?? mensalidadeCat;
     let dueDate: Date;
     if (opts.enrollmentFeeDueDate) {
@@ -70,16 +74,18 @@ export async function gerarMensalidades(opts: {
   if (monthlyAmount > 0) {
     for (let i = 0; i < installments; i++) {
       const dueDate = addMonths(base, i + 1);
+      const amount = discountedMonthly(coupon, monthlyAmount, i);
       const t = await (prisma as any).financialTransaction.create({
         data: {
           type: 'RECEITA',
           status: 'PENDENTE',
-          amount: monthlyAmount,
+          amount,
           description: `Mensalidade ${i + 1}/${installments} — ${courseName}`,
           dueDate,
           categoryId: mensalidadeCat,
           studentId,
           enrollmentId,
+          ...(coupon && amount < monthlyAmount ? { notes: `Cupom ${coupon.code}` } : {}),
         },
       });
       ids.push(t.id);
@@ -219,10 +225,23 @@ export interface MatricularGrupoInput {
   family?: { name: string; responsibleName?: string; responsiblePhone?: string } | null;
   /** ignora a validação de matrícula aberta (uso admin). */
   skipOpenCheck?: boolean;
+  /** código de cupom (isenção de taxa / desconto), aplicado a cada pessoa do lote. */
+  couponCode?: string | null;
+}
+
+export interface EnrollmentResult {
+  enrollmentId: string;
+  studentId: string;
+  tier: PriceTier;
+  monthlyAmount: number;
+  /** valor da 1ª mensalidade após cupom (igual a monthlyAmount se sem desconto). */
+  discountedMonthlyAmount: number;
+  appliedCouponCode: string | null;
+  transactionIds: string[];
 }
 
 export interface MatriculaResultado {
-  enrollments: { enrollmentId: string; studentId: string; tier: PriceTier; monthlyAmount: number; transactionIds: string[] }[];
+  enrollments: EnrollmentResult[];
 }
 
 /**
@@ -315,8 +334,15 @@ export async function matricularGrupo(input: MatricularGrupoInput): Promise<Matr
     const dup = await prisma.enrollment.findFirst({ where: { studentId, classId: input.classId } });
     if (dup) {
       await sincronizarPresencas(studentId, input.classId);
-      enrollments.push({ enrollmentId: dup.id, studentId, tier, monthlyAmount: amount, transactionIds: [] });
+      enrollments.push({ enrollmentId: dup.id, studentId, tier, monthlyAmount: amount, discountedMonthlyAmount: amount, appliedCouponCode: null, transactionIds: [] });
       continue;
+    }
+
+    // Cupom: revalida por aluno (respeita "1 uso por aluno" e limite de usos).
+    let couponEffect: CouponEffect | null = null;
+    if (input.couponCode) {
+      const v = await validateCoupon(input.couponCode, { classId: input.classId, studentId });
+      if (v.ok) couponEffect = v.effect;
     }
 
     const enrollment = await prisma.enrollment.create({
@@ -342,9 +368,20 @@ export async function matricularGrupo(input: MatricularGrupoInput): Promise<Matr
       enrollmentFee: coursePrice?.enrollmentFee ?? null,
       enrollmentFeeDueDate: coursePrice?.enrollmentFeeDueDate ?? null,
       startDate: cc.startDate ?? undefined,
+      coupon: couponEffect,
     });
 
-    enrollments.push({ enrollmentId: enrollment.id, studentId, tier, monthlyAmount: amount, transactionIds });
+    if (couponEffect) await redeemCoupon(couponEffect, { studentId, enrollmentId: enrollment.id });
+
+    enrollments.push({
+      enrollmentId: enrollment.id,
+      studentId,
+      tier,
+      monthlyAmount: amount,
+      discountedMonthlyAmount: discountedMonthly(couponEffect, amount, 0),
+      appliedCouponCode: couponEffect?.code ?? null,
+      transactionIds,
+    });
   }
 
   return { enrollments };
@@ -355,6 +392,8 @@ export interface AutoMatriculaResultado {
   alreadyEnrolled: boolean;
   tier: PriceTier;
   monthlyAmount: number;
+  discountedMonthlyAmount: number;
+  appliedCouponCode: string | null;
   transactionIds: string[];
 }
 
@@ -364,7 +403,7 @@ export interface AutoMatriculaResultado {
  * igreja já vinculada ao aluno. Idempotente: se já matriculado, apenas
  * sincroniza presenças e retorna a matrícula existente.
  */
-export async function matricularAlunoExistente(studentId: string, classId: string): Promise<AutoMatriculaResultado> {
+export async function matricularAlunoExistente(studentId: string, classId: string, couponCode?: string | null): Promise<AutoMatriculaResultado> {
   const student = await prisma.student.findUnique({
     where: { id: studentId },
     include: { church: true } as any,
@@ -392,6 +431,8 @@ export async function matricularAlunoExistente(studentId: string, classId: strin
       alreadyEnrolled: true,
       tier: ((dup as any).priceTier as PriceTier) ?? 'NON_MEMBER',
       monthlyAmount: (dup as any).monthlyAmount ?? 0,
+      discountedMonthlyAmount: (dup as any).monthlyAmount ?? 0,
+      appliedCouponCode: null,
       transactionIds: [],
     };
   }
@@ -419,6 +460,13 @@ export async function matricularAlunoExistente(studentId: string, classId: strin
     partnerGroupCount,
   });
 
+  // Cupom (opcional): valida para este aluno/turma.
+  let couponEffect: CouponEffect | null = null;
+  if (couponCode) {
+    const v = await validateCoupon(couponCode, { classId, studentId });
+    if (v.ok) couponEffect = v.effect;
+  }
+
   const enrollment = await prisma.enrollment.create({
     data: {
       studentId,
@@ -442,7 +490,18 @@ export async function matricularAlunoExistente(studentId: string, classId: strin
     enrollmentFee: coursePrice?.enrollmentFee ?? null,
     enrollmentFeeDueDate: coursePrice?.enrollmentFeeDueDate ?? null,
     startDate: cc.startDate ?? undefined,
+    coupon: couponEffect,
   });
 
-  return { enrollmentId: enrollment.id, alreadyEnrolled: false, tier, monthlyAmount: amount, transactionIds };
+  if (couponEffect) await redeemCoupon(couponEffect, { studentId, enrollmentId: enrollment.id });
+
+  return {
+    enrollmentId: enrollment.id,
+    alreadyEnrolled: false,
+    tier,
+    monthlyAmount: amount,
+    discountedMonthlyAmount: discountedMonthly(couponEffect, amount, 0),
+    appliedCouponCode: couponEffect?.code ?? null,
+    transactionIds,
+  };
 }

@@ -11,6 +11,7 @@ interface Body {
   isFamily?: boolean;
   family?: { name?: string; responsibleName?: string; responsiblePhone?: string } | null;
   people: PersonInput[];
+  couponCode?: string | null;
 }
 
 export async function POST(request: Request) {
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
       family: isFamily
         ? { name: familyName, responsibleName: body.family?.responsibleName, responsiblePhone: body.family?.responsiblePhone }
         : null,
+      couponCode: body.couponCode ?? null,
     });
 
     // Monta resumo para a tela de sucesso. Destaca a taxa de matrícula (se
@@ -48,6 +50,8 @@ export async function POST(request: Request) {
       studentName: string;
       tier: string;
       monthlyAmount: number;
+      discountedMonthlyAmount: number;
+      appliedCouponCode: string | null;
       enrollmentFeeTransactionId: string | null;
       enrollmentFeeAmount: number | null;
     }[];
@@ -61,6 +65,8 @@ export async function POST(request: Request) {
         studentName: student?.name ?? '',
         tier: en.tier,
         monthlyAmount: en.monthlyAmount,
+        discountedMonthlyAmount: en.discountedMonthlyAmount,
+        appliedCouponCode: en.appliedCouponCode,
         enrollmentFeeTransactionId: feeTx?.id ?? null,
         enrollmentFeeAmount: feeTx?.amount ?? null,
       });

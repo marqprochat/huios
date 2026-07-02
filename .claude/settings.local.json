@@ -40,7 +40,12 @@
       "WebFetch(domain:developer.santander.com.br)",
       "WebFetch(domain:developers.openpix.com.br)",
       "Bash(grep -n \"\\\\${base}/cob\\\\|/api/v1/webhook\\\\|auth/oauth\" src/lib/santander.ts)",
-      "Bash(grep -n \"\\\\${base}/api/v1/cob\\\\|\\\\${base}/cob\\\\|scope=\\\\|auth/oauth\" src/lib/santander.ts)"
+      "Bash(grep -n \"\\\\${base}/api/v1/cob\\\\|\\\\${base}/cob\\\\|scope=\\\\|auth/oauth\" src/lib/santander.ts)",
+      "Bash(find src/app/matricula -type f)",
+      "Bash(find src/app/api/matricula src/app/api/pagamentos src/app/api/portal -type f)",
+      "Bash(find src/app/financeiro -maxdepth 2 -type d)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\)\")",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }

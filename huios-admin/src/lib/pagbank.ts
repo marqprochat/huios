@@ -106,6 +106,8 @@ export function mapStatus(pagbankStatus?: string): 'WAITING' | 'PAID' | 'DECLINE
 }
 
 async function postOrder(body: any, config: PagBankConfig): Promise<any> {
+  // [HOMOLOGAÇÃO PagBank] log temporário do request/response — remover depois de homologar.
+  console.log('[PAGBANK][REQUEST]', `${baseUrlFor(config.env)}/orders`, JSON.stringify(body, null, 2));
   const res = await fetch(`${baseUrlFor(config.env)}/orders`, {
     method: 'POST',
     headers: {
@@ -116,6 +118,8 @@ async function postOrder(body: any, config: PagBankConfig): Promise<any> {
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
+  // [HOMOLOGAÇÃO PagBank] log temporário — remover depois de homologar.
+  console.log('[PAGBANK][RESPONSE]', res.status, JSON.stringify(data, null, 2));
   if (!res.ok) {
     const errs = data?.error_messages;
     const msg = Array.isArray(errs) && errs.length

@@ -116,8 +116,9 @@ export async function createAluno(prevState: any, formData: FormData) {
                     })
                 )
             );
+            const couponCode = (formData.get('couponCode') as string) || null;
             for (const enrollment of enrollments) {
-                await createEnrollmentCharge(student.id, enrollment.id, enrollment.classId);
+                await createEnrollmentCharge(student.id, enrollment.id, enrollment.classId, couponCode);
                 await sincronizarPresencas(student.id, enrollment.classId);
             }
         }
