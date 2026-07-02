@@ -32,6 +32,10 @@ export default function ConfiguracoesPage() {
   const [pagbankWebhookToken, setPagbankWebhookToken] = useState("")
   const [tokenMasked, setTokenMasked] = useState<string | null>(null)
   const [hasPublicKey, setHasPublicKey] = useState(false)
+  // Meios de pagamento habilitados
+  const [pagbankCardEnabled, setPagbankCardEnabled] = useState(false)
+  const [pagbankPixEnabled, setPagbankPixEnabled] = useState(true)
+  const [pagbankBoletoEnabled, setPagbankBoletoEnabled] = useState(false)
 
   // Santander
   const [santanderEnv, setSantanderEnv] = useState("sandbox")
@@ -73,6 +77,9 @@ export default function ConfiguracoesPage() {
         setPagbankEnv(data.pagbankEnv || 'sandbox')
         setTokenMasked(data.tokenMasked || null)
         setHasPublicKey(!!data.hasPublicKey)
+        setPagbankCardEnabled(!!data.pagbankCardEnabled)
+        setPagbankPixEnabled(data.pagbankPixEnabled !== false)
+        setPagbankBoletoEnabled(!!data.pagbankBoletoEnabled)
         // Santander
         setSantanderEnv(data.santanderEnv || 'sandbox')
         setSantanderClientId(data.santanderClientId || '')
@@ -102,6 +109,9 @@ export default function ConfiguracoesPage() {
           pagbankEnv,
           pagbankToken,
           pagbankWebhookToken,
+          pagbankCardEnabled,
+          pagbankPixEnabled,
+          pagbankBoletoEnabled,
           santanderEnv,
           santanderClientId,
           santanderClientSecret,
@@ -803,6 +813,46 @@ export default function ConfiguracoesPage() {
                 ))}
               </div>
               <p className="text-xs text-slate-500 mt-1">Use <b>Produção</b> com o token real para cobrar de verdade.</p>
+            </div>
+
+            {/* Meios de pagamento habilitados no checkout */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Meios de pagamento</label>
+              <p className="text-xs text-slate-500 mb-3">Escolha o que aparece para o aluno no checkout. Cartão e boleto exigem liberação na sua conta PagBank.</p>
+              <div className="space-y-2">
+                {[
+                  { key: 'pix', label: 'Pix', icon: 'qr_code_2', on: pagbankPixEnabled, set: setPagbankPixEnabled },
+                  { key: 'card', label: 'Cartão de crédito', icon: 'credit_card', on: pagbankCardEnabled, set: setPagbankCardEnabled },
+                  { key: 'boleto', label: 'Boleto', icon: 'receipt_long', on: pagbankBoletoEnabled, set: setPagbankBoletoEnabled },
+                ].map((m) => (
+                  <button
+                    key={m.key}
+                    type="button"
+                    onClick={() => m.set(!m.on)}
+                    className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-all ${
+                      m.on
+                        ? 'border-primary bg-primary/5'
+                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200">
+                      <span className="material-symbols-outlined text-base">{m.icon}</span>
+                      {m.label}
+                    </span>
+                    <span
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                        m.on ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                          m.on ? 'translate-x-5' : 'translate-x-0.5'
+                        }`}
+                      />
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* URL de notificação (read-only, copiável) */}

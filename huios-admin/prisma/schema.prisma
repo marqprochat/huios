@@ -454,6 +454,12 @@ model SystemSettings {
   pagbankWebhookToken String? // Token p/ validar a assinatura do webhook
   appUrl              String? // URL pública base (ex: https://huios.igrejaconviva.com.br)
 
+  // Meios de pagamento PagBank habilitados no checkout (o coordenador liga/desliga no painel).
+  // Cartão e boleto exigem liberação na conta PagBank; por isso vêm desligados por padrão.
+  pagbankCardEnabled   Boolean? @default(false) // Cartão de crédito
+  pagbankPixEnabled    Boolean? @default(true)  // Pix
+  pagbankBoletoEnabled Boolean? @default(false) // Boleto
+
   // Pagamentos (Santander — API Pix Bacen, autenticação OAuth2 + mTLS)
   santanderEnv               String?  @default("sandbox") // "sandbox" | "prod"
   santanderClientId          String?  // Client ID do app no portal do desenvolvedor Santander

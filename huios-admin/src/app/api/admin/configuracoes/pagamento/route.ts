@@ -37,6 +37,10 @@ export async function GET() {
     webhookTokenMasked: mask(s?.pagbankWebhookToken),
     hasToken: !!s?.pagbankToken,
     hasPublicKey: !!s?.pagbankPublicKey,
+    // Meios de pagamento habilitados (default: só Pix, casando com o padrão do schema)
+    pagbankCardEnabled: s?.pagbankCardEnabled ?? false,
+    pagbankPixEnabled: s?.pagbankPixEnabled ?? true,
+    pagbankBoletoEnabled: s?.pagbankBoletoEnabled ?? false,
     // Santander
     santanderEnv: s?.santanderEnv || 'sandbox',
     santanderClientId: s?.santanderClientId || '',
@@ -72,6 +76,9 @@ export async function PUT(req: Request) {
       pagbankEnv,
       pagbankToken,
       pagbankWebhookToken,
+      pagbankCardEnabled,
+      pagbankPixEnabled,
+      pagbankBoletoEnabled,
       // Santander
       santanderEnv,
       santanderClientId,
@@ -100,6 +107,9 @@ export async function PUT(req: Request) {
     if (typeof pagbankWebhookToken === 'string' && pagbankWebhookToken.trim()) {
       data.pagbankWebhookToken = pagbankWebhookToken.trim();
     }
+    if (typeof pagbankCardEnabled === 'boolean') data.pagbankCardEnabled = pagbankCardEnabled;
+    if (typeof pagbankPixEnabled === 'boolean') data.pagbankPixEnabled = pagbankPixEnabled;
+    if (typeof pagbankBoletoEnabled === 'boolean') data.pagbankBoletoEnabled = pagbankBoletoEnabled;
 
     // --- Santander ---
     if (typeof santanderEnv === 'string') data.santanderEnv = santanderEnv === 'prod' ? 'prod' : 'sandbox';

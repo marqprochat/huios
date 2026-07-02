@@ -25,6 +25,31 @@ export async function isActiveProviderConfigured(): Promise<boolean> {
   return provider === 'santander' ? santander.isConfigured() : pagbank.isConfigured();
 }
 
+export type CheckoutMethod = 'CREDIT_CARD' | 'PIX' | 'BOLETO';
+
+/**
+ * Métodos de pagamento habilitados no checkout, considerando o provedor ativo e
+ * as flags do PagBank (SystemSettings). PIX funciona em qualquer provedor; cartão
+ * e boleto só existem no PagBank e ainda dependem de estarem ligados no painel.
+ * Mantém UI (checkout) e API (rota de criação) alinhados a uma única fonte.
+ */
+export async function getEnabledMethods(): Promise<CheckoutMethod[]> {
+  let s: any = null;
+  try {
+    s = await (prisma as any).systemSettings.findFirst();
+  } catch {
+    s = null;
+  }
+  const provider: PaymentProvider = s?.paymentProvider === 'santander' ? 'santander' : 'pagbank';
+  if (provider === 'santander') return ['PIX'];
+
+  const methods: CheckoutMethod[] = [];
+  if (s?.pagbankCardEnabled) methods.push('CREDIT_CARD');
+  if (s?.pagbankPixEnabled ?? true) methods.push('PIX'); // default ligado (linhas antigas sem a coluna)
+  if (s?.pagbankBoletoEnabled) methods.push('BOLETO');
+  return methods;
+}
+
 export interface NormalizedPixResult {
   gateway: 'PAGBANK' | 'SANTANDER';
   status: string; // WAITING | PAID | DECLINED | CANCELED

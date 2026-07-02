@@ -108,6 +108,65 @@ async function fixSchema() {
       console.log('  ℹ️  Migration já está registrada');
     }
 
+    // 8. Criar tabela Coupon (se não existir)
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Coupon" (
+        "id" TEXT NOT NULL,
+        "code" TEXT NOT NULL,
+        "description" TEXT,
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "waiveEnrollmentFee" BOOLEAN NOT NULL DEFAULT false,
+        "discountType" TEXT,
+        "discountValue" DOUBLE PRECISION,
+        "discountMonths" INTEGER,
+        "validFrom" TIMESTAMP(3),
+        "validUntil" TIMESTAMP(3),
+        "maxUses" INTEGER,
+        "usedCount" INTEGER NOT NULL DEFAULT 0,
+        "onePerStudent" BOOLEAN NOT NULL DEFAULT false,
+        "courseIds" TEXT[] DEFAULT ARRAY[]::TEXT[],
+        "classIds" TEXT[] DEFAULT ARRAY[]::TEXT[],
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Coupon_pkey" PRIMARY KEY ("id")
+      )
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "Coupon_code_key" ON "Coupon"("code")
+    `);
+    console.log('  ℹ️  Tabela Coupon verificada/criada');
+
+    // 9. Criar tabela CouponRedemption (se não existir)
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CouponRedemption" (
+        "id" TEXT NOT NULL,
+        "couponId" TEXT NOT NULL,
+        "code" TEXT NOT NULL,
+        "studentId" TEXT,
+        "enrollmentId" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CouponRedemption_pkey" PRIMARY KEY ("id")
+      )
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "CouponRedemption_couponId_studentId_idx" ON "CouponRedemption"("couponId", "studentId")
+    `);
+    const hasCouponFk = await prisma.$queryRaw`
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE constraint_name = 'CouponRedemption_couponId_fkey'
+      AND table_schema = 'public'
+    `;
+    if (hasCouponFk.length === 0) {
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "CouponRedemption" ADD CONSTRAINT "CouponRedemption_couponId_fkey"
+        FOREIGN KEY ("couponId") REFERENCES "Coupon"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      `);
+      console.log('  ✅ Foreign key CouponRedemption_couponId_fkey criada');
+    } else {
+      console.log('  ℹ️  Foreign key CouponRedemption_couponId_fkey já existe');
+    }
+    console.log('  ℹ️  Tabela CouponRedemption verificada/criada');
+
     console.log('✅ Todas as correções de schema foram aplicadas com sucesso!');
   } catch (err) {
     console.error('⚠️  Erro ao aplicar correções:', err.message);

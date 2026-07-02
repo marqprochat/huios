@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createCharge, getPagBankConfig, PagBankMethod } from '@/lib/pagbank';
-import { createPixCharge, getActiveProvider, isActiveProviderConfigured } from '@/lib/payments';
+import { createPixCharge, getEnabledMethods, isActiveProviderConfigured } from '@/lib/payments';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,10 +17,6 @@ const METHOD_TO_PAYMENTMETHOD: Record<PagBankMethod, string> = {
   BOLETO: 'BOLETO',
 };
 
-// Métodos habilitados no momento. Mantém o checkout (UI) e a API alinhados.
-// PIX funciona em qualquer provedor; cartão/boleto são exclusivos do PagBank.
-const ENABLED_METHODS: PagBankMethod[] = ['PIX'];
-
 export async function POST(request: Request) {
   try {
     if (!(await isActiveProviderConfigured())) {
@@ -31,14 +27,10 @@ export async function POST(request: Request) {
     if (!body.transactionId || !body.method) {
       return NextResponse.json({ error: 'Dados incompletos.' }, { status: 400 });
     }
-    if (!ENABLED_METHODS.includes(body.method)) {
-      return NextResponse.json({ error: 'Método de pagamento indisponível. Use o Pix.' }, { status: 400 });
-    }
-
-    const provider = await getActiveProvider();
-    // Cartão e boleto só existem no PagBank. Se o provedor ativo for outro, bloqueia.
-    if (body.method !== 'PIX' && provider !== 'pagbank') {
-      return NextResponse.json({ error: 'Método indisponível para o provedor ativo. Use o Pix.' }, { status: 400 });
+    // Fonte única (provedor ativo + flags do painel) para os métodos liberados.
+    const enabledMethods = await getEnabledMethods();
+    if (!enabledMethods.includes(body.method)) {
+      return NextResponse.json({ error: 'Método de pagamento indisponível.' }, { status: 400 });
     }
 
     const tx = await (prisma as any).financialTransaction.findUnique({

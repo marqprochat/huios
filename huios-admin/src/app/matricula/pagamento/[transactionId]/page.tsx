@@ -1,6 +1,7 @@
 import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import { getPagBankConfig } from '@/lib/pagbank';
+import { getEnabledMethods } from '@/lib/payments';
 import { PagamentoClient } from './PagamentoClient';
 
 export const dynamic = 'force-dynamic';
@@ -24,6 +25,7 @@ export default async function PagamentoPage({
   if (!tx) notFound();
 
   const { publicKey } = await getPagBankConfig();
+  const enabledMethods = await getEnabledMethods();
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center py-10 px-4">
@@ -41,6 +43,7 @@ export default async function PagamentoPage({
           studentName={tx.student?.name ?? ''}
           alreadyPaid={tx.status === 'PAGO'}
           publicKey={publicKey}
+          enabledMethods={enabledMethods}
           redirectTo={redirectTo}
         />
       </div>

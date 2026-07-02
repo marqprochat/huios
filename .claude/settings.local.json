@@ -45,7 +45,12 @@
       "Bash(find src/app/api/matricula src/app/api/pagamentos src/app/api/portal -type f)",
       "Bash(find src/app/financeiro -maxdepth 2 -type d)",
       "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\)\")",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "Bash(echo \"=== migrations \\(api\\) ===\" && ls -1 ../huios-api/prisma/migrations 2>/dev/null | tail -15; echo \"=== fix-schema.js ===\" && cat ../huios-api/prisma/fix-schema.js 2>/dev/null | head -80)",
+      "Read(//p/APPS/huios/huios-api/prisma/**)",
+      "Bash(find ../huios-api/prisma -maxdepth 2 2>/dev/null | grep -v node_modules | head -40; echo \"=== fix-schema location ===\"; find .. -name \"fix-schema.js\" 2>/dev/null | grep -v node_modules)",
+      "Read(//p/APPS/huios/huios-api/**)",
+      "Read(//p/APPS/huios/**)"
     ]
   }
 }
