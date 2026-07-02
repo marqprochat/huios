@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { getOnlinePaymentsEnabled } from '@/lib/payments';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,7 +52,9 @@ export async function GET() {
       paidTotal: items.filter(i => i.status === 'PAGO').reduce((s, i) => s + i.amount, 0),
     };
 
-    return NextResponse.json({ items, summary });
+    const onlinePaymentsEnabled = await getOnlinePaymentsEnabled();
+
+    return NextResponse.json({ items, summary, onlinePaymentsEnabled });
   } catch (error: any) {
     console.error('Portal financeiro error:', error);
     return NextResponse.json({ error: 'Erro ao carregar financeiro' }, { status: 500 });

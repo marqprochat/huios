@@ -18,6 +18,7 @@ export default function ConfiguracoesPage() {
   const [checkInBufferMinutes, setCheckInBufferMinutes] = useState("30")
 
   // Estados de pagamento (gerais)
+  const [onlinePaymentsEnabled, setOnlinePaymentsEnabled] = useState(false)
   const [paymentProvider, setPaymentProvider] = useState<"pagbank" | "santander">("pagbank")
   const [editProvider, setEditProvider] = useState<"pagbank" | "santander">("pagbank")
   const [appUrl, setAppUrl] = useState("")
@@ -72,6 +73,7 @@ export default function ConfiguracoesPage() {
         const provider = data.paymentProvider === 'santander' ? 'santander' : 'pagbank'
         setPaymentProvider(provider)
         setEditProvider(provider)
+        setOnlinePaymentsEnabled(!!data.onlinePaymentsEnabled)
         setAppUrl(data.appUrl || '')
         // PagBank
         setPagbankEnv(data.pagbankEnv || 'sandbox')
@@ -105,6 +107,7 @@ export default function ConfiguracoesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           paymentProvider,
+          onlinePaymentsEnabled,
           appUrl,
           pagbankEnv,
           pagbankToken,
@@ -675,6 +678,38 @@ export default function ConfiguracoesPage() {
             <p className="text-sm text-slate-500 mt-1">
               Configure a integração para cobrar matrículas e mensalidades online. Escolha qual provedor fica ativo.
             </p>
+          </div>
+
+          {/* Chave-mestra: liga/desliga o pagamento online do sistema */}
+          <div className={`rounded-2xl border p-5 flex items-start justify-between gap-4 ${
+            onlinePaymentsEnabled
+              ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
+              : 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'
+          }`}>
+            <div className="min-w-0">
+              <p className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span className="material-symbols-outlined text-base">{onlinePaymentsEnabled ? 'toggle_on' : 'toggle_off'}</span>
+                Pagamento online
+              </p>
+              <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                {onlinePaymentsEnabled
+                  ? 'Ativado: alunos podem pagar matrículas e mensalidades pelo sistema.'
+                  : 'Desativado: matrícula e financeiro do aluno mostram um aviso para procurar a coordenação. Nenhuma cobrança online é gerada.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={onlinePaymentsEnabled}
+              onClick={() => setOnlinePaymentsEnabled((v) => !v)}
+              className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${
+                onlinePaymentsEnabled ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'
+              }`}
+            >
+              <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${
+                onlinePaymentsEnabled ? 'translate-x-5' : 'translate-x-0.5'
+              }`} />
+            </button>
           </div>
 
           {/* Seletor do provedor ATIVO */}

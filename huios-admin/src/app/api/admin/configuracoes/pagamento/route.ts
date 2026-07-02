@@ -30,6 +30,7 @@ export async function GET() {
   const s = await (prisma as any).systemSettings.findFirst();
   return NextResponse.json({
     paymentProvider: s?.paymentProvider === 'santander' ? 'santander' : 'pagbank',
+    onlinePaymentsEnabled: s?.onlinePaymentsEnabled === true,
     appUrl: s?.appUrl || '',
     // PagBank
     pagbankEnv: s?.pagbankEnv || 'sandbox',
@@ -71,6 +72,7 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const {
       paymentProvider,
+      onlinePaymentsEnabled,
       appUrl,
       // PagBank
       pagbankEnv,
@@ -96,6 +98,7 @@ export async function PUT(req: Request) {
     if (paymentProvider === 'pagbank' || paymentProvider === 'santander') {
       data.paymentProvider = paymentProvider;
     }
+    if (typeof onlinePaymentsEnabled === 'boolean') data.onlinePaymentsEnabled = onlinePaymentsEnabled;
     if (typeof appUrl === 'string') data.appUrl = appUrl.trim() || null;
 
     // --- PagBank ---

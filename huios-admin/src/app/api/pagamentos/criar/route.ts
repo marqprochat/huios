@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createCharge, getPagBankConfig, PagBankMethod } from '@/lib/pagbank';
-import { createPixCharge, getEnabledMethods, isActiveProviderConfigured } from '@/lib/payments';
+import { createPixCharge, getEnabledMethods, getOnlinePaymentsEnabled, isActiveProviderConfigured } from '@/lib/payments';
+import { ONLINE_PAYMENTS_DISABLED_MESSAGE } from '@/lib/payment-messages';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +20,10 @@ const METHOD_TO_PAYMENTMETHOD: Record<PagBankMethod, string> = {
 
 export async function POST(request: Request) {
   try {
+    // Chave-mestra: se o pagamento online estiver desligado, bloqueia qualquer cobrança.
+    if (!(await getOnlinePaymentsEnabled())) {
+      return NextResponse.json({ error: ONLINE_PAYMENTS_DISABLED_MESSAGE }, { status: 503 });
+    }
     if (!(await isActiveProviderConfigured())) {
       return NextResponse.json({ error: 'Pagamento online não configurado. Contate a coordenação.' }, { status: 503 });
     }

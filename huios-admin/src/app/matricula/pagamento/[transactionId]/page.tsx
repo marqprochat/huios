@@ -1,7 +1,8 @@
 import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import { getPagBankConfig } from '@/lib/pagbank';
-import { getEnabledMethods } from '@/lib/payments';
+import { getEnabledMethods, getOnlinePaymentsEnabled } from '@/lib/payments';
+import { ONLINE_PAYMENTS_DISABLED_MESSAGE } from '@/lib/payment-messages';
 import { PagamentoClient } from './PagamentoClient';
 
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,9 @@ export default async function PagamentoPage({
 
   const { publicKey } = await getPagBankConfig();
   const enabledMethods = await getEnabledMethods();
+  const onlinePaymentsEnabled = await getOnlinePaymentsEnabled();
+  // Já paga: mostra o comprovante normalmente mesmo com pagamento online desligado.
+  const showDisabledNotice = !onlinePaymentsEnabled && tx.status !== 'PAGO';
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center py-10 px-4">
@@ -36,16 +40,26 @@ export default async function PagamentoPage({
           <h1 className="text-2xl font-black text-slate-900">Pagamento</h1>
           <p className="text-slate-500 text-sm">Seminário Teológico Huios</p>
         </div>
-        <PagamentoClient
-          transactionId={tx.id}
-          description={tx.description}
-          amount={tx.amount}
-          studentName={tx.student?.name ?? ''}
-          alreadyPaid={tx.status === 'PAGO'}
-          publicKey={publicKey}
-          enabledMethods={enabledMethods}
-          redirectTo={redirectTo}
-        />
+        {showDisabledNotice ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-sm text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
+              <span className="material-symbols-outlined text-4xl">schedule</span>
+            </div>
+            <p className="text-sm text-slate-500">{tx.description}</p>
+            <p className="text-base font-bold text-slate-800 leading-relaxed">{ONLINE_PAYMENTS_DISABLED_MESSAGE}</p>
+          </div>
+        ) : (
+          <PagamentoClient
+            transactionId={tx.id}
+            description={tx.description}
+            amount={tx.amount}
+            studentName={tx.student?.name ?? ''}
+            alreadyPaid={tx.status === 'PAGO'}
+            publicKey={publicKey}
+            enabledMethods={enabledMethods}
+            redirectTo={redirectTo}
+          />
+        )}
       </div>
     </div>
   );

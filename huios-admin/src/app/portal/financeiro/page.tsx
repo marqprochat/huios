@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { formatDateBR } from '@/lib/date-utils';
+import { ONLINE_PAYMENTS_DISABLED_MESSAGE } from '@/lib/payment-messages';
 
 interface Item {
   id: string;
@@ -32,6 +33,7 @@ const fmtDate = (iso: string | null) => (iso ? formatDateBR(iso) : '—');
 export default function PortalFinanceiroPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [onlinePaymentsEnabled, setOnlinePaymentsEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,6 +44,7 @@ export default function PortalFinanceiroPage() {
           const d = await res.json();
           setItems(d.items || []);
           setSummary(d.summary || null);
+          setOnlinePaymentsEnabled(d.onlinePaymentsEnabled !== false);
         }
       } catch (e) {
         console.error(e);
@@ -88,6 +91,16 @@ export default function PortalFinanceiroPage() {
         </div>
       </div>
 
+      {/* Pagamento online desligado */}
+      {!onlinePaymentsEnabled && (summary?.pendingCount ?? 0) > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-4">
+          <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <span className="material-symbols-outlined text-amber-600">schedule</span>
+          </div>
+          <p className="flex-1 text-amber-900 text-sm leading-relaxed">{ONLINE_PAYMENTS_DISABLED_MESSAGE}</p>
+        </div>
+      )}
+
       {/* Overdue alert */}
       {summary && summary.overdueCount > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex items-start gap-4">
@@ -96,7 +109,7 @@ export default function PortalFinanceiroPage() {
           </div>
           <div className="flex-1">
             <h3 className="font-semibold text-red-900 text-sm">Você tem cobranças vencidas</h3>
-            <p className="text-red-700 text-xs mt-1">Regularize o quanto antes para evitar bloqueios. Clique em &quot;Pagar&quot; abaixo.</p>
+            <p className="text-red-700 text-xs mt-1">Regularize o quanto antes para evitar bloqueios.{onlinePaymentsEnabled ? ' Clique em “Pagar” abaixo.' : ' Procure a coordenação para pagar.'}</p>
           </div>
         </div>
       )}
@@ -124,9 +137,11 @@ export default function PortalFinanceiroPage() {
                       <p className="font-bold text-slate-800 text-sm">{fmt(i.amount)}</p>
                       <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${b.cls}`}>{b.label}</span>
                     </div>
-                    <Link href={`/matricula/pagamento/${i.id}?retorno=/portal/financeiro`} className="bg-[#135bec] text-white px-4 py-2 rounded-xl text-xs font-bold hover:opacity-90 whitespace-nowrap">
-                      Pagar
-                    </Link>
+                    {onlinePaymentsEnabled && (
+                      <Link href={`/matricula/pagamento/${i.id}?retorno=/portal/financeiro`} className="bg-[#135bec] text-white px-4 py-2 rounded-xl text-xs font-bold hover:opacity-90 whitespace-nowrap">
+                        Pagar
+                      </Link>
+                    )}
                   </div>
                 </div>
               );

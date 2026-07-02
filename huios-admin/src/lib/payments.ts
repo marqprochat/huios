@@ -25,6 +25,17 @@ export async function isActiveProviderConfigured(): Promise<boolean> {
   return provider === 'santander' ? santander.isConfigured() : pagbank.isConfigured();
 }
 
+/** Chave-mestra: indica se o pagamento online está ligado no sistema (default: desligado). */
+export async function getOnlinePaymentsEnabled(): Promise<boolean> {
+  let s: any = null;
+  try {
+    s = await (prisma as any).systemSettings.findFirst();
+  } catch {
+    s = null;
+  }
+  return s?.onlinePaymentsEnabled === true;
+}
+
 export type CheckoutMethod = 'CREDIT_CARD' | 'PIX' | 'BOLETO';
 
 /**

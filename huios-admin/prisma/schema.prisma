@@ -448,6 +448,10 @@ model SystemSettings {
   // Provedor de pagamento ativo: "pagbank" | "santander"
   paymentProvider String? @default("pagbank")
 
+  // Chave-mestra: liga/desliga o pagamento online no sistema todo. Desligado,
+  // matrícula e financeiro do aluno mostram um aviso para procurar a coordenação.
+  onlinePaymentsEnabled Boolean @default(false)
+
   // Pagamentos (PagBank / PagSeguro)
   pagbankEnv          String? @default("sandbox") // "sandbox" (testes) | "prod" (produção)
   pagbankToken        String? // Token de integração (sensível)
