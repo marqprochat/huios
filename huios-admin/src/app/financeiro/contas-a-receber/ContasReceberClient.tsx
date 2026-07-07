@@ -25,10 +25,14 @@ interface Transaction {
   enrollment: { class: { course: { name: string } } } | null;
 }
 
+interface ClassStudent { id: string; name: string; enrollmentId: string }
+interface ClassOption { id: string; name: string; courseName: string; students: ClassStudent[] }
+
 interface Props {
   transactions: Transaction[];
   categories: Category[];
   students: Student[];
+  classes?: ClassOption[];
 }
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
@@ -42,7 +46,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fmtDate = (d: string) => formatDateBR(d);
 
-export function ContasReceberClient({ transactions: initial, categories, students }: Props) {
+export function ContasReceberClient({ transactions: initial, categories, students, classes = [] }: Props) {
   const [transactions, setTransactions] = useState(initial);
   const [statusFilter, setStatusFilter] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
@@ -188,6 +192,7 @@ export function ContasReceberClient({ transactions: initial, categories, student
             transaction={editingTx as any}
             categories={categories}
             students={students}
+            classes={classes}
             onSaved={onSaved}
           />
         </div>

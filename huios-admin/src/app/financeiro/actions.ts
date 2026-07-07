@@ -161,6 +161,96 @@ export async function createTransaction(prevState: any, formData: FormData) {
   }
 }
 
+/**
+ * Lançamento em lote: cria a mesma cobrança (taxa extra, material, beca, etc.)
+ * para um aluno individual, uma turma inteira ou alguns alunos selecionados,
+ * opcionalmente parcelada em N meses. Uma FinancialTransaction por aluno × parcela.
+ */
+export async function createBulkTransactions(prevState: any, formData: FormData) {
+  const categoryId = formData.get('categoryId') as string;
+  const description = formData.get('description') as string;
+  const amountRaw = formData.get('amount') as string;
+  const dueDate = formData.get('dueDate') as string;
+  const status = (formData.get('status') as string) || 'PENDENTE';
+  const paymentMethod = formData.get('paymentMethod') as string;
+  const paidAt = formData.get('paidAt') as string;
+  const notes = formData.get('notes') as string;
+  const installmentsRaw = formData.get('installments') as string;
+
+  // studentIds: um ou vários (checkboxes da turma). enrollmentMap opcional:
+  // JSON { studentId: enrollmentId } para vincular a cobrança à matrícula da turma.
+  const studentIds = formData.getAll('studentIds').map(String).filter(Boolean);
+
+  if (!description || !amountRaw || !dueDate) {
+    return { success: false, message: 'Descrição, valor e vencimento são obrigatórios' };
+  }
+  // Se a turma foi escolhida mas nenhum aluno marcado, o cliente bloqueia antes.
+  // Aqui, lista vazia = lançamento avulso (sem aluno vinculado).
+  const targets: (string | null)[] = studentIds.length > 0 ? studentIds : [null];
+
+  const amount = parseFloat(amountRaw);
+  if (isNaN(amount) || amount < 0) return { success: false, message: 'Valor inválido' };
+
+  const installments = Math.max(1, parseInt(installmentsRaw, 10) || 1);
+
+  let enrollmentMap: Record<string, string> = {};
+  try {
+    const raw = formData.get('enrollmentMap') as string;
+    if (raw) enrollmentMap = JSON.parse(raw);
+  } catch {
+    enrollmentMap = {};
+  }
+
+  // addMonths: mesmo comportamento de gerarMensalidades (parcela 1 = vencimento
+  // informado; demais somam meses, ajustando fim de mês).
+  const addMonths = (date: Date, months: number): Date => {
+    const d = new Date(date);
+    const day = d.getDate();
+    d.setMonth(d.getMonth() + months);
+    if (d.getDate() < day) d.setDate(0);
+    return d;
+  };
+
+  const baseDue = new Date(`${dueDate}T12:00:00`);
+
+  try {
+    const rows: any[] = [];
+    for (const studentId of targets) {
+      for (let i = 0; i < installments; i++) {
+        const parcelaDue = addMonths(baseDue, i);
+        const desc = installments > 1 ? `${description} ${i + 1}/${installments}` : description;
+        rows.push({
+          type: 'RECEITA',
+          status,
+          amount,
+          description: desc,
+          dueDate: parcelaDue,
+          paidAt: status === 'PAGO' && paidAt ? new Date(`${paidAt}T12:00:00`) : null,
+          paymentMethod: status === 'PAGO' ? (paymentMethod || null) : null,
+          notes: notes || null,
+          categoryId: categoryId || null,
+          studentId,
+          enrollmentId: studentId ? (enrollmentMap[studentId] || null) : null,
+        });
+      }
+    }
+
+    await (prisma as any).financialTransaction.createMany({ data: rows });
+
+    revalidatePath('/financeiro/contas-a-receber');
+    revalidatePath('/financeiro');
+
+    const alunos = studentIds.length;
+    const alvo = alunos > 0 ? ` para ${alunos} aluno${alunos !== 1 ? 's' : ''}` : '';
+    return {
+      success: true,
+      message: `${rows.length} lançamento${rows.length !== 1 ? 's' : ''} criado${rows.length !== 1 ? 's' : ''}${alvo}.`,
+    };
+  } catch (error: any) {
+    return { success: false, message: 'Erro ao criar lançamentos: ' + error.message };
+  }
+}
+
 export async function updateTransaction(id: string, prevState: any, formData: FormData) {
   const categoryId = formData.get('categoryId') as string;
   const description = formData.get('description') as string;
