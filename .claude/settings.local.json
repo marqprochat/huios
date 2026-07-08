@@ -63,7 +63,12 @@
       "Bash(npx playwright *)",
       "Bash(node drive.js)",
       "Read(//c/Users/edmar/AppData/Local/ms-playwright/chromium-1228/**)",
-      "Read(//c/Users/edmar/AppData/Local/ms-playwright/chromium_headless_shell-1228/**)"
+      "Read(//c/Users/edmar/AppData/Local/ms-playwright/chromium_headless_shell-1228/**)",
+      "Bash(curl -s -o /dev/null -w \"admin HTTP=%{http_code}\\\\n\" http://localhost:3000/login)",
+      "PowerShell($p = Get-Process \"Docker Desktop\" -ErrorAction SilentlyContinue; if \\($p\\) { \"Docker Desktop rodando \\(PID $\\($p.Id\\)\\)\" } else { $exe = \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\"; if \\(Test-Path $exe\\) { Start-Process $exe; \"Iniciando Docker Desktop...\" } else { \"Executavel nao encontrado em $exe\" } })",
+      "Bash(node drive_edit.js)",
+      "Bash(node shot_edit.js)",
+      "Bash(awk '{print $6, $7}')"
     ]
   }
 }
