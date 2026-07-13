@@ -1,11 +1,76 @@
 'use client';
 
 import { useState, useTransition, useMemo } from 'react';
-import { createTransaction, updateTransaction, createBulkTransactions } from './actions';
+import { createTransaction, updateTransaction, createBulkTransactions, createPaymentForm, createAccount } from './actions';
+import TransactionAttachments from './TransactionAttachments';
 
 interface Category { id: string; name: string; color: string | null }
 interface Student { id: string; name: string }
 interface Teacher { id: string; name: string }
+interface NamedItem { id: string; name: string }
+
+const qInput = 'w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-primary/30';
+const qLabel = 'block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1';
+
+/** Select com cadastro rápido: botão ＋ abre input inline que cria e já seleciona o item. */
+function QuickAddSelect({ label, name, initial, initialSelectedId, onCreate }: {
+  label: string;
+  name: string;
+  initial: NamedItem[];
+  initialSelectedId?: string | null;
+  onCreate: (name: string) => Promise<{ success: boolean; item?: NamedItem; message?: string }>;
+}) {
+  const [options, setOptions] = useState<NamedItem[]>(initial);
+  const [selected, setSelected] = useState(initialSelectedId ?? '');
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const add = async () => {
+    const n = newName.trim();
+    if (!n) return;
+    setBusy(true); setErr('');
+    const res = await onCreate(n);
+    setBusy(false);
+    if (res.success && res.item) {
+      const item = res.item;
+      setOptions(prev => [...prev, item].sort((a, b) => a.name.localeCompare(b.name)));
+      setSelected(item.id);
+      setNewName(''); setAdding(false);
+    } else {
+      setErr(res.message || 'Erro ao cadastrar');
+    }
+  };
+
+  return (
+    <div>
+      <label className={qLabel}>{label}</label>
+      <div className="flex gap-2">
+        <select name={name} value={selected} onChange={e => setSelected(e.target.value)} className={qInput}>
+          <option value="">Selecione</option>
+          {options.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+        </select>
+        <button type="button" onClick={() => setAdding(v => !v)} title={`Cadastrar ${label.toLowerCase()}`}
+          className="shrink-0 w-11 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:border-primary hover:text-primary transition-colors flex items-center justify-center">
+          <span className="material-symbols-outlined text-base">{adding ? 'close' : 'add'}</span>
+        </button>
+      </div>
+      {adding && (
+        <div className="flex gap-2 mt-2">
+          <input autoFocus value={newName} onChange={e => setNewName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
+            placeholder={`Nova ${label.toLowerCase()}...`} className={qInput} />
+          <button type="button" onClick={add} disabled={busy || !newName.trim()}
+            className="shrink-0 px-4 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 disabled:opacity-50">
+            {busy ? '...' : 'Salvar'}
+          </button>
+        </div>
+      )}
+      {err && <p className="text-xs text-red-600 mt-1">{err}</p>}
+    </div>
+  );
+}
 interface ClassStudent { id: string; name: string; enrollmentId: string }
 interface ClassOption { id: string; name: string; courseName: string; students: ClassStudent[] }
 
@@ -22,6 +87,8 @@ interface Transaction {
   studentId?: string | null;
   teacherId?: string | null;
   enrollmentId?: string | null;
+  paymentFormId?: string | null;
+  accountId?: string | null;
 }
 
 interface Props {
@@ -31,6 +98,8 @@ interface Props {
   students?: Student[];
   teachers?: Teacher[];
   classes?: ClassOption[];
+  paymentForms?: NamedItem[];
+  accounts?: NamedItem[];
   onSaved: () => void;
 }
 
@@ -43,7 +112,7 @@ const PAYMENT_METHODS = [
   { value: 'OUTRO', label: 'Outro' },
 ];
 
-export function TransactionForm({ type, transaction, categories, students = [], teachers = [], classes = [], onSaved }: Props) {
+export function TransactionForm({ type, transaction, categories, students = [], teachers = [], classes = [], paymentForms = [], accounts = [], onSaved }: Props) {
   const isEdit = !!transaction?.id;
   // Recursos de lançamento em lote só no fluxo RECEITA + criação.
   const bulkEnabled = type === 'RECEITA' && !isEdit;
@@ -301,13 +370,6 @@ export function TransactionForm({ type, transaction, categories, students = [], 
         {status === 'PAGO' && (
           <>
             <div>
-              <label className={labelCls}>Método de Pagamento</label>
-              <select name="paymentMethod" defaultValue={transaction?.paymentMethod ?? ''} className={inputCls}>
-                <option value="">Selecione</option>
-                {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-              </select>
-            </div>
-            <div>
               <label className={labelCls}>Data do Pagamento</label>
               <input
                 name="paidAt"
@@ -316,6 +378,33 @@ export function TransactionForm({ type, transaction, categories, students = [], 
                 className={inputCls}
               />
             </div>
+            {type === 'RECEITA' && (
+              <div>
+                <label className={labelCls}>Método de Pagamento</label>
+                <select name="paymentMethod" defaultValue={transaction?.paymentMethod ?? ''} className={inputCls}>
+                  <option value="">Selecione</option>
+                  {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              </div>
+            )}
+            {type === 'DESPESA' && (
+              <>
+                <QuickAddSelect
+                  label="Forma de Pagamento"
+                  name="paymentFormId"
+                  initial={paymentForms}
+                  initialSelectedId={transaction?.paymentFormId}
+                  onCreate={createPaymentForm}
+                />
+                <QuickAddSelect
+                  label="Conta"
+                  name="accountId"
+                  initial={accounts}
+                  initialSelectedId={transaction?.accountId}
+                  onCreate={createAccount}
+                />
+              </>
+            )}
           </>
         )}
 
@@ -351,6 +440,11 @@ export function TransactionForm({ type, transaction, categories, students = [], 
           />
         </div>
       </div>
+
+      {/* Anexos: só no modo edição (precisa do ID do lançamento salvo) */}
+      {isEdit && transaction?.id && (
+        <TransactionAttachments transactionId={transaction.id} />
+      )}
 
       {result && (
         <p className={`text-sm font-bold ${result.ok ? 'text-emerald-600' : 'text-red-600'}`}>{result.msg}</p>

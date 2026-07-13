@@ -127,6 +127,8 @@ export async function createTransaction(prevState: any, formData: FormData) {
   const studentId = formData.get('studentId') as string;
   const enrollmentId = formData.get('enrollmentId') as string;
   const teacherId = formData.get('teacherId') as string;
+  const paymentFormId = formData.get('paymentFormId') as string;
+  const accountId = formData.get('accountId') as string;
 
   if (!description || !amountRaw || !dueDate || !type) {
     return { success: false, message: 'Descrição, valor, tipo e vencimento são obrigatórios' };
@@ -150,6 +152,8 @@ export async function createTransaction(prevState: any, formData: FormData) {
         studentId: studentId || null,
         enrollmentId: enrollmentId || null,
         teacherId: teacherId || null,
+        paymentFormId: paymentFormId || null,
+        accountId: accountId || null,
       }
     });
     revalidatePath('/financeiro/contas-a-receber');
@@ -263,6 +267,8 @@ export async function updateTransaction(id: string, prevState: any, formData: Fo
   const studentId = formData.get('studentId') as string;
   const enrollmentId = formData.get('enrollmentId') as string;
   const teacherId = formData.get('teacherId') as string;
+  const paymentFormId = formData.get('paymentFormId') as string;
+  const accountId = formData.get('accountId') as string;
 
   if (!description || !amountRaw || !dueDate) {
     return { success: false, message: 'Descrição, valor e vencimento são obrigatórios' };
@@ -286,6 +292,8 @@ export async function updateTransaction(id: string, prevState: any, formData: Fo
         studentId: studentId || null,
         enrollmentId: enrollmentId || null,
         teacherId: teacherId || null,
+        paymentFormId: paymentFormId || null,
+        accountId: accountId || null,
       }
     });
     revalidatePath('/financeiro/contas-a-receber');
@@ -327,6 +335,34 @@ export async function deleteTransaction(id: string) {
   revalidatePath('/financeiro/contas-a-receber');
   revalidatePath('/financeiro/contas-a-pagar');
   revalidatePath('/financeiro');
+}
+
+// ─── Formas de Pagamento e Contas (cadastro rápido) ─────────────────────────
+
+export async function createPaymentForm(name: string) {
+  const n = (name || '').trim();
+  if (!n) return { success: false, message: 'Nome é obrigatório' };
+  try {
+    const pf = await (prisma as any).paymentForm.create({ data: { name: n } });
+    revalidatePath('/financeiro/contas-a-pagar');
+    return { success: true, item: { id: pf.id, name: pf.name } };
+  } catch (error: any) {
+    if (error.code === 'P2002') return { success: false, message: 'Já existe uma forma com este nome.' };
+    return { success: false, message: 'Erro: ' + error.message };
+  }
+}
+
+export async function createAccount(name: string) {
+  const n = (name || '').trim();
+  if (!n) return { success: false, message: 'Nome é obrigatório' };
+  try {
+    const acc = await (prisma as any).account.create({ data: { name: n } });
+    revalidatePath('/financeiro/contas-a-pagar');
+    return { success: true, item: { id: acc.id, name: acc.name } };
+  } catch (error: any) {
+    if (error.code === 'P2002') return { success: false, message: 'Já existe uma conta com este nome.' };
+    return { success: false, message: 'Erro: ' + error.message };
+  }
 }
 
 // ─── Auto-charge helper (called from alunos/actions.ts) ──────────────────────

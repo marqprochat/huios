@@ -630,6 +630,12 @@ model FinancialTransaction {
   notes         String?
   reference     String?
 
+  // Contas a Pagar: forma de pagamento e conta de origem (cadastráveis)
+  paymentFormId String?
+  paymentForm   PaymentForm?        @relation(fields: [paymentFormId], references: [id])
+  accountId     String?
+  account       Account?            @relation(fields: [accountId], references: [id])
+
   categoryId    String?
   category      FinancialCategory?  @relation(fields: [categoryId], references: [id])
 
@@ -641,9 +647,41 @@ model FinancialTransaction {
   teacher       Teacher?            @relation(fields: [teacherId], references: [id])
 
   payments      Payment[]
+  attachments   TransactionAttachment[]
 
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
+}
+
+model TransactionAttachment {
+  id            String               @id @default(uuid())
+  transactionId String
+  transaction   FinancialTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  fileName      String
+  filePath      String
+  fileSize      Int
+  mimeType      String
+  description   String?
+  uploadedById  String?
+  createdAt     DateTime             @default(now())
+}
+
+// Forma de pagamento cadastrável (ex.: PIX, Cheque, Dinheiro) — usada em Contas a Pagar
+model PaymentForm {
+  id           String                 @id @default(cuid())
+  name         String                 @unique
+  isActive     Boolean                @default(true)
+  createdAt    DateTime               @default(now())
+  transactions FinancialTransaction[]
+}
+
+// Conta de origem do pagamento (ex.: Caixa da Igreja, PagSeguro) — usada em Contas a Pagar
+model Account {
+  id           String                 @id @default(cuid())
+  name         String                 @unique
+  isActive     Boolean                @default(true)
+  createdAt    DateTime               @default(now())
+  transactions FinancialTransaction[]
 }
 
 // ============================================================

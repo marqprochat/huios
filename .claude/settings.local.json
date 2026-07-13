@@ -68,7 +68,15 @@
       "PowerShell($p = Get-Process \"Docker Desktop\" -ErrorAction SilentlyContinue; if \\($p\\) { \"Docker Desktop rodando \\(PID $\\($p.Id\\)\\)\" } else { $exe = \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\"; if \\(Test-Path $exe\\) { Start-Process $exe; \"Iniciando Docker Desktop...\" } else { \"Executavel nao encontrado em $exe\" } })",
       "Bash(node drive_edit.js)",
       "Bash(node shot_edit.js)",
-      "Bash(awk '{print $6, $7}')"
+      "Bash(awk '{print $6, $7}')",
+      "Bash(awk '/^model FinancialTransaction /,/^}/' huios-admin/prisma/schema.prisma)",
+      "Bash(awk '/^model FinancialCategory /,/^}/' huios-admin/prisma/schema.prisma)",
+      "PowerShell($p = Get-Process \"Docker Desktop\" -ErrorAction SilentlyContinue; if \\(-not $p\\) { Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\"; \"Reiniciando Docker Desktop...\" } else { \"Docker Desktop ja em execucao \\(PID $\\($p.Id\\)\\)\" })",
+      "Bash(node drive_despesa.js)",
+      "Bash(export NODE_PATH=\"C:/Users/edmar/AppData/Local/Temp/claude/p--APPS-huios-huios/997f321b-d385-4d05-90ff-896b4286489e/scratchpad/node_modules\")",
+      "Bash(awk '/^model LessonMaterial /,/^}/' huios-api/prisma/schema.prisma)",
+      "Bash(awk '/^model FinancialTransaction /,/^}/' huios-api/prisma/schema.prisma)",
+      "Bash(node drive_anexo.js)"
     ]
   }
 }

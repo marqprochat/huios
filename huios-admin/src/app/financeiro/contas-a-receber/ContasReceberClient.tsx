@@ -271,6 +271,13 @@ export function ContasReceberClient({ transactions: initial, categories, student
                             </button>
                           )}
                           <button
+                            onClick={() => { setEditingTx(t); setShowForm(false); }}
+                            title="Anexos / comprovantes"
+                            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-primary transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-sm">attach_file</span>
+                          </button>
+                          <button
                             onClick={() => { setEditingTx(isEditing ? null : t); setShowForm(false); }}
                             title={isEditing ? 'Fechar edição' : 'Editar'}
                             className={`p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${isEditing ? 'text-primary bg-primary/10' : 'text-slate-400 hover:text-primary'}`}

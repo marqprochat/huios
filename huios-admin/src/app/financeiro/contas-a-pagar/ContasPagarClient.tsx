@@ -24,10 +24,14 @@ interface Transaction {
   teacher: Teacher | null;
 }
 
+interface NamedItem { id: string; name: string }
+
 interface Props {
   transactions: Transaction[];
   categories: Category[];
   teachers: Teacher[];
+  paymentForms?: NamedItem[];
+  accounts?: NamedItem[];
 }
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
@@ -41,7 +45,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fmtDate = (d: string) => formatDateBR(d);
 
-export function ContasPagarClient({ transactions: initial, categories, teachers }: Props) {
+export function ContasPagarClient({ transactions: initial, categories, teachers, paymentForms = [], accounts = [] }: Props) {
   const [transactions, setTransactions] = useState(initial);
   const [statusFilter, setStatusFilter] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
@@ -182,6 +186,8 @@ export function ContasPagarClient({ transactions: initial, categories, teachers 
             transaction={editingTx as any}
             categories={categories}
             teachers={teachers}
+            paymentForms={paymentForms}
+            accounts={accounts}
             onSaved={onSaved}
           />
         </div>
@@ -239,6 +245,10 @@ export function ContasPagarClient({ transactions: initial, categories, teachers 
                               <span className="material-symbols-outlined text-sm">check_circle</span>
                             </button>
                           )}
+                          <button onClick={() => { setEditingTx(t); setShowForm(false); }} title="Anexos / comprovantes"
+                            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-primary transition-colors">
+                            <span className="material-symbols-outlined text-sm">attach_file</span>
+                          </button>
                           <button onClick={() => { setEditingTx(t); setShowForm(false); }} title="Editar"
                             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-primary transition-colors">
                             <span className="material-symbols-outlined text-sm">edit</span>

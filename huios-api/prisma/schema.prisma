@@ -620,9 +620,23 @@ model FinancialTransaction {
   teacher       Teacher?            @relation(fields: [teacherId], references: [id])
 
   payments      Payment[]
+  attachments   TransactionAttachment[]
 
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
+}
+
+model TransactionAttachment {
+  id            String               @id @default(uuid())
+  transactionId String
+  transaction   FinancialTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  fileName      String
+  filePath      String
+  fileSize      Int
+  mimeType      String
+  description   String?
+  uploadedById  String?
+  createdAt     DateTime             @default(now())
 }
 
 // ============================================================

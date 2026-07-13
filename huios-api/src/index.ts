@@ -13,6 +13,7 @@ import gradeRoutes from './routes/gradeRoutes';
 import settingsRoutes from './routes/settingsRoutes';
 import justificationRoutes from './routes/justificationRoutes';
 import pushTokenRoutes from './routes/pushTokenRoutes';
+import transactionRoutes from './routes/transactionRoutes';
 
 dotenv.config();
 
@@ -51,6 +52,7 @@ app.use('/api/grades', gradeRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/justifications', justificationRoutes);
 app.use('/api/push-tokens', pushTokenRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 // Rate Limiting
 

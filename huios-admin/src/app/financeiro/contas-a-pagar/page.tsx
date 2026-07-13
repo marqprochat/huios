@@ -2,12 +2,14 @@ import prisma from '@/lib/prisma';
 import { ContasPagarClient } from './ContasPagarClient';
 
 export default async function ContasPagarPage() {
-  const [transactions, categories, teachers] = await Promise.all([
+  const [transactions, categories, teachers, paymentForms, accounts] = await Promise.all([
     (prisma as any).financialTransaction.findMany({
       where: { type: 'DESPESA' },
       include: {
         category: true,
         teacher: { select: { id: true, name: true } },
+        paymentForm: { select: { id: true, name: true } },
+        account: { select: { id: true, name: true } },
       },
       orderBy: { dueDate: 'asc' },
     }),
@@ -19,7 +21,17 @@ export default async function ContasPagarPage() {
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
+    (prisma as any).paymentForm.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+    (prisma as any).account.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
   ]);
 
-  return <ContasPagarClient transactions={transactions} categories={categories} teachers={teachers as any} />;
+  return <ContasPagarClient transactions={transactions} categories={categories} teachers={teachers as any} paymentForms={paymentForms} accounts={accounts} />;
 }
