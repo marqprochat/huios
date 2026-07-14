@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useFinanceSummary } from './PortalShell';
+import NotificationBell from './NotificationBell';
 
 export default function PortalHeader({ studentName }: { studentName: string }) {
   const router = useRouter();
@@ -39,6 +40,7 @@ export default function PortalHeader({ studentName }: { studentName: string }) {
 
       {/* Right side */}
       <div className="flex items-center gap-3">
+        <NotificationBell />
         <Link href="/portal/financeiro" className="relative p-2 hover:bg-slate-50 rounded-xl transition-colors" title={pending > 0 ? `${pending} cobrança(s) em aberto` : 'Financeiro'}>
           <span className="material-symbols-outlined text-slate-400">notifications</span>
           {pending > 0 && (
