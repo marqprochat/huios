@@ -48,6 +48,7 @@ model Student {
   grades Grade[]
   absenceJustifications AbsenceJustification[]
   financialTransactions FinancialTransaction[]
+  studentNotifications StudentNotification[]
 
   // Vínculos de matrícula
   familyId String?
@@ -492,6 +493,19 @@ model TeacherEvaluationSubmission {
   createdAt     DateTime @default(now())
 
   @@unique([studentId, disciplineId])
+}
+
+model StudentNotification {
+  id           String    @id @default(uuid())
+  studentId    String
+  student      Student   @relation(fields: [studentId], references: [id])
+  disciplineId String?
+  type         String    // "TEACHER_EVALUATION_REMINDER"
+  title        String
+  message      String
+  read         Boolean   @default(false)
+  readAt       DateTime?
+  createdAt    DateTime  @default(now())
 }
 
 // ============================================================
