@@ -45,8 +45,12 @@ async function request<T>(
   }
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: 'Erro desconhecido' }));
-    throw new ApiError('http', error.message ?? `HTTP ${res.status}`, res.status);
+    const body: unknown = await res.json().catch(() => undefined);
+    const message = typeof body === 'object' && body !== null &&
+      'message' in body && typeof body.message === 'string'
+      ? body.message
+      : `HTTP ${res.status}`;
+    throw new ApiError('http', message, res.status);
   }
 
   return res.json() as Promise<T>;

@@ -33,4 +33,22 @@ describe('api errors', () => {
       message: 'Token expirado',
     });
   });
+
+  it.each([
+    ['null JSON', jest.fn().mockResolvedValue(null)],
+    ['empty body', jest.fn().mockRejectedValue(new SyntaxError('Unexpected end of JSON input'))],
+    ['invalid JSON', jest.fn().mockRejectedValue(new SyntaxError('Unexpected token'))],
+  ])('keeps HTTP errors typed for a %s response body', async (_label, json) => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 502,
+      json,
+    } as unknown as Response);
+
+    await expect(api.get('/api/auth/me')).rejects.toMatchObject({
+      kind: 'http',
+      status: 502,
+      message: 'HTTP 502',
+    });
+  });
 });

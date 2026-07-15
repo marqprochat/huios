@@ -17,6 +17,16 @@ const fullUser = {
   student: { id: 'student-1', name: 'Nome Completo' },
 };
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
 describe('auth store', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -65,5 +75,47 @@ describe('auth store', () => {
       user: fullUser,
       isLoading: false,
     });
+  });
+
+  it('does not replace a newer login with a late profile response', async () => {
+    const pendingProfile = deferred<typeof fullUser>();
+    useAuthStore.setState({ token: 'token-a', user: basicUser });
+    jest.mocked(getMe).mockReturnValue(pendingProfile.promise);
+    const hydration = useAuthStore.getState().hydrateProfile();
+    const newerUser = { ...basicUser, id: 'user-2', name: 'Login B' };
+
+    useAuthStore.setState({ token: 'token-b', user: newerUser });
+    pendingProfile.resolve(fullUser);
+    await hydration;
+
+    expect(useAuthStore.getState()).toMatchObject({ token: 'token-b', user: newerUser });
+  });
+
+  it('does not restore a logged-out session from a late profile response', async () => {
+    const pendingProfile = deferred<typeof fullUser>();
+    useAuthStore.setState({ token: 'token-a', user: basicUser });
+    jest.mocked(getMe).mockReturnValue(pendingProfile.promise);
+    const hydration = useAuthStore.getState().hydrateProfile();
+
+    useAuthStore.setState({ token: null, user: null });
+    pendingProfile.resolve(fullUser);
+    await hydration;
+
+    expect(useAuthStore.getState()).toMatchObject({ token: null, user: null });
+  });
+
+  it.each([401, 403])('does not clear a newer login after a stale HTTP %i', async (status) => {
+    const pendingProfile = deferred<typeof fullUser>();
+    useAuthStore.setState({ token: 'token-a', user: basicUser });
+    jest.mocked(getMe).mockReturnValue(pendingProfile.promise);
+    const hydration = useAuthStore.getState().hydrateProfile();
+    const newerUser = { ...basicUser, id: 'user-2', name: 'Login B' };
+
+    useAuthStore.setState({ token: 'token-b', user: newerUser });
+    pendingProfile.reject(new ApiError('http', 'Token antigo inválido', status));
+    await hydration;
+
+    expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
+    expect(useAuthStore.getState()).toMatchObject({ token: 'token-b', user: newerUser });
   });
 });

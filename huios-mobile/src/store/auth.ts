@@ -32,14 +32,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   hydrateProfile: async () => {
-    if (!get().token) return;
+    const hydrationToken = get().token;
+    if (!hydrationToken) return;
 
     try {
       const user = await getMe();
-      set({ user });
+      if (get().token === hydrationToken) {
+        set({ user });
+      }
     } catch (error) {
       if (error instanceof ApiError && error.kind === 'http' &&
-        (error.status === 401 || error.status === 403)) {
+        (error.status === 401 || error.status === 403) &&
+        get().token === hydrationToken) {
         await get().clearAuth();
       }
     }
