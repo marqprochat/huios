@@ -6,6 +6,8 @@ import * as Location from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getAula, checkin, checkout } from '@/services/aulas';
 import { getLessonTitle } from '@/utils/lesson';
+import { ErrorState } from '@/components/ErrorState';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 type CheckinState = 'idle' | 'locating' | 'sending' | 'success' | 'error';
 
@@ -14,7 +16,7 @@ export default function CheckinScreen() {
   const router = useRouter();
   const qc = useQueryClient();
 
-  const { data: lesson, isLoading } = useQuery({
+  const { data: lesson, isLoading, isError, refetch } = useQuery({
     queryKey: ['aula', id],
     queryFn: () => getAula(id),
     enabled: !!id,
@@ -68,10 +70,12 @@ export default function CheckinScreen() {
   if (isLoading) {
     return (
       <View className="flex-1 bg-slate-50 items-center justify-center">
-        <ActivityIndicator size="large" color="#135bec" />
+        <View className="w-full px-6"><LoadingSkeleton count={2} /></View>
       </View>
     );
   }
+
+  if (isError) return <View className="flex-1 justify-center bg-slate-50 px-6"><ErrorState message="Não foi possível carregar a aula." onRetry={refetch} /></View>;
 
   if (!lesson) {
     return (

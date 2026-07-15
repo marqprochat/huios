@@ -289,10 +289,10 @@ describe('portal routes', () => {
     const findMany = vi.spyOn(prisma.discipline, 'findMany');
     findMany.mockResolvedValueOnce([{ id: 'discipline-1' }] as never).mockResolvedValueOnce([{
       id: 'discipline-1', name: 'Discipline', lessons: [
-        { attendances: [{ status: 'ABSENT', justification: null }] },
-        { attendances: [{ status: 'ABSENT', justification: { status: 'PENDING_REVIEW' } }] },
-        { attendances: [{ status: 'ABSENT', justification: { status: 'REJECTED' } }] },
-        { attendances: [{ status: 'PRESENT', justification: null }] }
+        { attendances: [{ id: 'attendance-1', status: 'ABSENT', justification: null }] },
+        { attendances: [{ id: 'attendance-2', status: 'ABSENT', justification: { status: 'PENDING_REVIEW' } }] },
+        { attendances: [{ id: 'attendance-3', status: 'ABSENT', justification: { status: 'REJECTED' } }] },
+        { attendances: [{ id: 'attendance-4', status: 'PRESENT', justification: null }] }
       ]
     }] as never);
 
@@ -300,12 +300,12 @@ describe('portal routes', () => {
 
     expect(response.status).toBe(200);
     expect(response.body[0]).toEqual(expect.objectContaining({
-      totalLessons: 4, absences: 3, status: 'AUTO_FAILED', pendingJustifications: 3
+      totalLessons: 4, absences: 3, status: 'AUTO_FAILED', pendingJustifications: 3, attendanceId: 'attendance-1'
     }));
     expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({
       select: expect.objectContaining({
         lessons: expect.objectContaining({
-          select: { attendances: { where: { studentId: 'student-1' }, select: { status: true, justification: { select: { status: true } } } } }
+          select: { attendances: { where: { studentId: 'student-1' }, select: { id: true, status: true, justification: { select: { status: true } } } } }
         })
       })
     }));

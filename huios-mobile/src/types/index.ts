@@ -93,6 +93,7 @@ export interface AbsenceSummary {
   attendanceRate: number;
   status: 'OK' | 'NEEDS_JUSTIFICATION' | 'AUTO_FAILED';
   pendingJustifications: number;
+  attendanceId?: string;
 }
 
 export interface Notification {

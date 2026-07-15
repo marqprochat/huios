@@ -5,13 +5,15 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getProvaQuestions, submitProva } from '@/services/provas';
+import { ErrorState } from '@/components/ErrorState';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
 export default function ProvaScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
 
-  const { data: questions = [], isLoading } = useQuery({
+  const { data: questions = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['prova-questions', id],
     queryFn: () => getProvaQuestions(id),
     enabled: !!id,
@@ -56,10 +58,12 @@ export default function ProvaScreen() {
   if (isLoading) {
     return (
       <View className="flex-1 bg-slate-50 items-center justify-center">
-        <ActivityIndicator size="large" color="#135bec" />
+        <View className="w-full px-6"><LoadingSkeleton count={3} /></View>
       </View>
     );
   }
+
+  if (isError) return <View className="flex-1 justify-center bg-slate-50 px-6"><ErrorState message="Não foi possível carregar a prova." onRetry={refetch} /></View>;
 
   if (finished) {
     return (

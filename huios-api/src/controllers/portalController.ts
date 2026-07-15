@@ -292,7 +292,7 @@ export const getStudentAttendanceSummary: PortalHandler = async (req, res) => {
         select: {
           attendances: {
             where: { studentId },
-            select: { status: true, justification: { select: { status: true } } }
+            select: { id: true, status: true, justification: { select: { status: true } } }
           }
         }
       }
@@ -315,7 +315,11 @@ export const getStudentAttendanceSummary: PortalHandler = async (req, res) => {
         ? Math.round(((discipline.lessons.length - absences) / discipline.lessons.length) * 10000) / 100
         : 100,
       status: absences >= 3 ? 'AUTO_FAILED' : absences >= 2 ? 'NEEDS_JUSTIFICATION' : 'OK',
-      pendingJustifications
+      pendingJustifications,
+      attendanceId: discipline.lessons.find(lesson => {
+        const attendance = lesson.attendances[0];
+        return attendance?.status === 'ABSENT' && attendance.justification?.status !== 'APPROVED';
+      })?.attendances[0]?.id
     };
   }));
 };
