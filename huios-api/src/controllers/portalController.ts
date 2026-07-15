@@ -3,6 +3,7 @@ import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../services/prisma';
 import { getStudentContext } from '../services/studentContext';
 import fs from 'fs';
+import path from 'path';
 
 type PortalHandler = (req: AuthRequest, res: Response, next: NextFunction) => Promise<unknown>;
 
@@ -37,9 +38,14 @@ async function authorizedLesson(req: AuthRequest) {
 
 async function checkWindow(lesson: { startTime: Date | null; endTime: Date | null }, action: 'checkin' | 'checkout') {
   if (!lesson.startTime || !lesson.endTime) return null;
-  const settings = await prisma.systemSettings.findFirst();
-  const configuredBuffer = (settings as unknown as { checkInBufferMinutes?: number | null } | null)?.checkInBufferMinutes;
-  const bufferMs = (configuredBuffer ?? 30) * 60 * 1000;
+  let bufferMinutes = 30;
+  try {
+    const settings = await prisma.systemSettings.findFirst();
+    bufferMinutes = settings?.checkInBufferMinutes ?? 30;
+  } catch (error) {
+    console.error('Could not read check-in configuration, using default buffer:', error);
+  }
+  const bufferMs = bufferMinutes * 60 * 1000;
   const now = Date.now();
   if (action === 'checkin') {
     if (now < lesson.startTime.getTime() - bufferMs) return 'Check-in ainda não permitido';
@@ -106,54 +112,113 @@ function removeUploadedFile(req: AuthRequest) {
   if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 }
 
-export const submitStudentJustification: PortalHandler = async (req, res) => {
-  const { studentId, disciplineIds } = await context(req);
-  const attendanceId = typeof req.body?.attendanceId === 'string' ? req.body.attendanceId : '';
-  if (!req.file || !attendanceId) {
-    removeUploadedFile(req);
-    return res.status(400).json({ error: 'Arquivo e ID da presença são obrigatórios' });
-  }
-  const attendance = await prisma.attendance.findUnique({
-    where: { id: attendanceId },
-    include: { lesson: { include: { disciplines: { select: { id: true, name: true } } } } }
-  });
-  if (!attendance) {
-    removeUploadedFile(req);
-    return res.status(404).json({ error: 'Presença não encontrada' });
-  }
-  if (attendance.studentId !== studentId) {
-    removeUploadedFile(req);
-    return res.status(403).json({ error: 'Acesso negado' });
-  }
-  if (attendance.status !== 'ABSENT') {
-    removeUploadedFile(req);
-    return res.status(400).json({ error: 'Justificativa só pode ser enviada para faltas' });
-  }
-  const discipline = attendance.lesson.disciplines.find(item => disciplineIds.includes(item.id));
-  if (!discipline) {
-    removeUploadedFile(req);
-    return res.status(403).json({ error: 'Acesso negado' });
-  }
-  const existing = await prisma.absenceJustification.findUnique({ where: { attendanceId } });
-  if (existing) {
-    if (fs.existsSync(existing.filePath)) fs.unlinkSync(existing.filePath);
-    await prisma.absenceJustification.delete({ where: { id: existing.id } });
-  }
-  const justification = await prisma.absenceJustification.create({
-    data: {
-      studentId, attendanceId, disciplineId: discipline.id, fileName: req.file.originalname,
-      filePath: req.file.path, fileSize: req.file.size, mimeType: req.file.mimetype, status: 'PENDING_REVIEW'
-    },
-    include: { student: { select: { id: true, name: true } }, discipline: { select: { id: true, name: true } } }
-  });
-  await prisma.notification.create({
-    data: {
-      type: 'JUSTIFICATION_SUBMITTED', title: 'Justificativa de falta enviada',
-      message: `${justification.student.name} enviou um resumo para justificar a falta na disciplina "${justification.discipline.name}". Aguarda aprovação da diretoria.`,
-      targetRole: 'COORDENADOR', relatedId: justification.id
+const fileContracts: Record<string, { extensions: string[]; signature: (contents: Buffer) => boolean }> = {
+  'application/pdf': { extensions: ['.pdf'], signature: contents => contents.subarray(0, 5).equals(Buffer.from('%PDF-')) },
+  'image/png': {
+    extensions: ['.png'],
+    signature: contents => contents.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+  },
+  'image/jpeg': {
+    extensions: ['.jpg', '.jpeg'], signature: contents => contents.length >= 3
+      && contents[0] === 0xff && contents[1] === 0xd8 && contents[2] === 0xff
+  },
+  'application/msword': {
+    extensions: ['.doc'],
+    signature: contents => contents.subarray(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]))
+  },
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
+    extensions: ['.docx'], signature: contents => contents.length >= 4
+      && contents[0] === 0x50 && contents[1] === 0x4b && contents[2] === 0x03 && contents[3] === 0x04
+  },
+  'text/plain': {
+    extensions: ['.txt'], signature: contents => {
+      if (contents.includes(0)) return false;
+      try {
+        new TextDecoder('utf-8', { fatal: true }).decode(contents);
+        return true;
+      } catch {
+        return false;
+      }
     }
-  });
-  return res.status(201).json(justification);
+  }
+};
+
+function uploadedFileHasValidContent(file: Express.Multer.File): boolean {
+  const contract = fileContracts[file.mimetype];
+  if (!contract || !contract.extensions.includes(path.extname(file.originalname).toLowerCase())) return false;
+  return contract.signature(fs.readFileSync(file.path));
+}
+
+export const submitStudentJustification: PortalHandler = async (req, res) => {
+  try {
+    const attendanceId = typeof req.body?.attendanceId === 'string' ? req.body.attendanceId : '';
+    if (!req.file || !attendanceId) {
+      removeUploadedFile(req);
+      return res.status(400).json({ error: 'Arquivo e ID da presença são obrigatórios' });
+    }
+    if (!uploadedFileHasValidContent(req.file)) {
+      removeUploadedFile(req);
+      return res.status(400).json({ error: 'Conteúdo do arquivo inválido' });
+    }
+    const { studentId, disciplineIds } = await context(req);
+    const attendance = await prisma.attendance.findUnique({
+      where: { id: attendanceId },
+      include: { lesson: { include: { disciplines: { select: { id: true, name: true } } } } }
+    });
+    if (!attendance) {
+      removeUploadedFile(req);
+      return res.status(404).json({ error: 'Presença não encontrada' });
+    }
+    if (attendance.studentId !== studentId) {
+      removeUploadedFile(req);
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+    if (attendance.status !== 'ABSENT') {
+      removeUploadedFile(req);
+      return res.status(400).json({ error: 'Justificativa só pode ser enviada para faltas' });
+    }
+    const discipline = attendance.lesson.disciplines.find(item => disciplineIds.includes(item.id));
+    if (!discipline) {
+      removeUploadedFile(req);
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+    const fileData = {
+      studentId, attendanceId, disciplineId: discipline.id, fileName: req.file.originalname,
+      filePath: req.file.path, fileSize: req.file.size, mimeType: req.file.mimetype, status: 'PENDING_REVIEW' as const,
+      reviewedById: null, reviewedAt: null, reviewNotes: null
+    };
+    const result = await prisma.$transaction(async tx => {
+      const existing = await tx.absenceJustification.findUnique({ where: { attendanceId } });
+      const justification = existing
+        ? await tx.absenceJustification.update({
+          where: { id: existing.id }, data: fileData,
+          include: { student: { select: { id: true, name: true } }, discipline: { select: { id: true, name: true } } }
+        })
+        : await tx.absenceJustification.create({
+          data: fileData,
+          include: { student: { select: { id: true, name: true } }, discipline: { select: { id: true, name: true } } }
+        });
+      await tx.notification.create({
+        data: {
+          type: 'JUSTIFICATION_SUBMITTED', title: 'Justificativa de falta enviada',
+          message: `${justification.student.name} enviou um resumo para justificar a falta na disciplina "${justification.discipline.name}". Aguarda aprovação da diretoria.`,
+          targetRole: 'COORDENADOR', relatedId: justification.id
+        }
+      });
+      return { justification, previousFilePath: existing?.filePath };
+    }, { isolationLevel: 'Serializable' });
+    if (result.previousFilePath && result.previousFilePath !== req.file.path && fs.existsSync(result.previousFilePath)) {
+      try {
+        fs.unlinkSync(result.previousFilePath);
+      } catch (error) {
+        console.error('Could not remove replaced justification file:', error);
+      }
+    }
+    return res.status(201).json(result.justification);
+  } catch (error) {
+    removeUploadedFile(req);
+    throw error;
+  }
 };
 
 export const listStudentLessons: PortalHandler = async (req, res) => {

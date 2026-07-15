@@ -444,6 +444,8 @@ model Grade {
 
 model SystemSettings {
   id String @id @default(uuid())
+
+  checkInBufferMinutes Int @default(30)
   
   // Localização padrão da instituição
   institutionName String @default("Huios Seminário Teológico")

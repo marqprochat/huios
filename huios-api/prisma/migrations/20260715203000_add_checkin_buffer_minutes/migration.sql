@@ -1,0 +1,2 @@
+ALTER TABLE "SystemSettings"
+ADD COLUMN "checkInBufferMinutes" INTEGER NOT NULL DEFAULT 30;
