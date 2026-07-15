@@ -19,4 +19,15 @@ describe('LessonCard', () => {
 
     expect(getByText(lesson.title).props.numberOfLines).toBeUndefined();
   });
+
+  it('formats the lesson civil date in America/Sao_Paulo', () => {
+    const dateSpy = jest.spyOn(Date.prototype, 'toLocaleDateString').mockReturnValue('15/07/2026');
+    render(<LessonCard lesson={{
+      id: 'lesson-timezone', title: 'Aula noturna', startTime: '2026-07-16T01:30:00.000Z', endTime: null,
+      date: '2026-07-16T01:30:00.000Z',
+    }} />);
+
+    expect(dateSpy).toHaveBeenCalledWith('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    dateSpy.mockRestore();
+  });
 });

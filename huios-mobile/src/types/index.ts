@@ -32,8 +32,8 @@ export interface Lesson {
   id: string;
   title: string;
   date: string;
-  startTime: string;
-  endTime: string;
+  startTime: string | null;
+  endTime: string | null;
   locationName?: string;
   latitude?: number;
   longitude?: number;

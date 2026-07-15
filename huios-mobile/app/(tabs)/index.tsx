@@ -28,7 +28,8 @@ export function getSaoPauloDateKey(date: Date): string {
   return `${value('year')}-${value('month')}-${value('day')}`;
 }
 
-export function formatLessonTime(value: string): string {
+export function formatLessonTime(value: string | null): string {
+  if (!value) return 'Horário não informado';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat('pt-BR', {
@@ -37,12 +38,18 @@ export function formatLessonTime(value: string): string {
 }
 
 export function sortLessonsByStartTime(lessons: Lesson[]): Lesson[] {
-  return [...lessons].sort((left, right) => {
-    const leftTime = new Date(left.startTime).getTime();
-    const rightTime = new Date(right.startTime).getTime();
-    if (!Number.isNaN(leftTime) && !Number.isNaN(rightTime)) return leftTime - rightTime;
-    return left.startTime.localeCompare(right.startTime);
-  });
+  return lessons
+    .map((lesson, index) => ({ lesson, index }))
+    .sort((left, right) => {
+      const leftTime = left.lesson.startTime ? new Date(left.lesson.startTime).getTime() : Number.NaN;
+      const rightTime = right.lesson.startTime ? new Date(right.lesson.startTime).getTime() : Number.NaN;
+      const leftValid = !Number.isNaN(leftTime);
+      const rightValid = !Number.isNaN(rightTime);
+      if (leftValid && rightValid && leftTime !== rightTime) return leftTime - rightTime;
+      if (leftValid !== rightValid) return leftValid ? -1 : 1;
+      return left.index - right.index;
+    })
+    .map(({ lesson }) => lesson);
 }
 
 export const shouldStackCards = (screenWidth: number): boolean =>
@@ -150,7 +157,7 @@ export default function DashboardScreen() {
               value={attendance.value}
               status={attendance.status}
               statusLabel={attendance.statusLabel}
-              supportingText="Mínimo recomendado: 75%"
+              supportingText={attendance.status === 'neutral' ? undefined : 'Mínimo recomendado: 75%'}
             />
             <MetricCard
               icon="assignment"

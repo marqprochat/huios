@@ -41,8 +41,8 @@ const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 const queryData = {
   aulas: [
-    { id: 'late', title: 'Arquitetura', date: `${today}T12:00:00.000Z`, startTime: '19:00', endTime: '20:00' },
-    { id: 'early', title: 'Algoritmos', date: `${today}T12:00:00.000Z`, startTime: '08:00', endTime: '09:00', attendance: { id: 'at1', status: 'PENDING' } },
+    { id: 'late', title: 'Arquitetura', date: `${today}T12:00:00.000Z`, startTime: `${today}T22:00:00.000Z`, endTime: `${today}T23:00:00.000Z` },
+    { id: 'early', title: 'Algoritmos', date: `${today}T12:00:00.000Z`, startTime: `${today}T11:00:00.000Z`, endTime: `${today}T12:00:00.000Z`, attendance: { id: 'at1', status: 'PENDING' } },
   ],
   boletim: [],
   presenca: [{ disciplineId: 'd1', disciplineName: 'Algoritmos', totalLessons: 20, absences: 2, attendanceRate: 90, status: 'OK', pendingJustifications: 0 }],
@@ -123,6 +123,16 @@ describe('Home data normalization', () => {
     expect(formatLessonTime(early.startTime)).toBe('08:00');
   });
 
+  it('shows a clear placeholder and stably places lessons without a time last', () => {
+    const firstWithoutTime = { ...queryData.aulas[0], id: 'no-time-1', startTime: null, endTime: null };
+    const timed = { ...queryData.aulas[1], id: 'timed', startTime: '2026-07-15T11:00:00.000Z' };
+    const secondWithoutTime = { ...queryData.aulas[0], id: 'no-time-2', startTime: null, endTime: null };
+
+    expect(formatLessonTime(null)).toBe('Horário não informado');
+    expect(sortLessonsByStartTime([firstWithoutTime, timed, secondWithoutTime]).map((lesson) => lesson.id))
+      .toEqual(['timed', 'no-time-1', 'no-time-2']);
+  });
+
   it('stacks cards while their real minimum width would not fit', () => {
     expect(shouldStackCards(350)).toBe(true);
     expect(shouldStackCards(364)).toBe(false);
@@ -130,6 +140,13 @@ describe('Home data normalization', () => {
 
   it('reports attendance as unavailable when there are no recorded lessons', () => {
     expect(getAttendanceMetric([])).toEqual({ value: '—', status: 'neutral', statusLabel: 'Sem dados' });
+  });
+
+  it('does not recommend a minimum attendance rate before attendance exists', () => {
+    mockQueries({ presenca: { data: [] } });
+    const { getByText, queryByText } = render(<DashboardScreen />);
+    expect(getByText('Sem dados')).toBeTruthy();
+    expect(queryByText('Mínimo recomendado: 75%')).toBeNull();
   });
 
   it('does not present an inactive enrollment as the current course', () => {
