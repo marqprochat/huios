@@ -1,6 +1,14 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { useQuery } from '@tanstack/react-query';
-import DashboardScreen from './index';
+import DashboardScreen, {
+  countActionableExams,
+  formatLessonTime,
+  getActiveEnrollmentLabel,
+  getAttendanceMetric,
+  getSaoPauloDateKey,
+  shouldStackCards,
+  sortLessonsByStartTime,
+} from './index';
 
 const mockPush = jest.fn();
 const refetchMocks = {
@@ -29,6 +37,8 @@ jest.mock('@/store/auth', () => ({
 }));
 
 const today = new Date().toISOString().split('T')[0];
+const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 const queryData = {
   aulas: [
     { id: 'late', title: 'Arquitetura', date: `${today}T12:00:00.000Z`, startTime: '19:00', endTime: '20:00' },
@@ -36,7 +46,7 @@ const queryData = {
   ],
   boletim: [],
   presenca: [{ disciplineId: 'd1', disciplineName: 'Algoritmos', totalLessons: 20, absences: 2, attendanceRate: 90, status: 'OK', pendingJustifications: 0 }],
-  provas: [{ id: 'p1', title: 'Prova 1' }],
+  provas: [{ id: 'p1', title: 'Prova 1', startDate: oneHourAgo, deadline: oneHourFromNow }],
 };
 
 function mockQueries(overrides: Record<string, object> = {}) {
@@ -97,5 +107,45 @@ describe('DashboardScreen', () => {
     expect(error.getByText('Não foi possível carregar as aulas de hoje.')).toBeTruthy();
     fireEvent.press(error.getByLabelText('Tentar novamente'));
     expect(refetchMocks.aulas).toHaveBeenCalled();
+  });
+});
+
+describe('Home data normalization', () => {
+  it('uses the civil date in America/Sao_Paulo across the UTC day boundary', () => {
+    expect(getSaoPauloDateKey(new Date('2026-07-16T01:30:00.000Z'))).toBe('2026-07-15');
+    expect(getSaoPauloDateKey(new Date('2026-07-16T03:00:00.000Z'))).toBe('2026-07-16');
+  });
+
+  it('formats and orders real ISO lesson timestamps', () => {
+    const late = { ...queryData.aulas[0], startTime: '2026-07-15T22:00:00.000Z', endTime: '2026-07-15T23:00:00.000Z' };
+    const early = { ...queryData.aulas[1], startTime: '2026-07-15T11:00:00.000Z', endTime: '2026-07-15T12:00:00.000Z' };
+    expect(sortLessonsByStartTime([late, early]).map((lesson) => lesson.id)).toEqual(['early', 'late']);
+    expect(formatLessonTime(early.startTime)).toBe('08:00');
+  });
+
+  it('stacks cards while their real minimum width would not fit', () => {
+    expect(shouldStackCards(350)).toBe(true);
+    expect(shouldStackCards(364)).toBe(false);
+  });
+
+  it('reports attendance as unavailable when there are no recorded lessons', () => {
+    expect(getAttendanceMetric([])).toEqual({ value: '—', status: 'neutral', statusLabel: 'Sem dados' });
+  });
+
+  it('does not present an inactive enrollment as the current course', () => {
+    expect(getActiveEnrollmentLabel([{
+      id: 'inactive', status: 'TRANCADO',
+      courseClass: { id: 't1', name: 'Turma antiga', course: { id: 'c1', name: 'Curso antigo' } },
+    }])).toBe('Matrícula ativa não encontrada');
+  });
+
+  it('counts only exams currently inside their actionable window', () => {
+    const now = new Date('2026-07-15T15:00:00.000Z');
+    expect(countActionableExams([
+      { id: 'active', title: 'Ativa', startDate: '2026-07-15T14:00:00.000Z', deadline: '2026-07-15T16:00:00.000Z' },
+      { id: 'future', title: 'Futura', startDate: '2026-07-15T16:00:00.000Z', deadline: '2026-07-15T17:00:00.000Z' },
+      { id: 'expired', title: 'Expirada', startDate: '2026-07-15T12:00:00.000Z', deadline: '2026-07-15T14:00:00.000Z' },
+      { id: 'done', title: 'Feita', startDate: '2026-07-15T14:00:00.000Z', deadline: '2026-07-15T16:00:00.000Z', submission: { id: 's', submittedAt: '2026-07-15T14:30:00.000Z' } },
+    ], now)).toBe(1);
   });
 });

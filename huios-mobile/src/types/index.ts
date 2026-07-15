@@ -53,6 +53,7 @@ export interface Attendance {
 export interface Exam {
   id: string;
   title: string;
+  startDate?: string;
   deadline?: string;
   durationMinutes?: number;
   discipline?: { id: string; name: string };

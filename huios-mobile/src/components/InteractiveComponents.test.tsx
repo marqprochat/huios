@@ -3,6 +3,7 @@ jest.mock('@expo/vector-icons/MaterialIcons', () => 'MaterialIcon');
 import { MenuRow } from './MenuRow';
 import { MetricCard } from './MetricCard';
 import type { MetricCardProps } from './MetricCard';
+import { AppIcon } from './AppIcon';
 
 // @ts-expect-error non-neutral states must include a visible semantic label
 const invalidMetricProps: MetricCardProps = { icon: 'warning', label: 'Faltas', value: '8', status: 'danger' };
@@ -50,5 +51,10 @@ describe('shared interactive components', () => {
 
     expect(getByText('Próximas provas')).toBeTruthy();
     expect(queryByText('Dentro da meta')).toBeNull();
+  });
+
+  it('allows decorative icons to stay out of the accessibility tree', () => {
+    const { queryByRole } = render(<AppIcon name="chevron-right" />);
+    expect(queryByRole('image')).toBeNull();
   });
 });
