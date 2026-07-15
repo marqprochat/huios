@@ -13,6 +13,7 @@ import settingsRoutes from './routes/settingsRoutes';
 import justificationRoutes from './routes/justificationRoutes';
 import pushTokenRoutes from './routes/pushTokenRoutes';
 import transactionRoutes from './routes/transactionRoutes';
+import portalRoutes from './routes/portalRoutes';
 
 export const app: Express = express();
 
@@ -49,6 +50,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/justifications', justificationRoutes);
 app.use('/api/push-tokens', pushTokenRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/portal', portalRoutes);
 
 // Rate Limiting
 const limiter = rateLimit({
