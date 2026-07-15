@@ -74,6 +74,32 @@ describe('portal routes', () => {
     }));
   });
 
+  it('calculates attendance thresholds and pending justifications from actual justification state', async () => {
+    const findMany = vi.spyOn(prisma.discipline, 'findMany');
+    findMany.mockResolvedValueOnce([{ id: 'discipline-1' }] as never).mockResolvedValueOnce([{
+      id: 'discipline-1', name: 'Discipline', lessons: [
+        { attendances: [{ status: 'ABSENT', justification: null }] },
+        { attendances: [{ status: 'ABSENT', justification: { status: 'PENDING_REVIEW' } }] },
+        { attendances: [{ status: 'ABSENT', justification: { status: 'REJECTED' } }] },
+        { attendances: [{ status: 'PRESENT', justification: null }] }
+      ]
+    }] as never);
+
+    const response = await request(app).get('/api/portal/presenca/pendencias').set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body[0]).toEqual(expect.objectContaining({
+      totalLessons: 4, absences: 3, status: 'AUTO_FAILED', pendingJustifications: 3
+    }));
+    expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({
+      select: expect.objectContaining({
+        lessons: expect.objectContaining({
+          select: { attendances: { where: { studentId: 'student-1' }, select: { status: true, justification: { select: { status: true } } } } }
+        })
+      })
+    }));
+  });
+
   it('lists only published exams from the authenticated student disciplines', async () => {
     const findMany = vi.spyOn(prisma.exam, 'findMany').mockResolvedValue([]);
     const response = await request(app).get('/api/portal/provas').set('Authorization', `Bearer ${token}`);
@@ -96,7 +122,6 @@ describe('portal routes', () => {
   });
 
   it('submits an authorized exam using the JWT-derived student id', async () => {
-    vi.spyOn(prisma.examSubmission, 'findUnique').mockResolvedValue(null);
     vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({
       id: 'exam-1', title: 'Exam', disciplineId: 'discipline-1',
       startDate: new Date(Date.now() - 1000), endDate: new Date(Date.now() + 1000),
@@ -104,10 +129,18 @@ describe('portal routes', () => {
         { id: 'alt-1', isCorrect: true, letter: 'A', text: 'Yes' }
       ] }]
     } as never);
-    const createSubmission = vi.spyOn(prisma.examSubmission, 'create').mockResolvedValue({ id: 'submission-1' } as never);
-    vi.spyOn(prisma.studentAnswer, 'upsert').mockResolvedValue({} as never);
-    vi.spyOn(prisma.examSubmission, 'update').mockResolvedValue({} as never);
-    vi.spyOn(prisma.grade, 'create').mockResolvedValue({} as never);
+    const tx = {
+      examSubmission: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue({ id: 'submission-1' }),
+        update: vi.fn().mockResolvedValue({})
+      },
+      studentAnswer: { upsert: vi.fn().mockResolvedValue({}) },
+      grade: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn().mockResolvedValue({}), update: vi.fn() }
+    };
+    const transaction = vi.spyOn(prisma, '$transaction').mockImplementation((async (
+      callback: (client: typeof tx) => Promise<unknown>
+    ) => callback(tx)) as never);
 
     const response = await request(app)
       .post('/api/portal/provas/exam-1/submit')
@@ -115,7 +148,83 @@ describe('portal routes', () => {
       .send({ studentId: 'attacker-student', answers: { 'question-1': 'alt-1' } });
 
     expect(response.status).toBe(200);
-    expect(createSubmission).toHaveBeenCalledWith({ data: expect.objectContaining({ studentId: 'student-1' }) });
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(tx.examSubmission.create).toHaveBeenCalledWith({ data: expect.objectContaining({ studentId: 'student-1' }) });
+    expect(tx.grade.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects duplicate answers before starting a transaction', async () => {
+    vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({
+      id: 'exam-1', title: 'Exam', disciplineId: 'discipline-1',
+      startDate: new Date(Date.now() - 1000), endDate: new Date(Date.now() + 1000),
+      questions: [{ id: 'question-1', weight: 1, statement: 'Q', alternatives: [{ id: 'alt-1', isCorrect: true }] }]
+    } as never);
+    const transaction = vi.spyOn(prisma, '$transaction');
+
+    const response = await request(app).post('/api/portal/provas/exam-1/submit')
+      .set('Authorization', `Bearer ${token}`).send({ answers: [
+        { questionId: 'question-1', alternativeId: 'alt-1' },
+        { questionId: 'question-1', alternativeId: 'alt-1' }
+      ] });
+
+    expect(response.status).toBe(400);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    null,
+    [null],
+    [{ questionId: 1, alternativeId: 'alt-1' }],
+    [{ questionId: 'question-1' }]
+  ])('rejects malformed answers before starting a transaction: %j', async (answers) => {
+    vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({
+      id: 'exam-1', title: 'Exam', disciplineId: 'discipline-1',
+      startDate: new Date(Date.now() - 1000), endDate: new Date(Date.now() + 1000), questions: []
+    } as never);
+    const transaction = vi.spyOn(prisma, '$transaction');
+    const response = await request(app).post('/api/portal/provas/exam-1/submit')
+      .set('Authorization', `Bearer ${token}`).send({ answers });
+    expect(response.status).toBe(400);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects questions and alternatives that do not belong to the exam', async () => {
+    vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({
+      id: 'exam-1', title: 'Exam', disciplineId: 'discipline-1',
+      startDate: new Date(Date.now() - 1000), endDate: new Date(Date.now() + 1000),
+      questions: [{ id: 'question-1', weight: 1, statement: 'Q', alternatives: [{ id: 'alt-1', isCorrect: true }] }]
+    } as never);
+    const transaction = vi.spyOn(prisma, '$transaction');
+    for (const answers of [
+      [{ questionId: 'question-2', alternativeId: 'alt-1' }],
+      [{ questionId: 'question-1', alternativeId: 'alt-other-question' }]
+    ]) {
+      const response = await request(app).post('/api/portal/provas/exam-1/submit')
+        .set('Authorization', `Bearer ${token}`).send({ answers });
+      expect(response.status).toBe(400);
+    }
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it('keeps grade persistence idempotent inside the submission transaction', async () => {
+    vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({
+      id: 'exam-1', title: 'Exam', disciplineId: 'discipline-1',
+      startDate: new Date(Date.now() - 1000), endDate: new Date(Date.now() + 1000), questions: []
+    } as never);
+    const tx = {
+      examSubmission: { findUnique: vi.fn().mockResolvedValue({ id: 'submission-1', submittedAt: null }), update: vi.fn() },
+      studentAnswer: { upsert: vi.fn() },
+      grade: { findFirst: vi.fn().mockResolvedValue({ id: 'grade-1' }), update: vi.fn(), create: vi.fn() }
+    };
+    vi.spyOn(prisma, '$transaction').mockImplementation((async (
+      callback: (client: typeof tx) => Promise<unknown>
+    ) => callback(tx)) as never);
+    const response = await request(app).post('/api/portal/provas/exam-1/submit')
+      .set('Authorization', `Bearer ${token}`).send({ answers: [] });
+    expect(response.status).toBe(200);
+    expect(tx.grade.findFirst).toHaveBeenCalledWith({ where: { studentId: 'student-1', examId: 'exam-1', type: 'EXAM' }, select: { id: true } });
+    expect(tx.grade.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'grade-1' } }));
+    expect(tx.grade.create).not.toHaveBeenCalled();
   });
 
   it('returns a controlled 500 when an async portal query fails', async () => {

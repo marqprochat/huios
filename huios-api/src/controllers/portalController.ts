@@ -77,14 +77,23 @@ export const getStudentAttendanceSummary: PortalHandler = async (req, res) => {
       name: true,
       lessons: {
         where: { date: { lt: new Date() } },
-        select: { attendances: { where: { studentId }, select: { status: true } } }
+        select: {
+          attendances: {
+            where: { studentId },
+            select: { status: true, justification: { select: { status: true } } }
+          }
+        }
       }
     }
   });
 
   return res.json(disciplines.map(discipline => {
     const absences = discipline.lessons.filter(lesson => lesson.attendances[0]?.status === 'ABSENT').length;
-    const pendingJustifications = absences >= 2 && absences < 3 ? absences : 0;
+    const pendingJustifications = discipline.lessons.filter(lesson => {
+      const attendance = lesson.attendances[0];
+      return attendance?.status === 'ABSENT'
+        && attendance.justification?.status !== 'APPROVED';
+    }).length;
     return {
       disciplineId: discipline.id,
       disciplineName: discipline.name,
@@ -132,9 +141,6 @@ export const listStudentExamQuestions: PortalHandler = async (req, res) => {
 export const submitStudentExam: PortalHandler = async (req, res) => {
   const { studentId, disciplineIds } = await context(req);
   const examId = req.params.id;
-  const existing = await prisma.examSubmission.findUnique({ where: { examId_studentId: { examId, studentId } } });
-  if (existing?.submittedAt) return res.status(400).json({ message: 'Prova já foi submetida' });
-
   const exam = await prisma.exam.findFirst({
     where: { id: examId, disciplineId: { in: disciplineIds }, isPublished: true },
     include: { questions: { include: { alternatives: true } } }
@@ -144,18 +150,33 @@ export const submitStudentExam: PortalHandler = async (req, res) => {
   if (now < exam.startDate || now > exam.endDate) return res.status(400).json({ message: 'Prova fora do período' });
 
   const rawAnswers = req.body?.answers;
-  const answers: Array<{ questionId: string; alternativeId: string }> = Array.isArray(rawAnswers)
-    ? rawAnswers
-    : Object.entries(rawAnswers ?? {}).map(([questionId, alternativeId]) => ({ questionId, alternativeId: String(alternativeId) }));
   if (!rawAnswers || typeof rawAnswers !== 'object') return res.status(400).json({ message: 'Respostas inválidas' });
+  const answers: unknown[] = Array.isArray(rawAnswers)
+    ? rawAnswers
+    : Object.entries(rawAnswers).map(([questionId, alternativeId]) => ({ questionId, alternativeId }));
+  const validShape = answers.every(answer => {
+    if (!answer || typeof answer !== 'object') return false;
+    const item = answer as Record<string, unknown>;
+    return typeof item.questionId === 'string' && item.questionId.length > 0
+      && typeof item.alternativeId === 'string' && item.alternativeId.length > 0;
+  });
+  if (!validShape) return res.status(400).json({ message: 'Respostas inválidas' });
+  const normalizedAnswers = answers as Array<{ questionId: string; alternativeId: string }>;
+  if (new Set(normalizedAnswers.map(answer => answer.questionId)).size !== normalizedAnswers.length) {
+    return res.status(400).json({ message: 'Questão respondida mais de uma vez' });
+  }
+  const answerReferencesAreValid = normalizedAnswers.every(answer => {
+    const question = exam.questions.find(item => item.id === answer.questionId);
+    return question?.alternatives.some(item => item.id === answer.alternativeId) ?? false;
+  });
+  if (!answerReferencesAreValid) return res.status(400).json({ message: 'Resposta não pertence à prova' });
 
-  const submission = existing ?? await prisma.examSubmission.create({ data: { examId, studentId, startedAt: now } });
   let totalScore = 0;
   const maxScore = exam.questions.reduce((sum, question) => sum + question.weight, 0);
   const questionResults = [];
-  for (const answer of answers) {
+  for (const answer of normalizedAnswers) {
     const question = exam.questions.find(item => item.id === answer.questionId);
-    if (!question) continue;
+    if (!question) continue; // validated above
     const selected = question.alternatives.find(item => item.id === answer.alternativeId);
     const correct = question.alternatives.find(item => item.isCorrect);
     const isCorrect = selected?.isCorrect ?? false;
@@ -166,17 +187,38 @@ export const submitStudentExam: PortalHandler = async (req, res) => {
       chosenLetter: selected?.letter ?? '—', chosenText: selected?.text ?? '—',
       correctLetter: correct?.letter ?? '—', correctText: correct?.text ?? '—'
     });
-    await prisma.studentAnswer.upsert({
-      where: { submissionId_questionId: { submissionId: submission.id, questionId: question.id } },
-      create: { submissionId: submission.id, questionId: question.id, alternativeId: answer.alternativeId, isCorrect, points },
-      update: { alternativeId: answer.alternativeId, isCorrect, points }
-    });
   }
 
   const gradeScore = maxScore ? Math.round((totalScore / maxScore) * 100) / 10 : 0;
-  await prisma.examSubmission.update({ where: { id: submission.id }, data: { submittedAt: now, score: totalScore, maxScore } });
-  await prisma.grade.create({
-    data: { studentId, disciplineId: exam.disciplineId, type: 'EXAM', examId, score: gradeScore, weight: 1, title: exam.title, createdById: req.user.id }
+  const transactionResult = await prisma.$transaction(async tx => {
+    const existing = await tx.examSubmission.findUnique({ where: { examId_studentId: { examId, studentId } } });
+    if (existing?.submittedAt) return { alreadySubmitted: true } as const;
+    const submission = existing ?? await tx.examSubmission.create({ data: { examId, studentId, startedAt: now } });
+
+    for (const answer of normalizedAnswers) {
+      const question = exam.questions.find(item => item.id === answer.questionId)!;
+      const selected = question.alternatives.find(item => item.id === answer.alternativeId)!;
+      const isCorrect = selected.isCorrect;
+      const points = isCorrect ? question.weight : 0;
+      await tx.studentAnswer.upsert({
+        where: { submissionId_questionId: { submissionId: submission.id, questionId: question.id } },
+        create: { submissionId: submission.id, questionId: question.id, alternativeId: answer.alternativeId, isCorrect, points },
+        update: { alternativeId: answer.alternativeId, isCorrect, points }
+      });
+    }
+
+    await tx.examSubmission.update({ where: { id: submission.id }, data: { submittedAt: now, score: totalScore, maxScore } });
+    const gradeData = {
+      studentId, disciplineId: exam.disciplineId, type: 'EXAM' as const, examId,
+      score: gradeScore, weight: 1, title: exam.title, createdById: req.user.id
+    };
+    const existingGrade = await tx.grade.findFirst({
+      where: { studentId, examId, type: 'EXAM' }, select: { id: true }
+    });
+    if (existingGrade) await tx.grade.update({ where: { id: existingGrade.id }, data: gradeData });
+    else await tx.grade.create({ data: gradeData });
+    return { alreadySubmitted: false } as const;
   });
+  if (transactionResult.alreadySubmitted) return res.status(400).json({ message: 'Prova já foi submetida' });
   return res.json({ success: true, score: totalScore, maxScore, gradeScore, questions: questionResults });
 };
