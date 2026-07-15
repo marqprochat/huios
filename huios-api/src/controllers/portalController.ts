@@ -212,11 +212,11 @@ export const submitStudentExam: PortalHandler = async (req, res) => {
       studentId, disciplineId: exam.disciplineId, type: 'EXAM' as const, examId,
       score: gradeScore, weight: 1, title: exam.title, createdById: req.user.id
     };
-    const existingGrade = await tx.grade.findFirst({
-      where: { studentId, examId, type: 'EXAM' }, select: { id: true }
+    await tx.grade.upsert({
+      where: { studentId_examId: { studentId, examId } },
+      create: gradeData,
+      update: gradeData
     });
-    if (existingGrade) await tx.grade.update({ where: { id: existingGrade.id }, data: gradeData });
-    else await tx.grade.create({ data: gradeData });
     return { alreadySubmitted: false } as const;
   });
   if (transactionResult.alreadySubmitted) return res.status(400).json({ message: 'Prova já foi submetida' });

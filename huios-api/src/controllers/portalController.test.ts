@@ -136,7 +136,7 @@ describe('portal routes', () => {
         update: vi.fn().mockResolvedValue({})
       },
       studentAnswer: { upsert: vi.fn().mockResolvedValue({}) },
-      grade: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn().mockResolvedValue({}), update: vi.fn() }
+      grade: { upsert: vi.fn().mockResolvedValue({}) }
     };
     const transaction = vi.spyOn(prisma, '$transaction').mockImplementation((async (
       callback: (client: typeof tx) => Promise<unknown>
@@ -150,7 +150,7 @@ describe('portal routes', () => {
     expect(response.status).toBe(200);
     expect(transaction).toHaveBeenCalledTimes(1);
     expect(tx.examSubmission.create).toHaveBeenCalledWith({ data: expect.objectContaining({ studentId: 'student-1' }) });
-    expect(tx.grade.create).toHaveBeenCalledTimes(1);
+    expect(tx.grade.upsert).toHaveBeenCalledTimes(1);
   });
 
   it('rejects duplicate answers before starting a transaction', async () => {
@@ -206,7 +206,7 @@ describe('portal routes', () => {
     expect(transaction).not.toHaveBeenCalled();
   });
 
-  it('keeps grade persistence idempotent inside the submission transaction', async () => {
+  it('uses the exam-grade composite key to upsert exactly once inside the transaction', async () => {
     vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({
       id: 'exam-1', title: 'Exam', disciplineId: 'discipline-1',
       startDate: new Date(Date.now() - 1000), endDate: new Date(Date.now() + 1000), questions: []
@@ -214,7 +214,7 @@ describe('portal routes', () => {
     const tx = {
       examSubmission: { findUnique: vi.fn().mockResolvedValue({ id: 'submission-1', submittedAt: null }), update: vi.fn() },
       studentAnswer: { upsert: vi.fn() },
-      grade: { findFirst: vi.fn().mockResolvedValue({ id: 'grade-1' }), update: vi.fn(), create: vi.fn() }
+      grade: { upsert: vi.fn() }
     };
     vi.spyOn(prisma, '$transaction').mockImplementation((async (
       callback: (client: typeof tx) => Promise<unknown>
@@ -222,9 +222,40 @@ describe('portal routes', () => {
     const response = await request(app).post('/api/portal/provas/exam-1/submit')
       .set('Authorization', `Bearer ${token}`).send({ answers: [] });
     expect(response.status).toBe(200);
-    expect(tx.grade.findFirst).toHaveBeenCalledWith({ where: { studentId: 'student-1', examId: 'exam-1', type: 'EXAM' }, select: { id: true } });
-    expect(tx.grade.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'grade-1' } }));
-    expect(tx.grade.create).not.toHaveBeenCalled();
+    expect(tx.grade.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { studentId_examId: { studentId: 'student-1', examId: 'exam-1' } },
+      create: expect.objectContaining({ studentId: 'student-1', examId: 'exam-1' }),
+      update: expect.objectContaining({ score: 0 })
+    }));
+    expect(tx.grade.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops before grade persistence when submission finalization fails inside the transaction', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({
+      id: 'exam-1', title: 'Exam', disciplineId: 'discipline-1',
+      startDate: new Date(Date.now() - 1000), endDate: new Date(Date.now() + 1000), questions: []
+    } as never);
+    const tx = {
+      examSubmission: {
+        findUnique: vi.fn().mockResolvedValue({ id: 'submission-1', submittedAt: null }),
+        update: vi.fn().mockRejectedValue(new Error('finalization failed'))
+      },
+      studentAnswer: { upsert: vi.fn() },
+      grade: { upsert: vi.fn() }
+    };
+    const transaction = vi.spyOn(prisma, '$transaction').mockImplementation((async (
+      callback: (client: typeof tx) => Promise<unknown>
+    ) => callback(tx)) as never);
+
+    const response = await request(app).post('/api/portal/provas/exam-1/submit')
+      .set('Authorization', `Bearer ${token}`).send({ answers: [] });
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ message: 'Erro interno do servidor' });
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(tx.examSubmission.update).toHaveBeenCalledTimes(1);
+    expect(tx.grade.upsert).not.toHaveBeenCalled();
   });
 
   it('returns a controlled 500 when an async portal query fails', async () => {

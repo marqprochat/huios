@@ -439,6 +439,7 @@ model Grade {
   updatedAt DateTime @updatedAt
 
   @@index([studentId, disciplineId])
+  @@unique([studentId, examId])
 }
 
 model SystemSettings {
