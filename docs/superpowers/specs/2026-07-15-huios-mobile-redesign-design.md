@@ -58,7 +58,9 @@ As telas de frequência e perfil deixarão de ser abas diretas, mas continuarão
 
 ### Login
 
-- marca HuIOS em destaque;
+- logo original azul do HuIOS, atualmente disponível em `huios-admin/public/logo.png`, copiada para os assets do mobile;
+- logo contida em um bloco branco arredondado para manter contraste com o cabeçalho azul;
+- texto “Portal do Aluno” em destaque ao lado da logo, sem repetir a palavra “HuIOS”;
 - campos com ícones de e-mail e senha;
 - ação para mostrar ou ocultar a senha;
 - botão principal de largura total;
@@ -150,6 +152,8 @@ O endpoint de login retorna o nome no objeto básico `user`, enquanto as telas p
 - retornar usuário e dados relacionados do aluno, incluindo matrículas, turma e curso;
 - manter o usuário básico recebido no login como fallback imediato;
 - após autenticar, buscar o perfil completo e substituir o fallback;
+- após armazenar token e usuário, executar navegação explícita para `/(tabs)` na ação de login;
+- manter o guard global como proteção de rotas e restauração de sessão, sem depender exclusivamente dele para a transição pós-login;
 - ao restaurar uma sessão armazenada, buscar novamente `/api/auth/me` antes de concluir a inicialização;
 - normalizar a leitura do nome em uma função compartilhada: `student.name`, depois `user.name`, depois “Aluno”.
 
@@ -194,6 +198,8 @@ Mensagens vindas da API serão preservadas quando forem seguras e úteis. Falhas
 ## Critérios de aceitação
 
 - o nome real do aluno aparece no início, no menu “Mais” e no perfil;
+- a tela de login exibe a logo original azul sobre base branca e “Portal do Aluno” ao lado;
+- um login bem-sucedido navega imediatamente para a tela inicial;
 - uma sessão restaurada carrega novamente os dados do aluno;
 - a barra inferior contém somente Início, Aulas, Provas e Mais;
 - frequência, boletim e perfil estão acessíveis pelo menu “Mais”;
