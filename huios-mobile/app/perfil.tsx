@@ -1,5 +1,4 @@
 import { ScrollView, View, Text, TouchableOpacity, Alert } from 'react-native';
-import { ScreenHeader } from '@/components/ScreenHeader';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { getBoletim } from '@/services/boletim';
@@ -26,7 +25,6 @@ export default function PerfilScreen() {
 
   return (
     <View className="flex-1 bg-slate-50">
-      <ScreenHeader title="Meu Perfil" />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {/* Avatar + name */}
         <View className="items-center mb-6 mt-2">

@@ -2,8 +2,24 @@ import { Tabs } from 'expo-router';
 import { Platform, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-function TabIcon({ name, color }: { name: React.ComponentProps<typeof MaterialIcons>['name']; color: string }) {
-  return <MaterialIcons name={name} size={24} color={color} />;
+export const TAB_ROUTES = ['index', 'aulas', 'provas', 'mais'] as const;
+
+function TabIcon({ name, color, focused }: { name: React.ComponentProps<typeof MaterialIcons>['name']; color: string; focused: boolean }) {
+  return (
+    <View
+      accessible={false}
+      style={{
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 44,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: focused ? '#e8efff' : 'transparent',
+      }}
+    >
+      <MaterialIcons name={name} size={24} color={color} accessible={false} />
+    </View>
+  );
 }
 
 export default function TabsLayout() {
@@ -27,35 +43,28 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Início',
-          tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="home" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="aulas"
         options={{
           title: 'Aulas',
-          tabBarIcon: ({ color }) => <TabIcon name="event" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="event" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="provas"
         options={{
           title: 'Provas',
-          tabBarIcon: ({ color }) => <TabIcon name="assignment" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="assignment" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
-        name="presenca"
+        name="mais"
         options={{
-          title: 'Frequência',
-          tabBarIcon: ({ color }) => <TabIcon name="fact-check" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="perfil"
-        options={{
-          title: 'Perfil',
-          tabBarIcon: ({ color }) => <TabIcon name="person" color={color} />,
+          title: 'Mais',
+          tabBarIcon: ({ color, focused }) => <TabIcon name="more-horiz" color={color} focused={focused} />,
         }}
       />
     </Tabs>

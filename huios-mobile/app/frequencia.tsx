@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, RefreshControl, Alert, Modal } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
-import { ScreenHeader } from '@/components/ScreenHeader';
 import { StatusBadge } from '@/components/StatusBadge';
 import { getPresenca, uploadJustificativa } from '@/services/presenca';
 
@@ -49,11 +48,11 @@ export default function PresencaScreen() {
 
   return (
     <View className="flex-1 bg-slate-50">
-      <ScreenHeader title="Frequência" subtitle={`Média geral: ${totalRate}%`} />
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#135bec" />}
       >
+        <Text className="mb-4 text-sm font-medium text-slate-500">Média geral: {totalRate}%</Text>
         {presenca.length === 0 && !isLoading && (
           <Text className="text-center text-slate-400 mt-10">Sem registros de frequência.</Text>
         )}

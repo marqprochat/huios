@@ -51,6 +51,18 @@ export default function RootLayout() {
               name="provas/[id]"
               options={{ headerShown: true, title: 'Prova', headerBackTitle: 'Voltar' }}
             />
+            <Stack.Screen
+              name="frequencia"
+              options={{ headerShown: true, title: 'Frequência', headerBackTitle: 'Voltar' }}
+            />
+            <Stack.Screen
+              name="boletim"
+              options={{ headerShown: true, title: 'Boletim', headerBackTitle: 'Voltar' }}
+            />
+            <Stack.Screen
+              name="perfil"
+              options={{ headerShown: true, title: 'Perfil', headerBackTitle: 'Voltar' }}
+            />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>
