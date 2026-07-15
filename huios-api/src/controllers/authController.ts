@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../services/prisma';
+import { AuthRequest } from '../middlewares/auth';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'huios-secret-key-change-in-production';
 
@@ -46,4 +47,50 @@ export const login = async (req: Request, res: Response) => {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Erro interno do servidor' });
   }
+};
+
+export const getMe = async (req: AuthRequest, res: Response) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      student: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          enrollments: {
+            where: { status: 'CURSANDO' },
+            select: {
+              id: true,
+              status: true,
+              class: {
+                select: {
+                  id: true,
+                  name: true,
+                  course: { select: { id: true, name: true } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!user) return res.status(404).json({ message: 'Usuário não encontrado' });
+
+  return res.json({
+    ...user,
+    student: user.student ? {
+      ...user.student,
+      enrollments: user.student.enrollments.map(({ class: courseClass, ...enrollment }) => ({
+        ...enrollment,
+        courseClass
+      }))
+    } : undefined
+  });
 };
