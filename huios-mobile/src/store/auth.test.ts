@@ -118,4 +118,30 @@ describe('auth store', () => {
     expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
     expect(useAuthStore.getState()).toMatchObject({ token: 'token-b', user: newerUser });
   });
+
+  it('preserves a newer login started while deletion of the old token is pending', async () => {
+    let storedToken: string | null = 'token-a';
+    const deletionStarted = deferred<void>();
+    const releaseDeletion = deferred<void>();
+    jest.mocked(SecureStore.deleteItemAsync).mockImplementation(async () => {
+      deletionStarted.resolve();
+      await releaseDeletion.promise;
+      storedToken = null;
+    });
+    jest.mocked(SecureStore.setItemAsync).mockImplementation(async (_key, token) => {
+      storedToken = token;
+    });
+    useAuthStore.setState({ token: 'token-a', user: basicUser });
+    jest.mocked(getMe).mockRejectedValue(new ApiError('http', 'Token antigo inválido', 401));
+
+    const staleHydration = useAuthStore.getState().hydrateProfile();
+    await deletionStarted.promise;
+    const newerUser = { ...basicUser, id: 'user-2', name: 'Login B' };
+    const newerLogin = useAuthStore.getState().setAuth('token-b', newerUser);
+    releaseDeletion.resolve();
+    await Promise.all([staleHydration, newerLogin]);
+
+    expect(storedToken).toBe('token-b');
+    expect(useAuthStore.getState()).toMatchObject({ token: 'token-b', user: newerUser });
+  });
 });

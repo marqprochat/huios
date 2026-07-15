@@ -6,12 +6,21 @@ import { getMe } from '@/services/auth';
 
 const TOKEN_KEY = 'huios_jwt';
 
+let tokenStorageQueue: Promise<void> = Promise.resolve();
+
+function enqueueTokenStorage(operation: () => Promise<void>): Promise<void> {
+  const result = tokenStorageQueue.then(operation, operation);
+  tokenStorageQueue = result.catch(() => undefined);
+  return result;
+}
+
 interface AuthState {
   token: string | null;
   user: User | null;
   isLoading: boolean;
   setAuth: (token: string, user: User) => Promise<void>;
   clearAuth: () => Promise<void>;
+  clearAuthIfToken: (token: string) => Promise<void>;
   hydrateProfile: () => Promise<void>;
   loadStoredAuth: () => Promise<void>;
 }
@@ -22,13 +31,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: true,
 
   setAuth: async (token, user) => {
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
     set({ token, user });
+    await enqueueTokenStorage(() => SecureStore.setItemAsync(TOKEN_KEY, token));
   },
 
   clearAuth: async () => {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
     set({ token: null, user: null });
+    await enqueueTokenStorage(() => SecureStore.deleteItemAsync(TOKEN_KEY));
+  },
+
+  clearAuthIfToken: async (token) => {
+    await enqueueTokenStorage(async () => {
+      if (get().token !== token) return;
+
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      if (get().token === token) {
+        set({ token: null, user: null });
+      }
+    });
   },
 
   hydrateProfile: async () => {
@@ -44,7 +64,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (error instanceof ApiError && error.kind === 'http' &&
         (error.status === 401 || error.status === 403) &&
         get().token === hydrationToken) {
-        await get().clearAuth();
+        await get().clearAuthIfToken(hydrationToken);
       }
     }
   },
