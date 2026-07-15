@@ -6,7 +6,7 @@
 
 **Architecture:** A API Express será a fonte única para o mobile e ganhará rotas protegidas em `/api/portal` derivadas do usuário do JWT, sem aceitar `studentId` do cliente. No mobile, autenticação e perfil serão normalizados no Zustand; componentes visuais reutilizáveis sustentarão quatro abas principais e as telas secundárias dentro de “Mais”.
 
-**Tech Stack:** Expo SDK 54, Expo Router 6, React Native 0.81, React 19, TypeScript 5.9, NativeWind 4, TanStack Query 5, Zustand 5, Express 4, Prisma 6, PostgreSQL 15, Vitest, Supertest.
+**Tech Stack:** Expo SDK 54, Expo Router 6, React Native 0.81, React 19, TypeScript 5.9, NativeWind 4, TanStack Query 5, Zustand 5, Express 4, Prisma 6, PostgreSQL 15, Vitest e Supertest na API, jest-expo e React Native Testing Library no mobile.
 
 ## Global Constraints
 
@@ -380,7 +380,7 @@ git commit -m "feat: protege ações acadêmicas do aluno"
 **Files:**
 - Create: `huios-mobile/src/utils/user.ts`
 - Create: `huios-mobile/src/utils/user.test.ts`
-- Create: `huios-mobile/vitest.config.ts`
+- Create: `huios-mobile/jest.setup.ts`
 - Modify: `huios-mobile/package.json`
 - Modify: `huios-mobile/package-lock.json`
 - Modify: `huios-mobile/src/types/index.ts`
@@ -393,9 +393,9 @@ git commit -m "feat: protege ações acadêmicas do aluno"
 - Produces: `ApiError` com `kind: 'http' | 'network'` e `status?: number`.
 - Produces: `hydrateProfile(): Promise<void>` no store/hook.
 
-- [ ] **Step 1: Configurar Vitest e escrever testes do nome**
+- [ ] **Step 1: Configurar Jest Expo e escrever testes do nome**
 
-Adicionar `vitest`, `react-test-renderer@19.1.0` e `@types/react-test-renderer` às devDependencies, o script `"test": "vitest run"` e alias `@` para `./src` em `vitest.config.ts`.
+Adicionar `jest-expo`, `jest`, `@types/jest`, `@testing-library/react-native`, `react-test-renderer@19.1.0` e `@types/react-test-renderer` às devDependencies. Adicionar o script `"test": "jest --runInBand"`, `"preset": "jest-expo"` e `"setupFilesAfterEnv": ["<rootDir>/jest.setup.ts"]` na configuração Jest do `package.json`; o preset deve respeitar o alias `@` já definido no TypeScript/Babel.
 
 ```ts
 it('prefers the student name and falls back to the basic user name', () => {
@@ -441,7 +441,7 @@ Esperado: todos PASS e zero erros TypeScript.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add huios-mobile/src/utils huios-mobile/vitest.config.ts huios-mobile/src/types/index.ts huios-mobile/src/services/api.ts huios-mobile/src/store/auth.ts huios-mobile/src/hooks/useAuth.ts huios-mobile/package.json huios-mobile/package-lock.json
+git add huios-mobile/src/utils huios-mobile/jest.setup.ts huios-mobile/src/types/index.ts huios-mobile/src/services/api.ts huios-mobile/src/store/auth.ts huios-mobile/src/hooks/useAuth.ts huios-mobile/package.json huios-mobile/package-lock.json
 git commit -m "fix: normaliza autenticação e perfil do aluno"
 ```
 
@@ -467,10 +467,10 @@ git commit -m "fix: normaliza autenticação e perfil do aluno"
 
 ```tsx
 it('exposes a retry action on errors', () => {
-  const retry = vi.fn();
-  const tree = renderer.create(<ErrorState message="Falha ao carregar" onRetry={retry} />);
-  tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress();
-  expect(retry).toHaveBeenCalledOnce();
+  const retry = jest.fn();
+  const { getByRole } = render(<ErrorState message="Falha ao carregar" onRetry={retry} />);
+  fireEvent.press(getByRole('button'));
+  expect(retry).toHaveBeenCalledTimes(1);
 });
 ```
 
