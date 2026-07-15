@@ -2,6 +2,7 @@ export type UserRole = 'ALUNO' | 'MONITOR' | 'COORDENADOR' | 'SUPER_ADMIN';
 
 export interface User {
   id: string;
+  name: string;
   email: string;
   role: UserRole;
   student?: Student;

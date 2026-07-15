@@ -1,24 +1,17 @@
 import { useAuthStore } from '@/store/auth';
-import { loginAluno, getMe } from '@/services/auth';
+import { loginAluno } from '@/services/auth';
 import { removePushToken } from '@/services/notifications';
 import * as SecureStore from 'expo-secure-store';
 
 const PUSH_TOKEN_KEY = 'huios_push_token';
 
 export function useAuth() {
-  const { token, user, isLoading, setAuth, clearAuth } = useAuthStore();
+  const { token, user, isLoading, setAuth, clearAuth, hydrateProfile } = useAuthStore();
 
   async function login(email: string, password: string) {
     const { token: newToken, user: newUser } = await loginAluno(email, password);
     await setAuth(newToken, newUser);
-
-    // Fetch full user profile
-    try {
-      const fullUser = await getMe();
-      await setAuth(newToken, fullUser);
-    } catch {
-      // Use basic user from login response
-    }
+    await hydrateProfile();
   }
 
   async function logout() {
@@ -34,5 +27,5 @@ export function useAuth() {
     await clearAuth();
   }
 
-  return { token, user, isLoading, login, logout };
+  return { token, user, isLoading, login, logout, hydrateProfile };
 }
