@@ -79,16 +79,52 @@ describe('GET /api/auth/me', () => {
         ]
       }
     });
-    expect(JSON.stringify(response.body)).not.toContain('password');
-    expect(JSON.stringify(response.body)).not.toContain('cpf');
+    expect(response.body).not.toHaveProperty('password');
+    expect(response.body).not.toHaveProperty('cpf');
+    expect(response.body.student).not.toHaveProperty('password');
+    expect(response.body.student).not.toHaveProperty('cpf');
     expect(findUnique).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 'user-1' },
       select: expect.objectContaining({
         id: true,
         name: true,
         email: true,
-        role: true
+        role: true,
+        student: {
+          select: expect.objectContaining({
+            enrollments: {
+              where: { status: 'CURSANDO' },
+              select: {
+                id: true,
+                status: true,
+                class: {
+                  select: {
+                    id: true,
+                    name: true,
+                    course: { select: { id: true, name: true } }
+                  }
+                }
+              }
+            }
+          })
+        }
       })
     }));
+  });
+
+  it('returns a controlled 500 when the profile query fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(prisma.user, 'findUnique').mockRejectedValue(new Error('database unavailable'));
+    const token = jwt.sign(
+      { id: 'user-1', email: 'ana@example.com', role: 'ALUNO' },
+      JWT_SECRET
+    );
+
+    const response = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ message: 'Erro interno do servidor' });
   });
 });

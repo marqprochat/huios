@@ -50,47 +50,52 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const getMe = async (req: AuthRequest, res: Response) => {
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      student: {
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          enrollments: {
-            where: { status: 'CURSANDO' },
-            select: {
-              id: true,
-              status: true,
-              class: {
-                select: {
-                  id: true,
-                  name: true,
-                  course: { select: { id: true, name: true } }
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        student: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            enrollments: {
+              where: { status: 'CURSANDO' },
+              select: {
+                id: true,
+                status: true,
+                class: {
+                  select: {
+                    id: true,
+                    name: true,
+                    course: { select: { id: true, name: true } }
+                  }
                 }
               }
             }
           }
         }
       }
-    }
-  });
+    });
 
-  if (!user) return res.status(404).json({ message: 'Usuário não encontrado' });
+    if (!user) return res.status(404).json({ message: 'Usuário não encontrado' });
 
-  return res.json({
-    ...user,
-    student: user.student ? {
-      ...user.student,
-      enrollments: user.student.enrollments.map(({ class: courseClass, ...enrollment }) => ({
-        ...enrollment,
-        courseClass
-      }))
-    } : undefined
-  });
+    return res.json({
+      ...user,
+      student: user.student ? {
+        ...user.student,
+        enrollments: user.student.enrollments.map(({ class: courseClass, ...enrollment }) => ({
+          ...enrollment,
+          courseClass
+        }))
+      } : undefined
+    });
+  } catch (error) {
+    console.error('Get profile error:', error);
+    return res.status(500).json({ message: 'Erro interno do servidor' });
+  }
 };
