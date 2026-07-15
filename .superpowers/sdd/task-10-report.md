@@ -71,3 +71,12 @@ Os testes focais falharam inicialmente porque a rota devolvia questões mesmo ap
 - API: 4 suítes, 45/45 testes passaram; build TypeScript sem erros;
 - mobile: 15 suítes, 73/73 testes passaram; TypeScript sem erros;
 - nenhum export adicional foi executado, pois as mudanças não alteraram dependências, assets ou configuração do bundle e o export anterior permanece verde.
+
+## Correção final de data e horário no check-in
+
+- a tela de detalhe usa formatadores compartilhados em vez de concatenar `T12:00:00` a um ISO completo;
+- a data Prisma à meia-noite UTC preserva seu componente civil e é apresentada em português no calendário de São Paulo;
+- `startTime` e `endTime` ISO são convertidos para hora/minuto em `America/Sao_Paulo`;
+- dois horários ausentes produzem um único “Horário não informado”; apenas um horário presente recebe texto contextual;
+- RED reproduziu `Invalid Date`, timestamps ISO crus e ausência do placeholder;
+- GREEN focal: 3/3 testes; suíte completa mobile: 15 suítes e 75/75 testes; TypeScript sem erros.

@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getAula, checkin, checkout } from '@/services/aulas';
-import { getLessonTitle } from '@/utils/lesson';
+import { formatLessonDate, formatLessonTimeRange, getLessonTitle } from '@/utils/lesson';
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
@@ -101,14 +101,12 @@ export default function CheckinScreen() {
           <View className="flex-row items-center gap-2">
             <MaterialIcons name="event" size={16} color="#94a3b8" />
             <Text className="text-sm text-slate-600">
-              {new Date(lesson.date + 'T12:00:00').toLocaleDateString('pt-BR', {
-                weekday: 'long', day: 'numeric', month: 'long',
-              })}
+              {formatLessonDate(lesson.date)}
             </Text>
           </View>
           <View className="flex-row items-center gap-2">
             <MaterialIcons name="schedule" size={16} color="#94a3b8" />
-            <Text className="text-sm text-slate-600">{lesson.startTime} – {lesson.endTime}</Text>
+            <Text className="text-sm text-slate-600">{formatLessonTimeRange(lesson.startTime, lesson.endTime)}</Text>
           </View>
           {lesson.locationName && (
             <View className="flex-row items-center gap-2">
