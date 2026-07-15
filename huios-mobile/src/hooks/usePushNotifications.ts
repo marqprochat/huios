@@ -1,44 +1,59 @@
 import { useEffect, useRef } from 'react';
-import * as Notifications from 'expo-notifications';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import type { EventSubscription } from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { registerPushToken } from '@/services/notifications';
 
 const PUSH_TOKEN_KEY = 'huios_push_token';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
 export function usePushNotifications() {
-  const notificationListener = useRef<Notifications.EventSubscription>();
-  const responseListener = useRef<Notifications.EventSubscription>();
+  const notificationListener = useRef<EventSubscription | undefined>(undefined);
+  const responseListener = useRef<EventSubscription | undefined>(undefined);
 
   useEffect(() => {
-    registerForPushNotificationsAsync();
+    if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+      return;
+    }
 
-    notificationListener.current = Notifications.addNotificationReceivedListener(() => {
-      // notification received while app is open
-    });
+    let isActive = true;
 
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(() => {
-      // user tapped notification
+    void import('expo-notifications').then(async (Notifications) => {
+      if (!isActive) return;
+
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        }),
+      });
+
+      await registerForPushNotificationsAsync(Notifications);
+      if (!isActive) return;
+
+      notificationListener.current = Notifications.addNotificationReceivedListener(() => {
+        // notification received while app is open
+      });
+
+      responseListener.current = Notifications.addNotificationResponseReceivedListener(() => {
+        // user tapped notification
+      });
     });
 
     return () => {
+      isActive = false;
       notificationListener.current?.remove();
       responseListener.current?.remove();
     };
   }, []);
 }
 
-async function registerForPushNotificationsAsync() {
+async function registerForPushNotificationsAsync(
+  Notifications: typeof import('expo-notifications'),
+) {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'HuIOS',

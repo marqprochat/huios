@@ -8,7 +8,7 @@ interface LoginResponse {
 }
 
 export async function loginAluno(email: string, password: string): Promise<{ token: string; user: User }> {
-  const data = await api.post<LoginResponse>('/api/auth/aluno/login', { email, password });
+  const data = await api.post<LoginResponse>('/api/auth/login', { email, password });
   if (!data.token || !data.user) {
     throw new Error(data.message ?? 'Credenciais inválidas');
   }
