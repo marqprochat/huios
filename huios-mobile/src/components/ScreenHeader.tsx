@@ -9,9 +9,9 @@ interface Props {
 export function ScreenHeader({ title, subtitle }: Props) {
   const insets = useSafeAreaInsets();
   return (
-    <View className="bg-white border-b border-slate-100 px-5 pb-4" style={{ paddingTop: insets.top + 8 }}>
+    <View className="border-b border-slate-100 bg-surface px-5 pb-4" style={{ paddingTop: insets.top + 8 }}>
       <Text className="text-2xl font-bold text-slate-900">{title}</Text>
-      {subtitle && <Text className="text-sm text-slate-500 mt-0.5">{subtitle}</Text>}
+      {subtitle ? <Text className="mt-0.5 text-sm leading-5 text-slate-500">{subtitle}</Text> : null}
     </View>
   );
 }

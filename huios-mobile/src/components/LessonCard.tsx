@@ -1,55 +1,26 @@
-import { View, Text, TouchableOpacity } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { AppIcon } from './AppIcon';
 import { StatusBadge } from './StatusBadge';
 import type { Lesson } from '@/types';
 
-interface Props {
-  lesson: Lesson;
-}
+interface Props { lesson: Lesson }
 
 export function LessonCard({ lesson }: Props) {
   const router = useRouter();
   const hasCheckin = lesson.attendance?.checkInAt;
   const status = lesson.attendance?.status;
+  const openCheckin = () => router.push(`/checkin/${lesson.id}`);
 
-  return (
-    <View className="bg-white rounded-2xl border border-slate-200 p-4 mb-3">
-      <View className="flex-row justify-between items-start mb-2">
-        <Text className="font-semibold text-slate-800 flex-1 mr-2" numberOfLines={2}>
-          {lesson.title}
-        </Text>
-        {status && <StatusBadge status={status} />}
-      </View>
-
-      {lesson.discipline && (
-        <Text className="text-xs text-slate-500 mb-1">{lesson.discipline.name}</Text>
-      )}
-
-      <Text className="text-xs text-slate-500">
-        {new Date(lesson.date).toLocaleDateString('pt-BR')} • {lesson.startTime} – {lesson.endTime}
-      </Text>
-
-      {lesson.locationName && (
-        <Text className="text-xs text-slate-400 mt-1">📍 {lesson.locationName}</Text>
-      )}
-
-      {!hasCheckin && status === 'PENDING' && (
-        <TouchableOpacity
-          className="mt-3 bg-primary rounded-xl py-2 items-center"
-          onPress={() => router.push(`/checkin/${lesson.id}`)}
-        >
-          <Text className="text-white font-semibold text-sm">Fazer Check-in</Text>
-        </TouchableOpacity>
-      )}
-
-      {hasCheckin && !lesson.attendance?.checkOutAt && (
-        <TouchableOpacity
-          className="mt-3 bg-slate-700 rounded-xl py-2 items-center"
-          onPress={() => router.push(`/checkin/${lesson.id}`)}
-        >
-          <Text className="text-white font-semibold text-sm">Fazer Check-out</Text>
-        </TouchableOpacity>
-      )}
+  return <View className="mb-3 rounded-card border border-slate-200 bg-surface p-4 shadow-card">
+    <View className="mb-2 flex-row items-start justify-between">
+      <Text className="mr-2 flex-1 font-semibold text-slate-800" numberOfLines={2}>{lesson.title}</Text>
+      {status ? <StatusBadge status={status} /> : null}
     </View>
-  );
+    {lesson.discipline ? <View className="mb-1 flex-row items-start gap-1.5"><AppIcon name="school" accessibilityLabel="Disciplina" color="#64748b" size={16} /><Text className="flex-1 text-xs text-slate-500">{lesson.discipline.name}</Text></View> : null}
+    <View className="mt-1 flex-row items-start gap-1.5"><AppIcon name="schedule" accessibilityLabel="Horário" color="#64748b" size={16} /><Text className="flex-1 text-xs text-slate-500">{new Date(lesson.date).toLocaleDateString('pt-BR')} • {lesson.startTime} – {lesson.endTime}</Text></View>
+    {lesson.locationName ? <View className="mt-1 flex-row items-start gap-1.5"><AppIcon name="location-on" accessibilityLabel="Local" color="#64748b" size={16} /><Text className="flex-1 text-xs text-slate-500">{lesson.locationName}</Text></View> : null}
+    {!hasCheckin && status === 'PENDING' ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Fazer check-in em ${lesson.title}`} className="mt-3 min-h-11 flex-row items-center justify-center gap-2 rounded-button bg-primary px-4 py-2" onPress={openCheckin}><AppIcon name="login" accessibilityLabel="Check-in" color="#fff" size={20} /><Text className="text-sm font-semibold text-white">Fazer Check-in</Text></TouchableOpacity> : null}
+    {hasCheckin && !lesson.attendance?.checkOutAt ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Fazer check-out de ${lesson.title}`} className="mt-3 min-h-11 flex-row items-center justify-center gap-2 rounded-button bg-slate-700 px-4 py-2" onPress={openCheckin}><AppIcon name="logout" accessibilityLabel="Check-out" color="#fff" size={20} /><Text className="text-sm font-semibold text-white">Fazer Check-out</Text></TouchableOpacity> : null}
+  </View>;
 }
