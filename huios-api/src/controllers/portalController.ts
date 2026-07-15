@@ -2,12 +2,159 @@ import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../services/prisma';
 import { getStudentContext } from '../services/studentContext';
+import fs from 'fs';
 
 type PortalHandler = (req: AuthRequest, res: Response, next: NextFunction) => Promise<unknown>;
 
 async function context(req: AuthRequest) {
   return getStudentContext(req.user.id);
 }
+
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const earthRadius = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function coordinates(body: unknown): { latitude: number; longitude: number } | null {
+  if (!body || typeof body !== 'object') return null;
+  const record = body as Record<string, unknown>;
+  const latitude = Number(record.latitude);
+  const longitude = Number(record.longitude);
+  return Number.isFinite(latitude) && Number.isFinite(longitude) ? { latitude, longitude } : null;
+}
+
+async function authorizedLesson(req: AuthRequest) {
+  const studentContext = await context(req);
+  const lesson = await prisma.lesson.findFirst({
+    where: { id: req.params.id, disciplines: { some: { id: { in: studentContext.disciplineIds } } } }
+  });
+  return { ...studentContext, lesson };
+}
+
+async function checkWindow(lesson: { startTime: Date | null; endTime: Date | null }, action: 'checkin' | 'checkout') {
+  if (!lesson.startTime || !lesson.endTime) return null;
+  const settings = await prisma.systemSettings.findFirst();
+  const configuredBuffer = (settings as unknown as { checkInBufferMinutes?: number | null } | null)?.checkInBufferMinutes;
+  const bufferMs = (configuredBuffer ?? 30) * 60 * 1000;
+  const now = Date.now();
+  if (action === 'checkin') {
+    if (now < lesson.startTime.getTime() - bufferMs) return 'Check-in ainda não permitido';
+    if (now > lesson.startTime.getTime() + bufferMs) return 'Prazo de check-in encerrado';
+  } else {
+    if (now < lesson.endTime.getTime()) return 'A aula ainda não terminou';
+    if (now > lesson.endTime.getTime() + bufferMs) return 'Prazo de check-out encerrado';
+  }
+  return null;
+}
+
+async function attendanceLocation(req: AuthRequest, action: 'checkin' | 'checkout') {
+  const location = coordinates(req.body);
+  if (!location) return { error: 'Localização não fornecida', status: 400 } as const;
+  const { studentId, lesson } = await authorizedLesson(req);
+  if (!lesson) return { error: 'Aula não encontrada', status: 404 } as const;
+  const windowError = await checkWindow(lesson, action);
+  if (windowError) return { error: windowError, status: 400 } as const;
+  if (lesson.latitude == null || lesson.longitude == null) {
+    return { error: 'Aula não possui localização definida', status: 400 } as const;
+  }
+  const distance = calculateDistance(lesson.latitude, lesson.longitude, location.latitude, location.longitude);
+  if (distance > lesson.radiusMeters) return { error: 'Você está fora do local da aula', status: 400 } as const;
+  return { studentId, lesson, location, distance };
+}
+
+export const checkInStudentLesson: PortalHandler = async (req, res) => {
+  const result = await attendanceLocation(req, 'checkin');
+  if ('error' in result) return res.status(result.status ?? 400).json({ error: result.error });
+  const { studentId, lesson, location, distance } = result;
+  const attendance = await prisma.attendance.upsert({
+    where: { lessonId_studentId: { lessonId: lesson.id, studentId } },
+    update: {
+      status: 'PRESENT', checkInAt: new Date(), checkInLat: location.latitude,
+      checkInLong: location.longitude, distance: Math.round(distance)
+    },
+    create: {
+      lessonId: lesson.id, studentId, status: 'PRESENT', checkInAt: new Date(),
+      checkInLat: location.latitude, checkInLong: location.longitude, distance: Math.round(distance)
+    }
+  });
+  return res.json({ attendance, distance: Math.round(distance), isWithinRadius: true, message: 'Check-in realizado com sucesso!' });
+};
+
+export const checkOutStudentLesson: PortalHandler = async (req, res) => {
+  const result = await attendanceLocation(req, 'checkout');
+  if ('error' in result) return res.status(result.status ?? 400).json({ error: result.error });
+  const { studentId, lesson, location, distance } = result;
+  const existing = await prisma.attendance.findUnique({
+    where: { lessonId_studentId: { lessonId: lesson.id, studentId } }
+  });
+  if (!existing?.checkInAt) return res.status(400).json({ error: 'Check-in não realizado nesta aula' });
+  const attendance = await prisma.attendance.update({
+    where: { lessonId_studentId: { lessonId: lesson.id, studentId } },
+    data: {
+      checkOutAt: new Date(), checkOutLat: location.latitude, checkOutLong: location.longitude,
+      checkOutDistance: Math.round(distance)
+    }
+  });
+  return res.json({ attendance, distance: Math.round(distance), isWithinRadius: true, message: 'Check-out realizado com sucesso!' });
+};
+
+function removeUploadedFile(req: AuthRequest) {
+  if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+}
+
+export const submitStudentJustification: PortalHandler = async (req, res) => {
+  const { studentId, disciplineIds } = await context(req);
+  const attendanceId = typeof req.body?.attendanceId === 'string' ? req.body.attendanceId : '';
+  if (!req.file || !attendanceId) {
+    removeUploadedFile(req);
+    return res.status(400).json({ error: 'Arquivo e ID da presença são obrigatórios' });
+  }
+  const attendance = await prisma.attendance.findUnique({
+    where: { id: attendanceId },
+    include: { lesson: { include: { disciplines: { select: { id: true, name: true } } } } }
+  });
+  if (!attendance) {
+    removeUploadedFile(req);
+    return res.status(404).json({ error: 'Presença não encontrada' });
+  }
+  if (attendance.studentId !== studentId) {
+    removeUploadedFile(req);
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+  if (attendance.status !== 'ABSENT') {
+    removeUploadedFile(req);
+    return res.status(400).json({ error: 'Justificativa só pode ser enviada para faltas' });
+  }
+  const discipline = attendance.lesson.disciplines.find(item => disciplineIds.includes(item.id));
+  if (!discipline) {
+    removeUploadedFile(req);
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+  const existing = await prisma.absenceJustification.findUnique({ where: { attendanceId } });
+  if (existing) {
+    if (fs.existsSync(existing.filePath)) fs.unlinkSync(existing.filePath);
+    await prisma.absenceJustification.delete({ where: { id: existing.id } });
+  }
+  const justification = await prisma.absenceJustification.create({
+    data: {
+      studentId, attendanceId, disciplineId: discipline.id, fileName: req.file.originalname,
+      filePath: req.file.path, fileSize: req.file.size, mimeType: req.file.mimetype, status: 'PENDING_REVIEW'
+    },
+    include: { student: { select: { id: true, name: true } }, discipline: { select: { id: true, name: true } } }
+  });
+  await prisma.notification.create({
+    data: {
+      type: 'JUSTIFICATION_SUBMITTED', title: 'Justificativa de falta enviada',
+      message: `${justification.student.name} enviou um resumo para justificar a falta na disciplina "${justification.discipline.name}". Aguarda aprovação da diretoria.`,
+      targetRole: 'COORDENADOR', relatedId: justification.id
+    }
+  });
+  return res.status(201).json(justification);
+};
 
 export const listStudentLessons: PortalHandler = async (req, res) => {
   const { studentId, disciplineIds } = await context(req);

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { app } from '../app';
 import { prisma } from '../services/prisma';
+import fs from 'fs';
 
 const token = jwt.sign(
   { id: 'user-1', email: 'student@example.com', role: 'ALUNO' },
@@ -28,10 +29,14 @@ describe('portal routes', () => {
       request(app).get('/api/portal/presenca/pendencias'),
       request(app).get('/api/portal/provas'),
       request(app).get('/api/portal/provas/exam-1/questoes'),
-      request(app).post('/api/portal/provas/exam-1/submit').send({ answers: {} })
+      request(app).post('/api/portal/provas/exam-1/submit').send({ answers: {} }),
+      request(app).post('/api/portal/aulas/lesson-1/checkin').send({ latitude: -23, longitude: -46 }),
+      request(app).post('/api/portal/aulas/lesson-1/checkout').send({ latitude: -23, longitude: -46 }),
+      request(app).post('/api/portal/presenca/justificativa').field('attendanceId', 'attendance-1')
+        .attach('file', Buffer.from('document'), { filename: 'resumo.pdf', contentType: 'application/pdf' })
     ];
     const responses = await Promise.all(calls);
-    expect(responses.map(({ status }) => status)).toEqual([401, 401, 401, 401, 401, 401, 401]);
+    expect(responses.map(({ status }) => status)).toEqual([401, 401, 401, 401, 401, 401, 401, 401, 401, 401]);
   });
 
   it('lists only lessons from the authenticated student disciplines', async () => {
@@ -51,6 +56,107 @@ describe('portal routes', () => {
     expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 'lesson-2', disciplines: { some: { id: { in: ['discipline-1'] } } } }
     }));
+  });
+
+  it('returns 404 when check-in lesson is outside the student disciplines', async () => {
+    const findFirst = vi.spyOn(prisma.lesson, 'findFirst').mockResolvedValue(null);
+    const response = await request(app).post('/api/portal/aulas/foreign/checkin')
+      .set('Authorization', `Bearer ${token}`).send({ latitude: -23, longitude: -46 });
+    expect(response.status).toBe(404);
+    expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'foreign', disciplines: { some: { id: { in: ['discipline-1'] } } } }
+    }));
+  });
+
+  it('rejects check-in outside the configured radius without recording attendance', async () => {
+    vi.spyOn(prisma.lesson, 'findFirst').mockResolvedValue({
+      id: 'lesson-1', startTime: null, endTime: null, latitude: -23, longitude: -46, radiusMeters: 50
+    } as never);
+    const upsert = vi.spyOn(prisma.attendance, 'upsert');
+    const response = await request(app).post('/api/portal/aulas/lesson-1/checkin')
+      .set('Authorization', `Bearer ${token}`).send({ studentId: 'attacker', latitude: -24, longitude: -46 });
+    expect(response.status).toBe(400);
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects check-in outside the lesson time window', async () => {
+    vi.spyOn(prisma.lesson, 'findFirst').mockResolvedValue({
+      id: 'lesson-1', startTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
+      endTime: new Date(Date.now() + 3 * 60 * 60 * 1000), latitude: -23, longitude: -46, radiusMeters: 100
+    } as never);
+    vi.spyOn(prisma.systemSettings, 'findFirst').mockResolvedValue(null);
+    const upsert = vi.spyOn(prisma.attendance, 'upsert');
+    const response = await request(app).post('/api/portal/aulas/lesson-1/checkin')
+      .set('Authorization', `Bearer ${token}`).send({ latitude: -23, longitude: -46 });
+    expect(response.status).toBe(400);
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('checks in with the JWT-derived student id', async () => {
+    vi.spyOn(prisma.lesson, 'findFirst').mockResolvedValue({
+      id: 'lesson-1', startTime: null, endTime: null, latitude: -23, longitude: -46, radiusMeters: 100
+    } as never);
+    const upsert = vi.spyOn(prisma.attendance, 'upsert').mockResolvedValue({ id: 'attendance-1' } as never);
+    const response = await request(app).post('/api/portal/aulas/lesson-1/checkin')
+      .set('Authorization', `Bearer ${token}`).send({ studentId: 'attacker', latitude: -23, longitude: -46 });
+    expect(response.status).toBe(200);
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { lessonId_studentId: { lessonId: 'lesson-1', studentId: 'student-1' } },
+      create: expect.objectContaining({ studentId: 'student-1' })
+    }));
+  });
+
+  it('requires the authenticated student to have checked in before checkout', async () => {
+    vi.spyOn(prisma.lesson, 'findFirst').mockResolvedValue({
+      id: 'lesson-1', startTime: null, endTime: null, latitude: -23, longitude: -46, radiusMeters: 100
+    } as never);
+    vi.spyOn(prisma.attendance, 'findUnique').mockResolvedValue(null);
+    const update = vi.spyOn(prisma.attendance, 'update');
+    const response = await request(app).post('/api/portal/aulas/lesson-1/checkout')
+      .set('Authorization', `Bearer ${token}`).send({ latitude: -23, longitude: -46 });
+    expect(response.status).toBe(400);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a justification for another student attendance', async () => {
+    vi.spyOn(prisma.attendance, 'findUnique').mockResolvedValue({
+      id: 'attendance-2', studentId: 'student-2', status: 'ABSENT', lesson: { disciplines: [{ id: 'discipline-1' }] }
+    } as never);
+    const create = vi.spyOn(prisma.absenceJustification, 'create');
+    const response = await request(app).post('/api/portal/presenca/justificativa')
+      .set('Authorization', `Bearer ${token}`).field('attendanceId', 'attendance-2')
+      .attach('file', Buffer.from('document'), { filename: 'resumo.pdf', contentType: 'application/pdf' });
+    expect(response.status).toBe(403);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('rejects unsupported justification file types', async () => {
+    const findUnique = vi.spyOn(prisma.attendance, 'findUnique');
+    const response = await request(app).post('/api/portal/presenca/justificativa')
+      .set('Authorization', `Bearer ${token}`).field('attendanceId', 'attendance-1')
+      .attach('file', Buffer.from('script'), { filename: 'script.exe', contentType: 'application/x-msdownload' });
+    expect(response.status).toBe(400);
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+
+  it('creates a justification using only authenticated student context', async () => {
+    vi.spyOn(prisma.attendance, 'findUnique').mockResolvedValue({
+      id: 'attendance-1', studentId: 'student-1', status: 'ABSENT', lesson: { disciplines: [{ id: 'discipline-1' }] }
+    } as never);
+    vi.spyOn(prisma.absenceJustification, 'findUnique').mockResolvedValue(null);
+    const create = vi.spyOn(prisma.absenceJustification, 'create').mockResolvedValue({
+      id: 'justification-1', student: { name: 'Student' }, discipline: { name: 'Discipline' }
+    } as never);
+    vi.spyOn(prisma.notification, 'create').mockResolvedValue({} as never);
+    const response = await request(app).post('/api/portal/presenca/justificativa')
+      .set('Authorization', `Bearer ${token}`).field('attendanceId', 'attendance-1').field('studentId', 'attacker')
+      .attach('file', Buffer.from('document'), { filename: 'resumo.pdf', contentType: 'application/pdf' });
+    expect(response.status).toBe(201);
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      studentId: 'student-1', attendanceId: 'attendance-1', disciplineId: 'discipline-1', mimeType: 'application/pdf'
+    }) }));
+    const uploadedPath = (create.mock.calls[0][0] as { data: { filePath: string } }).data.filePath;
+    if (fs.existsSync(uploadedPath)) fs.unlinkSync(uploadedPath);
   });
 
   it('returns report-card rows scoped to the authenticated student', async () => {
