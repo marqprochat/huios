@@ -1,5 +1,5 @@
 import '../global.css';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -16,15 +16,12 @@ function AuthGuard() {
   const { token, isLoading } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
-  const previousLoading = useRef(isLoading);
 
   usePushNotifications();
 
   useEffect(() => {
     const inAuthGroup = segments[0] === '(auth)';
-    const justHydrated = previousLoading.current && !isLoading;
-    previousLoading.current = isLoading;
-    const destination = getAuthRedirect({ token, isLoading, inAuthGroup, justHydrated });
+    const destination = getAuthRedirect({ token, isLoading, inAuthGroup });
     if (destination) router.replace(destination);
   }, [token, isLoading, segments, router]);
 
