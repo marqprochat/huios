@@ -1,8 +1,10 @@
 import { Tabs } from 'expo-router';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const TAB_ROUTES = ['index', 'aulas', 'provas', 'mais'] as const;
+export const unstable_settings = { initialRouteName: 'mais' } as const;
 
 function TabIcon({ name, color, focused }: { name: React.ComponentProps<typeof MaterialIcons>['name']; color: string; focused: boolean }) {
   return (
@@ -23,6 +25,9 @@ function TabIcon({ name, color, focused }: { name: React.ComponentProps<typeof M
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  const bottomSpacing = Math.max(insets.bottom, 8);
+
   return (
     <Tabs
       screenOptions={{
@@ -32,9 +37,9 @@ export default function TabsLayout() {
         tabBarStyle: {
           borderTopColor: '#e2e8f0',
           backgroundColor: '#ffffff',
-          paddingBottom: Platform.OS === 'ios' ? 20 : 8,
+          paddingBottom: bottomSpacing,
           paddingTop: 8,
-          height: Platform.OS === 'ios' ? 84 : 64,
+          height: 56 + bottomSpacing,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}

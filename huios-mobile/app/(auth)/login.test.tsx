@@ -38,7 +38,7 @@ describe('LoginScreen', () => {
     fireEvent.press(getByText('Entrar no portal'));
 
     await waitFor(() => expect(mockLogin).toHaveBeenCalledWith('aluno@huios.com', 'segredo'));
-    expect(mockReplace).toHaveBeenCalledWith('/(tabs)');
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/index');
   });
 
   it('allows the student to show and hide the password', () => {

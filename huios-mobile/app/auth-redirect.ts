@@ -8,9 +8,9 @@ export function getAuthRedirect({
   token,
   isLoading,
   inAuthGroup,
-}: AuthRedirectState): '/(auth)/login' | '/(tabs)' | null {
+}: AuthRedirectState): '/(auth)/login' | '/(tabs)/index' | null {
   if (isLoading) return null;
   if (!token && !inAuthGroup) return '/(auth)/login';
-  if (token && inAuthGroup) return '/(tabs)';
+  if (token && inAuthGroup) return '/(tabs)/index';
   return null;
 }
