@@ -289,9 +289,9 @@ describe('portal routes', () => {
     const findMany = vi.spyOn(prisma.discipline, 'findMany');
     findMany.mockResolvedValueOnce([{ id: 'discipline-1' }] as never).mockResolvedValueOnce([{
       id: 'discipline-1', name: 'Discipline', lessons: [
-        { attendances: [{ id: 'attendance-1', status: 'ABSENT', justification: null }] },
-        { attendances: [{ id: 'attendance-2', status: 'ABSENT', justification: { status: 'PENDING_REVIEW' } }] },
-        { attendances: [{ id: 'attendance-3', status: 'ABSENT', justification: { status: 'REJECTED' } }] },
+        { attendances: [{ id: 'attendance-1', status: 'ABSENT', justification: { status: 'PENDING_REVIEW' } }] },
+        { attendances: [{ id: 'attendance-2', status: 'ABSENT', justification: { status: 'REJECTED' } }] },
+        { attendances: [{ id: 'attendance-3', status: 'ABSENT', justification: { status: 'APPROVED' } }] },
         { attendances: [{ id: 'attendance-4', status: 'PRESENT', justification: null }] }
       ]
     }] as never);
@@ -300,7 +300,7 @@ describe('portal routes', () => {
 
     expect(response.status).toBe(200);
     expect(response.body[0]).toEqual(expect.objectContaining({
-      totalLessons: 4, absences: 3, status: 'AUTO_FAILED', pendingJustifications: 3, attendanceId: 'attendance-1'
+      totalLessons: 4, absences: 3, status: 'AUTO_FAILED', pendingJustifications: 2, attendanceId: 'attendance-2', justificationStatus: 'REJECTED'
     }));
     expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({
       select: expect.objectContaining({
@@ -336,6 +336,7 @@ describe('portal routes', () => {
       submissions: [], questions: [{ id: 'question-1', statement: 'Question?', alternatives: [{ id: 'alt-1', text: 'Answer' }] }]
     } as never);
     vi.spyOn(prisma.examSubmission, 'upsert').mockResolvedValue({ id: 'submission-1', startedAt: new Date(), submittedAt: null } as never);
+    vi.spyOn(prisma.examSubmission, 'findUnique').mockResolvedValue({ id: 'submission-1', submittedAt: null } as never);
     const response = await request(app).get('/api/portal/provas/exam-1/questoes').set('Authorization', `Bearer ${token}`);
     expect(response.status).toBe(200);
     expect(response.body).toEqual([{ id: 'question-1', text: 'Question?', alternatives: [{ id: 'alt-1', text: 'Answer' }] }]);
@@ -355,6 +356,15 @@ describe('portal routes', () => {
     vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({ id: 'exam-1', startDate: new Date(), endDate: new Date(Date.now()+60000), duration: 30, submissions: [{ id: 's', submittedAt: new Date() }], questions: [] } as never);
     const response = await request(app).get('/api/portal/provas/exam-1/questoes').set('Authorization', `Bearer ${token}`);
     expect(response.status).toBe(409);
+  });
+
+  it('revalidates submission after opening to close a concurrent-submit race', async () => {
+    vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({ id: 'exam-1', submissions: [], questions: [] } as never);
+    vi.spyOn(prisma.examSubmission, 'upsert').mockResolvedValue({ id: 's' } as never);
+    vi.spyOn(prisma.examSubmission, 'findUnique').mockResolvedValue({ id: 's', submittedAt: new Date() } as never);
+    const response = await request(app).get('/api/portal/provas/exam-1/questoes').set('Authorization', `Bearer ${token}`);
+    expect(response.status).toBe(409);
+    expect(response.body.message).toMatch(/submetida/i);
   });
 
   it('submits an authorized exam using the JWT-derived student id', async () => {

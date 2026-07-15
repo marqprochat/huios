@@ -318,8 +318,12 @@ export const getStudentAttendanceSummary: PortalHandler = async (req, res) => {
       pendingJustifications,
       attendanceId: discipline.lessons.find(lesson => {
         const attendance = lesson.attendances[0];
-        return attendance?.status === 'ABSENT' && attendance.justification?.status !== 'APPROVED';
-      })?.attendances[0]?.id
+        return attendance?.status === 'ABSENT' && (!attendance.justification || attendance.justification.status === 'REJECTED');
+      })?.attendances[0]?.id,
+      justificationStatus: discipline.lessons.find(lesson => {
+        const attendance = lesson.attendances[0];
+        return attendance?.status === 'ABSENT' && (!attendance.justification || attendance.justification.status === 'REJECTED');
+      })?.attendances[0]?.justification?.status
     };
   }));
 };
@@ -367,6 +371,11 @@ export const listStudentExamQuestions: PortalHandler = async (req, res) => {
     create: { examId: exam.id, studentId, startedAt: now },
     update: {}
   });
+  const currentSubmission = await prisma.examSubmission.findUnique({
+    where: { examId_studentId: { examId: exam.id, studentId } },
+    select: { submittedAt: true }
+  });
+  if (currentSubmission?.submittedAt) return res.status(409).json({ message: 'Prova já foi submetida' });
   return res.json(exam.questions.map(({ statement, ...question }) => ({ ...question, text: statement })));
 };
 
