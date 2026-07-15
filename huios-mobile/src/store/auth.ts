@@ -31,13 +31,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: true,
 
   setAuth: async (token, user) => {
-    set({ token, user });
-    await enqueueTokenStorage(() => SecureStore.setItemAsync(TOKEN_KEY, token));
+    await enqueueTokenStorage(async () => {
+      await SecureStore.setItemAsync(TOKEN_KEY, token);
+      set({ token, user });
+    });
   },
 
   clearAuth: async () => {
-    set({ token: null, user: null });
-    await enqueueTokenStorage(() => SecureStore.deleteItemAsync(TOKEN_KEY));
+    await enqueueTokenStorage(async () => {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      set({ token: null, user: null });
+    });
   },
 
   clearAuthIfToken: async (token) => {

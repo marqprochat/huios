@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import { ApiError } from '@/services/api';
+import { api, ApiError } from '@/services/api';
 import { getMe } from '@/services/auth';
 import { useAuthStore } from './auth';
 
@@ -143,5 +143,88 @@ describe('auth store', () => {
 
     expect(storedToken).toBe('token-b');
     expect(useAuthStore.getState()).toMatchObject({ token: 'token-b', user: newerUser });
+  });
+
+  it('publishes a new session only after its token is persisted', async () => {
+    let storedToken: string | null = 'token-a';
+    const writeStarted = deferred<void>();
+    const releaseWrite = deferred<void>();
+    jest.mocked(SecureStore.setItemAsync).mockImplementation(async (_key, token) => {
+      writeStarted.resolve();
+      await releaseWrite.promise;
+      storedToken = token;
+    });
+    jest.mocked(SecureStore.getItemAsync).mockImplementation(async () => storedToken);
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({ ok: true }),
+    } as unknown as Response);
+    useAuthStore.setState({ token: 'token-a', user: basicUser });
+    const newerUser = { ...basicUser, id: 'user-2', name: 'Login B' };
+
+    const newerLogin = useAuthStore.getState().setAuth('token-b', newerUser);
+    await writeStarted.promise;
+    await api.get('/probe');
+    const storedTokenDuringWrite = storedToken;
+    const stateDuringWrite = useAuthStore.getState();
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/probe'), expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: 'Bearer token-a' }),
+    }));
+    fetchMock.mockRestore();
+
+    releaseWrite.resolve();
+    await newerLogin;
+    expect(storedTokenDuringWrite).toBe('token-a');
+    expect(stateDuringWrite).toMatchObject({ token: 'token-a', user: basicUser });
+    expect(storedToken).toBe('token-b');
+    expect(useAuthStore.getState()).toMatchObject({ token: 'token-b', user: newerUser });
+  });
+
+  it('keeps the previous session when persisting a new token fails', async () => {
+    let storedToken: string | null = 'token-a';
+    jest.mocked(SecureStore.setItemAsync).mockImplementation(async () => {
+      throw new Error('secure storage unavailable');
+    });
+    useAuthStore.setState({ token: 'token-a', user: basicUser });
+    const newerUser = { ...basicUser, id: 'user-2', name: 'Login B' };
+
+    await expect(useAuthStore.getState().setAuth('token-b', newerUser)).rejects.toThrow(
+      'secure storage unavailable',
+    );
+
+    expect(storedToken).toBe('token-a');
+    expect(useAuthStore.getState()).toMatchObject({ token: 'token-a', user: basicUser });
+  });
+
+  it('keeps the current session when deleting its token fails', async () => {
+    let storedToken: string | null = 'token-a';
+    jest.mocked(SecureStore.deleteItemAsync).mockImplementation(async () => {
+      throw new Error('secure storage unavailable');
+    });
+    useAuthStore.setState({ token: 'token-a', user: basicUser });
+
+    await expect(useAuthStore.getState().clearAuth()).rejects.toThrow('secure storage unavailable');
+
+    expect(storedToken).toBe('token-a');
+    expect(useAuthStore.getState()).toMatchObject({ token: 'token-a', user: basicUser });
+  });
+
+  it('continues processing token transitions after a storage rejection', async () => {
+    let storedToken: string | null = 'token-a';
+    jest.mocked(SecureStore.setItemAsync)
+      .mockRejectedValueOnce(new Error('first write failed'))
+      .mockImplementation(async (_key, token) => {
+        storedToken = token;
+      });
+    useAuthStore.setState({ token: 'token-a', user: basicUser });
+
+    await expect(useAuthStore.getState().setAuth('token-b', basicUser)).rejects.toThrow(
+      'first write failed',
+    );
+    const finalUser = { ...basicUser, id: 'user-3', name: 'Login C' };
+    await useAuthStore.getState().setAuth('token-c', finalUser);
+
+    expect(storedToken).toBe('token-c');
+    expect(useAuthStore.getState()).toMatchObject({ token: 'token-c', user: finalUser });
   });
 });
