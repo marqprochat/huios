@@ -30,7 +30,7 @@ export interface CourseClass {
 
 export interface Lesson {
   id: string;
-  title: string;
+  description?: string;
   date: string;
   startTime: string | null;
   endTime: string | null;

@@ -9,6 +9,7 @@ import DashboardScreen, {
   shouldStackCards,
   sortLessonsByStartTime,
 } from './index';
+import type { Lesson } from '@/types';
 
 const mockPush = jest.fn();
 const refetchMocks = {
@@ -41,9 +42,9 @@ const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 const queryData = {
   aulas: [
-    { id: 'late', title: 'Arquitetura', date: `${today}T12:00:00.000Z`, startTime: `${today}T22:00:00.000Z`, endTime: `${today}T23:00:00.000Z` },
-    { id: 'early', title: 'Algoritmos', date: `${today}T12:00:00.000Z`, startTime: `${today}T11:00:00.000Z`, endTime: `${today}T12:00:00.000Z`, attendance: { id: 'at1', status: 'PENDING' } },
-  ],
+    { id: 'late', date: `${today}T12:00:00.000Z`, startTime: `${today}T22:00:00.000Z`, endTime: `${today}T23:00:00.000Z`, discipline: { id: 'd2', name: 'Arquitetura' } },
+    { id: 'early', date: `${today}T12:00:00.000Z`, startTime: `${today}T11:00:00.000Z`, endTime: `${today}T12:00:00.000Z`, discipline: { id: 'd1', name: 'Algoritmos' }, attendance: { id: 'at1', status: 'PENDING' } },
+  ] as Lesson[],
   boletim: [],
   presenca: [{ disciplineId: 'd1', disciplineName: 'Algoritmos', totalLessons: 20, absences: 2, attendanceRate: 90, status: 'OK', pendingJustifications: 0 }],
   provas: [{ id: 'p1', title: 'Prova 1', startDate: oneHourAgo, deadline: oneHourFromNow }],
@@ -107,6 +108,17 @@ describe('DashboardScreen', () => {
     expect(error.getByText('Não foi possível carregar as aulas de hoje.')).toBeTruthy();
     fireEvent.press(error.getByLabelText('Tentar novamente'));
     expect(refetchMocks.aulas).toHaveBeenCalled();
+  });
+
+  it('renders an API lesson without title and announces one missing-time placeholder', () => {
+    mockQueries({ aulas: { data: [{
+      id: 'without-time', date: `${today}T12:00:00.000Z`, startTime: null, endTime: null,
+      discipline: { id: 'd3', name: 'Banco de Dados' },
+    }] } });
+    const { getByText } = render(<DashboardScreen />);
+    expect(getByText('Banco de Dados')).toBeTruthy();
+    const timeText = getByText(/Horário não informado/).props.children.join('');
+    expect(timeText.match(/Horário não informado/g)).toHaveLength(1);
   });
 });
 

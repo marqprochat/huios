@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getAula, checkin, checkout } from '@/services/aulas';
+import { getLessonTitle } from '@/utils/lesson';
 
 type CheckinState = 'idle' | 'locating' | 'sending' | 'success' | 'error';
 
@@ -86,7 +87,7 @@ export default function CheckinScreen() {
     <ScrollView className="flex-1 bg-slate-50" contentContainerStyle={{ padding: 24 }}>
       {/* Lesson Info */}
       <View className="bg-white rounded-2xl border border-slate-100 p-5 mb-6">
-        <Text className="text-lg font-bold text-slate-800 mb-1">{lesson.title}</Text>
+        <Text className="text-lg font-bold text-slate-800 mb-1">{getLessonTitle(lesson)}</Text>
         {lesson.discipline && (
           <Text className="text-sm text-slate-500 mb-3">{lesson.discipline.name}</Text>
         )}

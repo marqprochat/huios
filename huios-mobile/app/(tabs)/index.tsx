@@ -15,6 +15,8 @@ import { useAuthStore } from '@/store/auth';
 import { getDisplayName, getInitials } from '@/utils/user';
 import type { AbsenceSummary, Enrollment, Exam, Lesson } from '@/types';
 
+export { formatLessonTime } from '@/utils/lesson';
+
 const SAO_PAULO_TIME_ZONE = 'America/Sao_Paulo';
 const cardHorizontalMargin = 32;
 const cardGap = 12;
@@ -26,15 +28,6 @@ export function getSaoPauloDateKey(date: Date): string {
   }).formatToParts(date);
   const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '';
   return `${value('year')}-${value('month')}-${value('day')}`;
-}
-
-export function formatLessonTime(value: string | null): string {
-  if (!value) return 'Horário não informado';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat('pt-BR', {
-    timeZone: SAO_PAULO_TIME_ZONE, hour: '2-digit', minute: '2-digit', hour12: false,
-  }).format(date);
 }
 
 export function sortLessonsByStartTime(lessons: Lesson[]): Lesson[] {
@@ -104,9 +97,6 @@ export default function DashboardScreen() {
   const provasQuery = useQuery({ queryKey: ['provas'], queryFn: getProvas });
   const todayLessons = sortLessonsByStartTime((aulasQuery.data ?? [])
     .filter((lesson) => getSaoPauloDateKey(new Date(lesson.date)) === today));
-  const normalizedTodayLessons = todayLessons.map((lesson) => ({
-    ...lesson, startTime: formatLessonTime(lesson.startTime), endTime: formatLessonTime(lesson.endTime),
-  }));
   const actionableExams = countActionableExams(provasQuery.data ?? []);
   const attendance = getAttendanceMetric(presencaQuery.data ?? []);
   const metricsLoading = presencaQuery.isLoading || provasQuery.isLoading;
@@ -177,9 +167,9 @@ export default function DashboardScreen() {
             message="Não foi possível carregar as aulas de hoje."
             onRetry={() => { void aulasQuery.refetch(); }}
           />
-        ) : normalizedTodayLessons.length === 0 ? (
+        ) : todayLessons.length === 0 ? (
           <EmptyState title="Nenhuma aula hoje" message="Sua agenda está livre por enquanto." icon="event-available" />
-        ) : normalizedTodayLessons.map((lesson) => <LessonCard key={lesson.id} lesson={lesson} />)}
+        ) : todayLessons.map((lesson) => <LessonCard key={lesson.id} lesson={lesson} />)}
       </View>
 
       <View className="mx-4 mt-6">
