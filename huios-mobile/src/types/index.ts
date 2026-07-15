@@ -96,6 +96,7 @@ export interface AbsenceSummary {
   status: 'OK' | 'NEEDS_JUSTIFICATION' | 'AUTO_FAILED';
   pendingJustifications: number;
   attendanceId?: string;
+  justificationStatus?: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
 }
 
 export interface Notification {

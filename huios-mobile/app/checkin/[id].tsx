@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getAula, checkin, checkout } from '@/services/aulas';
@@ -15,6 +16,7 @@ export default function CheckinScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
+  const insets = useSafeAreaInsets();
 
   const { data: lesson, isLoading, isError, refetch } = useQuery({
     queryKey: ['aula', id],
@@ -88,7 +90,7 @@ export default function CheckinScreen() {
   const isProcessing = state === 'locating' || state === 'sending';
 
   return (
-    <ScrollView className="flex-1 bg-slate-50" contentContainerStyle={{ padding: 24 }}>
+    <ScrollView className="flex-1 bg-slate-50" contentContainerStyle={{ paddingHorizontal: 24, paddingTop: Math.max(insets.top, 24), paddingBottom: Math.max(insets.bottom, 24) + 24 }}>
       {/* Lesson Info */}
       <View className="bg-white rounded-2xl border border-slate-100 p-5 mb-6">
         <Text className="text-lg font-bold text-slate-800 mb-1">{getLessonTitle(lesson)}</Text>
@@ -170,6 +172,9 @@ export default function CheckinScreen() {
       {/* Action Button */}
       {!hasCheckout && (
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={!hasCheckin ? 'Fazer check-in nesta aula' : 'Fazer check-out desta aula'}
+          accessibilityState={{ disabled: isProcessing || (isPresent && hasCheckout), busy: isProcessing }}
           className={`rounded-2xl py-4 items-center ${isProcessing ? 'bg-slate-300' : !hasCheckin ? 'bg-primary' : 'bg-slate-700'}`}
           onPress={() => handleAction(hasCheckin ? 'checkout' : 'checkin')}
           disabled={isProcessing || (isPresent && hasCheckout)}
@@ -191,7 +196,7 @@ export default function CheckinScreen() {
         <View className="items-center mt-4">
           <MaterialIcons name="check-circle" size={48} color="#10b981" />
           <Text className="text-emerald-600 font-semibold mt-2">Presença completa registrada</Text>
-          <TouchableOpacity className="mt-4" onPress={() => router.back()}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Voltar para Aulas" className="mt-4 min-h-11 justify-center" onPress={() => router.back()}>
             <View className="flex-row items-center gap-2"><MaterialIcons name="arrow-back" size={18} color="#135bec" /><Text className="text-primary font-medium">Voltar para Aulas</Text></View>
           </TouchableOpacity>
         </View>

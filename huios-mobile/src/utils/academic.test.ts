@@ -1,4 +1,4 @@
-import { calculateAttendanceRate, formatExamAvailability, formatExamDeadline, getAcademicViewState, groupLessonsByPeriod, lessonDateKey, summarizeGrades } from './academic';
+import { calculateAttendanceRate, canSubmitJustification, formatExamAvailability, formatExamDeadline, getAcademicViewState, groupLessonsByPeriod, lessonDateKey, summarizeGrades } from './academic';
 import type { Lesson } from '@/types';
 
 const lesson = (id: string, date: string): Lesson => ({ id, date, startTime: null, endTime: null });
@@ -40,5 +40,11 @@ describe('academic presentation rules', () => {
     expect(getAcademicViewState(false, true, false)).toBe('error');
     expect(getAcademicViewState(false, false, true)).toBe('empty');
     expect(getAcademicViewState(false, false, false)).toBe('content');
+  });
+
+  it('allows justification for auto-failed absence only when no review is pending or approved', () => {
+    expect(canSubmitJustification({ attendanceId: 'a', status: 'AUTO_FAILED' })).toBe(true);
+    expect(canSubmitJustification({ attendanceId: 'a', status: 'AUTO_FAILED', justificationStatus: 'PENDING_REVIEW' })).toBe(false);
+    expect(canSubmitJustification({ attendanceId: 'a', status: 'AUTO_FAILED', justificationStatus: 'APPROVED' })).toBe(false);
   });
 });

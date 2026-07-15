@@ -55,3 +55,19 @@ Os novos testes falharam inicialmente por ausência de filtros temporais, bloque
 - API: 4 suítes, 44/44 testes passaram; build TypeScript sem erros;
 - mobile: 14 suítes, 71/71 testes passaram; TypeScript sem erros;
 - o export Android bem-sucedido da implementação anterior permanece válido; esta revisão não alterou dependências, assets ou configuração de bundle.
+
+## Segunda revisão corretiva
+
+- check-in aplica os insets reais superior e inferior ao conteúdo rolável, com folga adicional para as ações;
+- ações de check-in/check-out e retorno possuem papel, rótulo e estados acessíveis de desabilitado/ocupado, mantendo Material Icons;
+- justificativa é oferecida para qualquer falta elegível com `attendanceId`, inclusive `AUTO_FAILED`, mas não para análise pendente ou aprovada;
+- o contrato de frequência associa `attendanceId` e `justificationStatus` à mesma falta elegível, aceitando ausência sem justificativa ou justificativa rejeitada;
+- após o `upsert` idempotente da tentativa, a rota de questões relê `submittedAt` e bloqueia uma submissão concorrente antes de devolver conteúdo.
+
+### RED/GREEN da segunda revisão
+
+Os testes focais falharam inicialmente porque a rota devolvia questões mesmo após a revalidação simulada, o helper de elegibilidade não existia e o check-in não usava insets/semântica explícitos. Após as correções:
+
+- API: 4 suítes, 45/45 testes passaram; build TypeScript sem erros;
+- mobile: 15 suítes, 73/73 testes passaram; TypeScript sem erros;
+- nenhum export adicional foi executado, pois as mudanças não alteraram dependências, assets ou configuração do bundle e o export anterior permanece verde.

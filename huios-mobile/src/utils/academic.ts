@@ -1,5 +1,7 @@
 import type { AbsenceSummary, Grade, Lesson } from '@/types';
 
+export const canSubmitJustification = (item: Pick<AbsenceSummary, 'attendanceId' | 'justificationStatus' | 'status'>) => Boolean(item.attendanceId) && item.justificationStatus !== 'PENDING_REVIEW' && item.justificationStatus !== 'APPROVED';
+
 const civilDate = (value: string | Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(typeof value === 'string' ? new Date(value) : value);
 
 export const lessonDateKey = (value: string) => /^\d{4}-\d{2}-\d{2}/.exec(value)?.[0] ?? civilDate(value);
