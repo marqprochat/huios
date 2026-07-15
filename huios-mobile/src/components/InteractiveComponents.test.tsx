@@ -2,6 +2,11 @@ import { fireEvent, render } from '@testing-library/react-native';
 jest.mock('@expo/vector-icons/MaterialIcons', () => 'MaterialIcon');
 import { MenuRow } from './MenuRow';
 import { MetricCard } from './MetricCard';
+import type { MetricCardProps } from './MetricCard';
+
+// @ts-expect-error non-neutral states must include a visible semantic label
+const invalidMetricProps: MetricCardProps = { icon: 'warning', label: 'Faltas', value: '8', status: 'danger' };
+void invalidMetricProps;
 
 describe('shared interactive components', () => {
   it('makes the complete menu row an accessible touch target', () => {
@@ -36,5 +41,14 @@ describe('shared interactive components', () => {
     expect(getByText('Frequência geral')).toBeTruthy();
     expect(getByText('92%')).toBeTruthy();
     expect(getByText('Dentro da meta')).toBeTruthy();
+  });
+
+  it('allows a neutral metric without a status label', () => {
+    const { queryByText, getByText } = render(
+      <MetricCard icon="event" label="Próximas provas" value="2" status="neutral" />,
+    );
+
+    expect(getByText('Próximas provas')).toBeTruthy();
+    expect(queryByText('Dentro da meta')).toBeNull();
   });
 });

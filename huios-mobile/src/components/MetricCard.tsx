@@ -2,7 +2,11 @@ import { Text, View } from 'react-native';
 import { AppIcon, type AppIconName } from './AppIcon';
 
 type MetricStatus = 'neutral' | 'positive' | 'warning' | 'danger';
-interface MetricCardProps { icon: AppIconName; label: string; value: string; status?: MetricStatus; statusLabel?: string; supportingText?: string }
+interface MetricCardBaseProps { icon: AppIconName; label: string; value: string; supportingText?: string }
+export type MetricCardProps = MetricCardBaseProps & (
+  | { status?: 'neutral'; statusLabel?: string }
+  | { status: Exclude<MetricStatus, 'neutral'>; statusLabel: string }
+);
 const statusStyles: Record<MetricStatus, { icon: string; text: string }> = {
   neutral: { icon: '#135bec', text: 'text-slate-600' }, positive: { icon: '#15803d', text: 'text-success' },
   warning: { icon: '#a16207', text: 'text-warning' }, danger: { icon: '#b91c1c', text: 'text-danger' },

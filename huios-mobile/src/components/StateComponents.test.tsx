@@ -13,7 +13,7 @@ describe('shared state components', () => {
       />,
     );
 
-    expect(getByLabelText('Agenda vazia')).toBeTruthy();
+    expect(getByLabelText('Nenhuma aula')).toBeTruthy();
     expect(getByText('Nenhuma aula')).toBeTruthy();
     expect(getByText('Sua agenda está livre por enquanto.')).toBeTruthy();
   });

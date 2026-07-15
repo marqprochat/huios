@@ -14,7 +14,7 @@ export function LessonCard({ lesson }: Props) {
 
   return <View className="mb-3 rounded-card border border-slate-200 bg-surface p-4 shadow-card">
     <View className="mb-2 flex-row items-start justify-between">
-      <Text className="mr-2 flex-1 font-semibold text-slate-800" numberOfLines={2}>{lesson.title}</Text>
+      <Text className="mr-2 flex-1 font-semibold text-slate-800">{lesson.title}</Text>
       {status ? <StatusBadge status={status} /> : null}
     </View>
     {lesson.discipline ? <View className="mb-1 flex-row items-start gap-1.5"><AppIcon name="school" accessibilityLabel="Disciplina" color="#64748b" size={16} /><Text className="flex-1 text-xs text-slate-500">{lesson.discipline.name}</Text></View> : null}
