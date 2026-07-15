@@ -1,113 +1,147 @@
-import { ScrollView, View, Text, RefreshControl, TouchableOpacity } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { LessonCard } from '@/components/LessonCard';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
+import { MetricCard } from '@/components/MetricCard';
+import { AppIcon } from '@/components/AppIcon';
 import { getAulas } from '@/services/aulas';
-import { getBoletim } from '@/services/boletim';
 import { getPresenca } from '@/services/presenca';
 import { getProvas } from '@/services/provas';
-import { LessonCard } from '@/components/LessonCard';
-import { GradeBar } from '@/components/GradeBar';
 import { useAuthStore } from '@/store/auth';
+import { getDisplayName, getInitials } from '@/utils/user';
+
+const formatToday = () => new Date().toLocaleDateString('pt-BR', {
+  weekday: 'long', day: 'numeric', month: 'long',
+});
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
-
+  const user = useAuthStore((state) => state.user);
+  const displayName = getDisplayName(user);
+  const firstName = displayName.split(/\s+/)[0];
+  const enrollment = user?.student?.enrollments?.find((item) => item.status === 'CURSANDO')
+    ?? user?.student?.enrollments?.[0];
+  const enrollmentLabel = enrollment
+    ? `${enrollment.courseClass.course.name} • ${enrollment.courseClass.name}`
+    : 'Dados da matrícula indisponíveis';
   const today = new Date().toISOString().split('T')[0];
 
-  const {
-    data: aulas = [],
-    isLoading: loadingAulas,
-    refetch: refetchAulas,
-  } = useQuery({ queryKey: ['aulas'], queryFn: getAulas });
-
-  const { data: grades = [] } = useQuery({ queryKey: ['boletim'], queryFn: getBoletim });
-  const { data: presenca = [] } = useQuery({ queryKey: ['presenca'], queryFn: getPresenca });
-  const { data: provas = [] } = useQuery({ queryKey: ['provas'], queryFn: getProvas });
-
-  const todayLessons = aulas.filter((a) => a.date?.startsWith(today));
-  const pendingExams = provas.filter((p) => !p.submission);
-
-  const totalLessons = presenca.reduce((acc, p) => acc + p.totalLessons, 0);
-  const totalAbsences = presenca.reduce((acc, p) => acc + p.absences, 0);
+  const aulasQuery = useQuery({ queryKey: ['aulas'], queryFn: getAulas });
+  const presencaQuery = useQuery({ queryKey: ['presenca'], queryFn: getPresenca });
+  const provasQuery = useQuery({ queryKey: ['provas'], queryFn: getProvas });
+  const todayLessons = (aulasQuery.data ?? [])
+    .filter((lesson) => lesson.date?.startsWith(today))
+    .sort((left, right) => left.startTime.localeCompare(right.startTime));
+  const pendingExams = (provasQuery.data ?? []).filter((exam) => !exam.submission);
+  const totalLessons = (presencaQuery.data ?? []).reduce((sum, item) => sum + item.totalLessons, 0);
+  const totalAbsences = (presencaQuery.data ?? []).reduce((sum, item) => sum + item.absences, 0);
   const attendanceRate = totalLessons > 0
     ? Math.round(((totalLessons - totalAbsences) / totalLessons) * 100)
     : 100;
+  const metricsLoading = presencaQuery.isLoading || provasQuery.isLoading;
+  const metricsError = presencaQuery.isError || provasQuery.isError;
+  const refreshing = aulasQuery.isFetching || presencaQuery.isFetching || provasQuery.isFetching;
+  const metricsStacked = width < 324;
 
-  const recentGrades = grades.slice(0, 3);
+  const refreshAll = () => {
+    void Promise.all([aulasQuery.refetch(), presencaQuery.refetch(), provasQuery.refetch()]);
+  };
 
   return (
     <ScrollView
       className="flex-1 bg-slate-50"
-      contentContainerStyle={{ paddingBottom: 24 }}
-      refreshControl={
-        <RefreshControl refreshing={loadingAulas} onRefresh={refetchAulas} tintColor="#135bec" />
-      }
+      contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 24) }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshAll} tintColor="#135bec" />}
     >
-      {/* Header */}
-      <View className="bg-primary px-5 pb-6" style={{ paddingTop: insets.top + 16 }}>
-        <Text className="text-white/70 text-sm">Bem-vindo,</Text>
-        <Text className="text-white text-2xl font-bold mt-0.5">
-          {user?.student?.name?.split(' ')[0] ?? 'Aluno'}
-        </Text>
-        <Text className="text-white/60 text-xs mt-1">
-          {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-        </Text>
-      </View>
-
-      {/* Stats Row */}
-      <View className="flex-row mx-4 -mt-5 gap-3">
-        <View className="flex-1 bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-          <Text className="text-xs text-slate-500">Frequência</Text>
-          <Text
-            className={`text-2xl font-bold mt-1 ${attendanceRate >= 75 ? 'text-emerald-600' : 'text-red-500'}`}
-          >
-            {attendanceRate}%
-          </Text>
-          <Text className="text-xs text-slate-400">mín. 75%</Text>
-        </View>
-        <View className="flex-1 bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-          <Text className="text-xs text-slate-500">Provas Pendentes</Text>
-          <Text className="text-2xl font-bold mt-1 text-amber-500">{pendingExams.length}</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/provas')}>
-            <Text className="text-xs text-primary">Ver todas</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Today's Lessons */}
-      <View className="mx-4 mt-6">
-        <Text className="text-base font-bold text-slate-800 mb-3">Aulas de Hoje</Text>
-        {todayLessons.length === 0 ? (
-          <View className="bg-white rounded-2xl border border-slate-100 p-6 items-center">
-            <Text className="text-slate-400 text-sm">Nenhuma aula hoje 🎉</Text>
+      <View className="bg-primary px-5 pb-10" style={{ paddingTop: insets.top + 16 }}>
+        <View className="flex-row items-center justify-between gap-4">
+          <View className="min-w-0 flex-1">
+            <Text className="text-2xl font-bold text-white">Olá, {firstName}</Text>
+            <Text className="mt-1 text-sm capitalize text-white/80">{formatToday()}</Text>
           </View>
+          <View
+            accessible
+            accessibilityLabel={`Avatar de ${displayName}`}
+            className="h-14 w-14 items-center justify-center rounded-full border-2 border-white/40 bg-white/20"
+          >
+            <Text className="text-lg font-bold text-white">{getInitials(user)}</Text>
+          </View>
+        </View>
+        <View className="mt-5 flex-row items-start gap-2">
+          <AppIcon name="school" accessibilityLabel="Matrícula" color="#fff" size={18} />
+          <Text className="min-w-0 flex-1 text-sm leading-5 text-white/90">{enrollmentLabel}</Text>
+        </View>
+      </View>
+
+      <View className="mx-4 -mt-5">
+        {metricsLoading ? <LoadingSkeleton count={2} /> : metricsError ? (
+          <ErrorState message="Não foi possível carregar seu resumo acadêmico." onRetry={() => {
+            void presencaQuery.refetch(); void provasQuery.refetch();
+          }} />
         ) : (
-          todayLessons.map((lesson) => <LessonCard key={lesson.id} lesson={lesson} />)
+          <View className={`${metricsStacked ? 'flex-col' : 'flex-row'} gap-3`}>
+            <MetricCard
+              icon="how-to-reg"
+              label="Frequência geral"
+              value={`${attendanceRate}%`}
+              status={attendanceRate >= 75 ? 'positive' : 'danger'}
+              statusLabel={attendanceRate >= 75 ? 'Dentro da meta' : 'Abaixo da meta'}
+              supportingText="Mínimo recomendado: 75%"
+            />
+            <MetricCard
+              icon="assignment"
+              label="Provas pendentes"
+              value={String(pendingExams.length)}
+              status={pendingExams.length > 0 ? 'warning' : 'positive'}
+              statusLabel={pendingExams.length > 0 ? 'Requer atenção' : 'Tudo em dia'}
+            />
+          </View>
         )}
       </View>
 
-      {/* Recent Grades */}
-      {recentGrades.length > 0 && (
-        <View className="mx-4 mt-6">
-          <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-base font-bold text-slate-800">Notas Recentes</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/presenca')}>
-              <Text className="text-xs text-primary">Ver boletim</Text>
-            </TouchableOpacity>
-          </View>
-          <View className="bg-white rounded-2xl border border-slate-100 p-4 gap-4">
-            {recentGrades.map((grade) => (
-              <View key={grade.disciplineId}>
-                <Text className="text-sm text-slate-700 mb-2">{grade.disciplineName}</Text>
-                <GradeBar value={grade.finalGrade ?? grade.value} />
-              </View>
-            ))}
-          </View>
+      <View className="mx-4 mt-6">
+        <Text className="mb-3 text-lg font-bold text-slate-900">Aulas de hoje</Text>
+        {aulasQuery.isLoading ? <LoadingSkeleton count={2} /> : aulasQuery.isError ? (
+          <ErrorState
+            message="Não foi possível carregar as aulas de hoje."
+            onRetry={() => { void aulasQuery.refetch(); }}
+          />
+        ) : todayLessons.length === 0 ? (
+          <EmptyState title="Nenhuma aula hoje" message="Sua agenda está livre por enquanto." icon="event-available" />
+        ) : todayLessons.map((lesson) => <LessonCard key={lesson.id} lesson={lesson} />)}
+      </View>
+
+      <View className="mx-4 mt-6">
+        <Text className="mb-3 text-lg font-bold text-slate-900">Acesso rápido</Text>
+        <View className={`${metricsStacked ? 'flex-col' : 'flex-row'} gap-3`}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Ver provas"
+            className="min-h-11 flex-1 flex-row items-center gap-3 rounded-card border border-slate-200 bg-white p-4 shadow-card"
+            onPress={() => router.push('/(tabs)/provas')}
+          >
+            <View className="rounded-full bg-primary-soft p-2"><AppIcon name="assignment" accessibilityLabel="Provas" color="#135bec" /></View>
+            <Text className="flex-1 font-semibold text-primary">Ver provas</Text>
+            <AppIcon name="chevron-right" accessibilityLabel="Abrir provas" color="#135bec" />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Ver boletim"
+            className="min-h-11 flex-1 flex-row items-center gap-3 rounded-card border border-slate-200 bg-white p-4 shadow-card"
+            onPress={() => router.push('/boletim')}
+          >
+            <View className="rounded-full bg-primary-soft p-2"><AppIcon name="analytics" accessibilityLabel="Boletim" color="#135bec" /></View>
+            <Text className="flex-1 font-semibold text-primary">Ver boletim</Text>
+            <AppIcon name="chevron-right" accessibilityLabel="Abrir boletim" color="#135bec" />
+          </Pressable>
         </View>
-      )}
+      </View>
     </ScrollView>
   );
 }
