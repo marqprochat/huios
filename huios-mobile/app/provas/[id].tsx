@@ -4,14 +4,17 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProvaQuestions, submitProva } from '@/services/provas';
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
+import { AppIcon } from '@/components/AppIcon';
 
 export default function ProvaScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
+  const insets = useSafeAreaInsets();
 
   const { data: questions = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['prova-questions', id],
@@ -40,9 +43,9 @@ export default function ProvaScreen() {
         text: 'Enviar', onPress: async () => {
           setSubmitting(true);
           try {
-            const result = await submitProva(id, answers) as { score?: number };
+            const result = await submitProva(id, answers) as { gradeScore?: number };
             await qc.invalidateQueries({ queryKey: ['provas'] });
-            setScore(result?.score ?? null);
+            setScore(result?.gradeScore ?? null);
             setFinished(true);
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Erro ao enviar prova';
@@ -68,7 +71,7 @@ export default function ProvaScreen() {
   if (finished) {
     return (
       <View className="flex-1 bg-slate-50 items-center justify-center px-6">
-        <Text className="text-6xl mb-4">🎉</Text>
+        <AppIcon name="check-circle" size={64} color="#059669" accessibilityLabel="Prova concluída" />
         <Text className="text-2xl font-bold text-slate-800 mb-2">Prova enviada!</Text>
         {score != null && (
           <Text className="text-lg text-slate-600 mb-6">
@@ -125,6 +128,9 @@ export default function ProvaScreen() {
           return (
             <TouchableOpacity
               key={alt.id}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              accessibilityLabel={`${String.fromCharCode(65 + idx)}. ${alt.text}${selected ? ', selecionada' : ''}`}
               className={`rounded-2xl border p-4 mb-3 flex-row items-start gap-3 ${
                 selected
                   ? 'bg-primary border-primary'
@@ -146,24 +152,30 @@ export default function ProvaScreen() {
       </ScrollView>
 
       {/* Navigation */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 py-4 flex-row gap-3">
+      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 pt-4 flex-row gap-3" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
         {currentIndex > 0 && (
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Questão anterior"
             className="flex-1 border border-slate-200 rounded-xl py-3 items-center"
             onPress={() => setCurrentIndex((i) => i - 1)}
           >
-            <Text className="text-slate-600 font-semibold">← Anterior</Text>
+            <View className="flex-row items-center gap-2"><AppIcon name="arrow-back" size={18} /><Text className="text-slate-600 font-semibold">Anterior</Text></View>
           </TouchableOpacity>
         )}
         {currentIndex < questions.length - 1 ? (
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Próxima questão"
             className="flex-1 bg-primary rounded-xl py-3 items-center"
             onPress={() => setCurrentIndex((i) => i + 1)}
           >
-            <Text className="text-white font-semibold">Próxima →</Text>
+            <View className="flex-row items-center gap-2"><Text className="text-white font-semibold">Próxima</Text><AppIcon name="arrow-forward" size={18} color="#ffffff" /></View>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Enviar prova"
             className={`flex-1 rounded-xl py-3 items-center ${allAnswered ? 'bg-emerald-600' : 'bg-slate-300'}`}
             onPress={handleSubmit}
             disabled={submitting}

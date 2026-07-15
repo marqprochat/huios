@@ -2,10 +2,28 @@ import type { AbsenceSummary, Grade, Lesson } from '@/types';
 
 const civilDate = (value: string | Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(typeof value === 'string' ? new Date(value) : value);
 
+export const lessonDateKey = (value: string) => /^\d{4}-\d{2}-\d{2}/.exec(value)?.[0] ?? civilDate(value);
+
 export function groupLessonsByPeriod(lessons: Lesson[], now = new Date()) {
   const today = civilDate(now);
-  const ordered = [...lessons].sort((a, b) => `${a.date}${a.startTime ?? ''}`.localeCompare(`${b.date}${b.startTime ?? ''}`));
-  return { upcoming: ordered.filter(item => civilDate(item.date) >= today), previous: ordered.filter(item => civilDate(item.date) < today).reverse() };
+  const ordered = [...lessons].sort((a, b) => `${lessonDateKey(a.date)}${a.startTime ?? ''}`.localeCompare(`${lessonDateKey(b.date)}${b.startTime ?? ''}`));
+  return { upcoming: ordered.filter(item => lessonDateKey(item.date) >= today), previous: ordered.filter(item => lessonDateKey(item.date) < today).reverse() };
+}
+
+export function formatExamAvailability(exam: { startDate?: string; deadline?: string; availabilityStatus?: 'NOT_STARTED' | 'AVAILABLE' | 'EXPIRED' }, now = new Date()) {
+  if (exam.availabilityStatus === 'NOT_STARTED') return 'Ainda não iniciada';
+  if (exam.availabilityStatus === 'EXPIRED') return 'Prazo encerrado';
+  if (exam.availabilityStatus === 'AVAILABLE') return 'Disponível';
+  if (exam.startDate && new Date(exam.startDate).getTime() > now.getTime()) return 'Ainda não iniciada';
+  if (exam.deadline && new Date(exam.deadline).getTime() < now.getTime()) return 'Prazo encerrado';
+  return 'Disponível';
+}
+
+export function getAcademicViewState(loading: boolean, error: boolean, empty: boolean) {
+  if (loading) return 'loading';
+  if (error) return 'error';
+  if (empty) return 'empty';
+  return 'content';
 }
 
 export function formatExamDeadline(deadline?: string, now = new Date()) {
@@ -30,5 +48,5 @@ export function summarizeGrades(grades: Grade[]) {
 }
 
 export function groupLessonsByDate(lessons: Lesson[]) {
-  return lessons.reduce<Record<string, Lesson[]>>((groups, item) => { const key = civilDate(item.date); (groups[key] ??= []).push(item); return groups; }, {});
+  return lessons.reduce<Record<string, Lesson[]>>((groups, item) => { const key = lessonDateKey(item.date); (groups[key] ??= []).push(item); return groups; }, {});
 }

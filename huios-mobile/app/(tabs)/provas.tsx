@@ -1,9 +1,36 @@
 import { useState } from 'react';
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query'; import { useRouter } from 'expo-router';
-import { AppIcon } from '@/components/AppIcon'; import { EmptyState } from '@/components/EmptyState'; import { ErrorState } from '@/components/ErrorState'; import { LoadingSkeleton } from '@/components/LoadingSkeleton'; import { ScreenHeader } from '@/components/ScreenHeader';
-import { getProvas } from '@/services/provas'; import { formatExamDeadline } from '@/utils/academic';
+import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
+import { AppIcon } from '@/components/AppIcon';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
+import { ScreenHeader } from '@/components/ScreenHeader';
+import { getProvas } from '@/services/provas';
+import { formatExamAvailability, formatExamDeadline } from '@/utils/academic';
 
-export default function ProvasScreen(){ const [tab,setTab]=useState<'pending'|'done'>('pending'); const router=useRouter(); const query=useQuery({queryKey:['provas'],queryFn:getProvas}); const exams=(query.data??[]).filter(item=>tab==='done'?!!item.submission:!item.submission);
- return <View className="flex-1 bg-slate-50"><ScreenHeader title="Provas" subtitle={`${(query.data??[]).filter(item=>!item.submission).length} pendentes`} /><View className="mx-4 mt-4 flex-row rounded-xl bg-slate-200 p-1">{([['pending','Pendentes'],['done','Realizadas']] as const).map(([key,label])=><TouchableOpacity key={key} accessibilityRole="tab" accessibilityState={{selected:tab===key}} onPress={()=>setTab(key)} className={`min-h-11 flex-1 items-center justify-center rounded-lg ${tab===key?'bg-white':''}`}><Text className={tab===key?'font-semibold text-primary':'text-slate-600'}>{label}</Text></TouchableOpacity>)}</View><ScrollView contentContainerStyle={{padding:16,paddingBottom:48}} refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={query.refetch}/>}>
- {query.isLoading?<LoadingSkeleton count={3}/>:query.isError?<ErrorState message="Não foi possível carregar as provas." onRetry={query.refetch}/>:exams.length===0?<EmptyState title={tab==='pending'?'Nenhuma prova pendente':'Nenhuma prova realizada'} message="As avaliações aparecerão aqui."/>:exams.map(exam=>{const deadline=formatExamDeadline(exam.deadline);const expired=deadline==='Prazo encerrado';return <View key={exam.id} className="mb-3 rounded-2xl border border-slate-100 bg-white p-4"><Text className="text-base font-bold text-slate-900">{exam.title}</Text><Text className="mt-1 text-sm text-slate-500">{exam.discipline?.name??'Disciplina não informada'}</Text><View className="mt-3 flex-row flex-wrap gap-3"><Text className={expired?'text-sm text-red-600':'text-sm text-amber-700'}><AppIcon name="schedule" size={16}/> {deadline}</Text>{exam.durationMinutes!=null&&<Text className="text-sm text-slate-600"><AppIcon name="timer" size={16}/> {exam.durationMinutes} min</Text>}</View>{exam.submission?<Text className="mt-3 font-bold text-emerald-700">Nota: {exam.submission.score?.toFixed(1)??'Aguardando correção'}</Text>:!expired&&<TouchableOpacity accessibilityRole="button" accessibilityLabel={`Iniciar ${exam.title}`} onPress={()=>router.push(`/provas/${exam.id}`)} className="mt-4 min-h-11 items-center justify-center rounded-xl bg-primary"><Text className="font-semibold text-white">Iniciar</Text></TouchableOpacity>}</View>})}</ScrollView></View> }
+export default function ProvasScreen() {
+  const [tab, setTab] = useState<'pending' | 'done'>('pending');
+  const router = useRouter();
+  const query = useQuery({ queryKey: ['provas'], queryFn: getProvas });
+  const exams = (query.data ?? []).filter(item => tab === 'done' ? Boolean(item.submission) : !item.submission);
+  return <View className="flex-1 bg-slate-50">
+    <ScreenHeader title="Provas" subtitle={`${(query.data ?? []).filter(item => !item.submission).length} pendentes`} />
+    <View className="mx-4 mt-4 flex-row rounded-xl bg-slate-200 p-1" accessibilityRole="tablist">
+      {([['pending', 'Pendentes'], ['done', 'Realizadas']] as const).map(([key, label]) => <TouchableOpacity key={key} accessibilityRole="tab" accessibilityState={{ selected: tab === key }} onPress={() => setTab(key)} className={`min-h-11 flex-1 items-center justify-center rounded-lg ${tab === key ? 'bg-white' : ''}`}><Text className={tab === key ? 'font-semibold text-primary' : 'text-slate-600'}>{label}</Text></TouchableOpacity>)}
+    </View>
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 }} refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={query.refetch} />}>
+      {query.isLoading ? <LoadingSkeleton count={3} /> : query.isError ? <ErrorState message="Não foi possível carregar as provas." onRetry={query.refetch} /> : exams.length === 0 ? <EmptyState title={tab === 'pending' ? 'Nenhuma prova pendente' : 'Nenhuma prova realizada'} message="As avaliações aparecerão aqui." /> : exams.map(exam => {
+        const availability = formatExamAvailability(exam);
+        return <View key={exam.id} className="mb-3 rounded-2xl border border-slate-100 bg-white p-4">
+          <Text className="text-base font-bold text-slate-900">{exam.title}</Text>
+          <Text className="mt-1 text-sm text-slate-500">{exam.discipline?.name ?? 'Disciplina não informada'}</Text>
+          <View className="mt-3 flex-row items-center gap-2"><AppIcon name="schedule" size={16} /><Text className={availability === 'Disponível' ? 'text-sm text-amber-700' : 'text-sm text-slate-600'}>{availability === 'Disponível' ? formatExamDeadline(exam.deadline) : availability}</Text></View>
+          {exam.durationMinutes != null && <View className="mt-2 flex-row items-center gap-2"><AppIcon name="timer" size={16} /><Text className="text-sm text-slate-600">{exam.durationMinutes} min</Text></View>}
+          {exam.submission ? <Text className="mt-3 font-bold text-emerald-700">Nota: {exam.submission.gradeScore?.toFixed(1) ?? 'Aguardando correção'}</Text> : availability === 'Disponível' && <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Iniciar ${exam.title}`} onPress={() => router.push(`/provas/${exam.id}`)} className="mt-4 min-h-11 items-center justify-center rounded-xl bg-primary"><Text className="font-semibold text-white">Iniciar</Text></TouchableOpacity>}
+        </View>;
+      })}
+    </ScrollView>
+  </View>;
+}

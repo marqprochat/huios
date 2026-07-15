@@ -1,4 +1,4 @@
-import { calculateAttendanceRate, formatExamDeadline, groupLessonsByPeriod, summarizeGrades } from './academic';
+import { calculateAttendanceRate, formatExamAvailability, formatExamDeadline, getAcademicViewState, groupLessonsByPeriod, lessonDateKey, summarizeGrades } from './academic';
 import type { Lesson } from '@/types';
 
 const lesson = (id: string, date: string): Lesson => ({ id, date, startTime: null, endTime: null });
@@ -27,5 +27,18 @@ describe('academic presentation rules', () => {
 
   it('does not turn missing grades into zeroes', () => {
     expect(summarizeGrades([{ disciplineId: '1', disciplineName: 'Direito', finalGrade: undefined }])).toEqual({ average: null, gradedCount: 0 });
+  });
+
+  it('labels future exams as not started and preserves Prisma civil lesson dates', () => {
+    const now = new Date('2026-07-15T12:00:00.000Z');
+    expect(formatExamAvailability({ startDate: '2026-07-16T12:00:00.000Z', deadline: '2026-07-17T12:00:00.000Z' }, now)).toBe('Ainda não iniciada');
+    expect(lessonDateKey('2026-07-15T00:00:00.000Z')).toBe('2026-07-15');
+  });
+
+  it('keeps profile loading until both academic queries settle', () => {
+    expect(getAcademicViewState(true, false, false)).toBe('loading');
+    expect(getAcademicViewState(false, true, false)).toBe('error');
+    expect(getAcademicViewState(false, false, true)).toBe('empty');
+    expect(getAcademicViewState(false, false, false)).toBe('content');
   });
 });

@@ -182,9 +182,7 @@ export default function CheckinScreen() {
               </Text>
             </View>
           ) : (
-            <Text className="text-white font-bold text-base">
-              {!hasCheckin ? '📍 Fazer Check-in' : '🚪 Fazer Check-out'}
-            </Text>
+            <View className="flex-row items-center gap-2"><MaterialIcons name={!hasCheckin ? 'location-on' : 'logout'} size={20} color="#ffffff" /><Text className="text-white font-bold text-base">{!hasCheckin ? 'Fazer check-in' : 'Fazer check-out'}</Text></View>
           )}
         </TouchableOpacity>
       )}
@@ -194,7 +192,7 @@ export default function CheckinScreen() {
           <MaterialIcons name="check-circle" size={48} color="#10b981" />
           <Text className="text-emerald-600 font-semibold mt-2">Presença completa registrada</Text>
           <TouchableOpacity className="mt-4" onPress={() => router.back()}>
-            <Text className="text-primary font-medium">← Voltar para Aulas</Text>
+            <View className="flex-row items-center gap-2"><MaterialIcons name="arrow-back" size={18} color="#135bec" /><Text className="text-primary font-medium">Voltar para Aulas</Text></View>
           </TouchableOpacity>
         </View>
       )}

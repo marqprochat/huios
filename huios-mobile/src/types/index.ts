@@ -58,11 +58,13 @@ export interface Exam {
   durationMinutes?: number;
   discipline?: { id: string; name: string };
   submission?: ExamSubmission;
+  availabilityStatus?: 'NOT_STARTED' | 'AVAILABLE' | 'EXPIRED';
 }
 
 export interface ExamSubmission {
   id: string;
   score?: number;
+  gradeScore?: number;
   submittedAt: string;
 }
 
