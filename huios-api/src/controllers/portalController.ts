@@ -326,6 +326,7 @@ export const getStudentAttendanceSummary: PortalHandler = async (req, res) => {
 
 export const listStudentExams: PortalHandler = async (req, res) => {
   const { studentId, disciplineIds } = await context(req);
+  const now = new Date();
   const exams = await prisma.exam.findMany({
     where: { disciplineId: { in: disciplineIds }, isPublished: true },
     include: { discipline: true, submissions: { where: { studentId } } },
@@ -335,15 +336,24 @@ export const listStudentExams: PortalHandler = async (req, res) => {
     ...exam,
     deadline: endDate,
     durationMinutes: duration,
-    submission: submissions[0]
+    availabilityStatus: now < exam.startDate ? 'NOT_STARTED' : now > endDate ? 'EXPIRED' : 'AVAILABLE',
+    submission: submissions[0] ? {
+      ...submissions[0],
+      gradeScore: submissions[0].score != null && submissions[0].maxScore
+        ? Math.round((submissions[0].score / submissions[0].maxScore) * 100) / 10
+        : undefined
+    } : undefined
   })));
 };
 
 export const listStudentExamQuestions: PortalHandler = async (req, res) => {
-  const { disciplineIds } = await context(req);
+  const { studentId, disciplineIds } = await context(req);
+  const now = new Date();
   const exam = await prisma.exam.findFirst({
-    where: { id: req.params.id, disciplineId: { in: disciplineIds }, isPublished: true },
+    where: { id: req.params.id, disciplineId: { in: disciplineIds }, isPublished: true, startDate: { lte: now }, endDate: { gte: now } },
     select: {
+      id: true,
+      submissions: { where: { studentId }, select: { id: true, submittedAt: true } },
       questions: {
         orderBy: { order: 'asc' },
         select: { id: true, statement: true, alternatives: { select: { id: true, text: true } } }
@@ -351,6 +361,12 @@ export const listStudentExamQuestions: PortalHandler = async (req, res) => {
     }
   });
   if (!exam) return res.status(404).json({ message: 'Prova não encontrada' });
+  if (exam.submissions?.[0]?.submittedAt) return res.status(409).json({ message: 'Prova já foi submetida' });
+  await prisma.examSubmission.upsert({
+    where: { examId_studentId: { examId: exam.id, studentId } },
+    create: { examId: exam.id, studentId, startedAt: now },
+    update: {}
+  });
   return res.json(exam.questions.map(({ statement, ...question }) => ({ ...question, text: statement })));
 };
 
@@ -408,8 +424,19 @@ export const submitStudentExam: PortalHandler = async (req, res) => {
   const gradeScore = maxScore ? Math.round((totalScore / maxScore) * 100) / 10 : 0;
   const transactionResult = await prisma.$transaction(async tx => {
     const existing = await tx.examSubmission.findUnique({ where: { examId_studentId: { examId, studentId } } });
-    if (existing?.submittedAt) return { alreadySubmitted: true } as const;
-    const submission = existing ?? await tx.examSubmission.create({ data: { examId, studentId, startedAt: now } });
+    if (!existing) return { conflict: 'Prova ainda não iniciada' } as const;
+    if (existing.submittedAt) return { conflict: 'Prova já foi submetida' } as const;
+    const durationDeadline = exam.duration
+      ? new Date(existing.startedAt.getTime() + exam.duration * 60_000)
+      : exam.endDate;
+    const effectiveDeadline = new Date(Math.min(exam.endDate.getTime(), durationDeadline.getTime()));
+    if (now > effectiveDeadline) return { conflict: 'Tempo da prova encerrado' } as const;
+    const claimed = await tx.examSubmission.updateMany({
+      where: { id: existing.id, submittedAt: null },
+      data: { submittedAt: now, score: totalScore, maxScore }
+    });
+    if (claimed.count !== 1) return { conflict: 'Prova já foi submetida' } as const;
+    const submission = existing;
 
     for (const answer of normalizedAnswers) {
       const question = exam.questions.find(item => item.id === answer.questionId)!;
@@ -423,7 +450,6 @@ export const submitStudentExam: PortalHandler = async (req, res) => {
       });
     }
 
-    await tx.examSubmission.update({ where: { id: submission.id }, data: { submittedAt: now, score: totalScore, maxScore } });
     const gradeData = {
       studentId, disciplineId: exam.disciplineId, type: 'EXAM' as const, examId,
       score: gradeScore, weight: 1, title: exam.title, createdById: req.user.id
@@ -433,8 +459,8 @@ export const submitStudentExam: PortalHandler = async (req, res) => {
       create: gradeData,
       update: gradeData
     });
-    return { alreadySubmitted: false } as const;
+    return { conflict: null } as const;
   });
-  if (transactionResult.alreadySubmitted) return res.status(400).json({ message: 'Prova já foi submetida' });
+  if (transactionResult.conflict) return res.status(409).json({ message: transactionResult.conflict });
   return res.json({ success: true, score: totalScore, maxScore, gradeScore, questions: questionResults });
 };
