@@ -8,12 +8,12 @@ describe('getAuthRedirect', () => {
 
   it('opens tabs when a stored session has just finished hydrating', () => {
     expect(getAuthRedirect({ token: 'token', isLoading: false, inAuthGroup: true }))
-      .toBe('/(tabs)/index');
+      .toBe('/(tabs)');
   });
 
   it('redirects a valid session that reaches auth after hydration or remount', () => {
     expect(getAuthRedirect({ token: 'token', isLoading: false, inAuthGroup: true }))
-      .toBe('/(tabs)/index');
+      .toBe('/(tabs)');
   });
 
   it('chooses the same destination as login during the setAuth/replace interval', () => {
@@ -22,8 +22,8 @@ describe('getAuthRedirect', () => {
       isLoading: false,
       inAuthGroup: true,
     });
-    const explicitLoginDestination = '/(tabs)/index';
+    const explicitLoginDestination = '/(tabs)';
 
-    expect(new Set([guardDestination, explicitLoginDestination])).toEqual(new Set(['/(tabs)/index']));
+    expect(new Set([guardDestination, explicitLoginDestination])).toEqual(new Set(['/(tabs)']));
   });
 });

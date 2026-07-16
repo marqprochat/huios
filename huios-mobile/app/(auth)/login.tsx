@@ -60,7 +60,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(normalizedEmail, password);
-      router.replace('/(tabs)/index');
+      router.replace('/(tabs)');
     } catch (error) {
       setFormError(toLoginMessage(error));
     } finally {
