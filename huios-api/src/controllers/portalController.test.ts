@@ -305,9 +305,26 @@ describe('portal routes', () => {
     expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({
       select: expect.objectContaining({
         lessons: expect.objectContaining({
+          where: { endTime: { lte: expect.any(Date) } },
           select: { attendances: { where: { studentId: 'student-1' }, select: { id: true, status: true, justification: { select: { status: true } } } } }
         })
       })
+    }));
+  });
+
+  it('does not count future lessons or missing and pending attendance as presence', async () => {
+    const findMany = vi.spyOn(prisma.discipline, 'findMany');
+    findMany.mockResolvedValueOnce([{ id: 'discipline-1' }] as never).mockResolvedValueOnce([{
+      id: 'discipline-1', name: 'Discipline', lessons: [
+        { attendances: [] },
+        { attendances: [{ id: 'pending', status: 'PENDING', justification: null }] },
+        { attendances: [{ id: 'present', status: 'PRESENT', justification: null }] },
+      ]
+    }] as never);
+    const response = await request(app).get('/api/portal/presenca/pendencias').set('Authorization', `Bearer ${token}`);
+    expect(response.body[0]).toMatchObject({ totalLessons: 1, absences: 0, attendanceRate: 100 });
+    expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({
+      select: expect.objectContaining({ lessons: expect.objectContaining({ where: { endTime: { lte: expect.any(Date) } } }) })
     }));
   });
 
@@ -324,10 +341,24 @@ describe('portal routes', () => {
     const findMany = vi.spyOn(prisma.exam, 'findMany');
     findMany.mockResolvedValueOnce([{
       id: 'future', title: 'Future', startDate: new Date(Date.now() + 60_000), endDate: new Date(Date.now() + 120_000), duration: 30,
-      discipline: { id: 'discipline-1', name: 'D' }, submissions: [{ id: 's', score: 2, maxScore: 4, submittedAt: new Date() }]
+      discipline: { id: 'discipline-1', name: 'D' }, submissions: [{ id: 's', score: 2, maxScore: 4, startedAt: new Date(), submittedAt: new Date() }]
     }] as never);
     const response = await request(app).get('/api/portal/provas').set('Authorization', `Bearer ${token}`);
     expect(response.body[0]).toEqual(expect.objectContaining({ availabilityStatus: 'NOT_STARTED', submission: expect.objectContaining({ gradeScore: 5 }) }));
+  });
+
+  it('lists an unfinished submission as started, not submitted, with its effective deadline', async () => {
+    const startedAt = new Date(Date.now() - 5 * 60_000);
+    vi.spyOn(prisma.exam, 'findMany').mockResolvedValue([{
+      id: 'exam-1', title: 'Exam', disciplineId: 'discipline-1', discipline: { id: 'discipline-1' },
+      startDate: new Date(Date.now() - 60_000), endDate: new Date(Date.now() + 60 * 60_000), duration: 30,
+      submissions: [{ id: 'submission-1', startedAt, submittedAt: null, score: null, maxScore: null }]
+    }] as never);
+    const response = await request(app).get('/api/portal/provas').set('Authorization', `Bearer ${token}`);
+    expect(response.status).toBe(200);
+    expect(response.body[0]).toMatchObject({ attemptStatus: 'STARTED', startedAt: startedAt.toISOString() });
+    expect(response.body[0].submittedAt).toBeUndefined();
+    expect(response.body[0].deadline).toBe(new Date(startedAt.getTime() + 30 * 60_000).toISOString());
   });
 
   it('returns questions without correct-answer flags for an authorized exam', async () => {
@@ -343,6 +374,38 @@ describe('portal routes', () => {
     expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ id: 'exam-1', disciplineId: { in: ['discipline-1'] }, isPublished: true })
     }));
+  });
+
+  it('resumes an unfinished attempt without replacing its startedAt', async () => {
+    const startedAt = new Date(Date.now() - 5 * 60_000);
+    vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({ id: 'exam-1', submissions: [{ id: 's', startedAt, submittedAt: null }], questions: [] } as never);
+    const upsert = vi.spyOn(prisma.examSubmission, 'upsert').mockResolvedValue({ id: 's', startedAt, submittedAt: null } as never);
+    vi.spyOn(prisma.examSubmission, 'findUnique').mockResolvedValue({ id: 's', startedAt, submittedAt: null } as never);
+    const response = await request(app).get('/api/portal/provas/exam-1/questoes').set('Authorization', `Bearer ${token}`);
+    expect(response.status).toBe(200);
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ update: {} }));
+    const createdAt = upsert.mock.calls[0]?.[0].create.startedAt;
+    expect(new Date(createdAt!).getTime()).toBeGreaterThan(startedAt.getTime());
+  });
+
+  it.each([
+    ['omitted', { q1: 'a1' }],
+    ['extra', { q1: 'a1', q2: 'a2', q3: 'a3' }],
+    ['empty', { q1: 'a1', q2: '' }],
+  ])('rejects %s answers before claiming the submission', async (_case, answers) => {
+    vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({
+      id: 'exam-1', title: 'Exam', disciplineId: 'discipline-1', duration: 30,
+      startDate: new Date(Date.now() - 1000), endDate: new Date(Date.now() + 60_000),
+      questions: [
+        { id: 'q1', weight: 1, alternatives: [{ id: 'a1', isCorrect: true }] },
+        { id: 'q2', weight: 1, alternatives: [{ id: 'a2', isCorrect: true }] },
+      ]
+    } as never);
+    const transaction = vi.spyOn(prisma, '$transaction');
+    const response = await request(app).post('/api/portal/provas/exam-1/submit')
+      .set('Authorization', `Bearer ${token}`).send({ answers });
+    expect(response.status).toBe(400);
+    expect(transaction).not.toHaveBeenCalled();
   });
 
   it('does not expose questions before the exam starts', async () => {

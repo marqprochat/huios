@@ -15,19 +15,20 @@ import pushTokenRoutes from './routes/pushTokenRoutes';
 import transactionRoutes from './routes/transactionRoutes';
 import portalRoutes from './routes/portalRoutes';
 
-export const app: Express = express();
+export function createApp(options: { rateLimitMax?: number } = {}): Express {
+  const app: Express = express();
 
 // Security Middleware
-app.use(helmet());
-const allowedOrigins = [
+  app.use(helmet());
+  const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3000',
   /^https?:\/\/localhost(:\d+)?$/,
   /^http:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/,
   /^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/,
   /^http:\/\/172\.\d+\.\d+\.\d+(:\d+)?$/,
-];
+  ];
 
-app.use(cors({
+  app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true); // server-to-server (proxy)
     const allowed = allowedOrigins.some(o =>
@@ -36,30 +37,33 @@ app.use(cors({
     callback(null, allowed);
   },
   credentials: true
-}));
-app.use(express.json());
+  }));
+  app.use(express.json());
+
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: options.rateLimitMax ?? 100
+  });
+  app.use('/api', limiter);
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/classes', classRoutes);
-app.use('/api/exams', examRoutes);
-app.use('/api/lessons', lessonRoutes);
-app.use('/api/attendance', attendanceRoutes);
-app.use('/api/grades', gradeRoutes);
-app.use('/api/settings', settingsRoutes);
-app.use('/api/justifications', justificationRoutes);
-app.use('/api/push-tokens', pushTokenRoutes);
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/portal', portalRoutes);
-
-// Rate Limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
+  app.use('/api/auth', authRoutes);
+  app.use('/api/classes', classRoutes);
+  app.use('/api/exams', examRoutes);
+  app.use('/api/lessons', lessonRoutes);
+  app.use('/api/attendance', attendanceRoutes);
+  app.use('/api/grades', gradeRoutes);
+  app.use('/api/settings', settingsRoutes);
+  app.use('/api/justifications', justificationRoutes);
+  app.use('/api/push-tokens', pushTokenRoutes);
+  app.use('/api/transactions', transactionRoutes);
+  app.use('/api/portal', portalRoutes);
 
 // Health Check
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+  app.get('/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+  return app;
+}
+
+export const app = createApp();

@@ -288,7 +288,7 @@ export const getStudentAttendanceSummary: PortalHandler = async (req, res) => {
       id: true,
       name: true,
       lessons: {
-        where: { date: { lt: new Date() } },
+        where: { endTime: { lte: new Date() } },
         select: {
           attendances: {
             where: { studentId },
@@ -300,8 +300,12 @@ export const getStudentAttendanceSummary: PortalHandler = async (req, res) => {
   });
 
   return res.json(disciplines.map(discipline => {
-    const absences = discipline.lessons.filter(lesson => lesson.attendances[0]?.status === 'ABSENT').length;
-    const pendingJustifications = discipline.lessons.filter(lesson => {
+    const consolidatedLessons = discipline.lessons.filter(lesson => {
+      const status = lesson.attendances[0]?.status;
+      return status === 'PRESENT' || status === 'ABSENT' || status === 'EXCUSED';
+    });
+    const absences = consolidatedLessons.filter(lesson => lesson.attendances[0]?.status === 'ABSENT').length;
+    const pendingJustifications = consolidatedLessons.filter(lesson => {
       const attendance = lesson.attendances[0];
       return attendance?.status === 'ABSENT'
         && attendance.justification?.status !== 'APPROVED';
@@ -309,10 +313,10 @@ export const getStudentAttendanceSummary: PortalHandler = async (req, res) => {
     return {
       disciplineId: discipline.id,
       disciplineName: discipline.name,
-      totalLessons: discipline.lessons.length,
+      totalLessons: consolidatedLessons.length,
       absences,
-      attendanceRate: discipline.lessons.length
-        ? Math.round(((discipline.lessons.length - absences) / discipline.lessons.length) * 10000) / 100
+      attendanceRate: consolidatedLessons.length
+        ? Math.round(((consolidatedLessons.length - absences) / consolidatedLessons.length) * 10000) / 100
         : 100,
       status: absences >= 3 ? 'AUTO_FAILED' : absences >= 2 ? 'NEEDS_JUSTIFICATION' : 'OK',
       pendingJustifications,
@@ -336,18 +340,29 @@ export const listStudentExams: PortalHandler = async (req, res) => {
     include: { discipline: true, submissions: { where: { studentId } } },
     orderBy: { startDate: 'desc' }
   });
-  return res.json(exams.map(({ submissions, endDate, duration, ...exam }) => ({
-    ...exam,
-    deadline: endDate,
-    durationMinutes: duration,
-    availabilityStatus: now < exam.startDate ? 'NOT_STARTED' : now > endDate ? 'EXPIRED' : 'AVAILABLE',
-    submission: submissions[0] ? {
-      ...submissions[0],
-      gradeScore: submissions[0].score != null && submissions[0].maxScore
-        ? Math.round((submissions[0].score / submissions[0].maxScore) * 100) / 10
-        : undefined
-    } : undefined
-  })));
+  return res.json(exams.map(({ submissions, endDate, duration, ...exam }) => {
+    const attempt = submissions[0];
+    const attemptDeadline = attempt && duration
+      ? new Date(attempt.startedAt.getTime() + duration * 60_000)
+      : endDate;
+    const deadline = new Date(Math.min(endDate.getTime(), attemptDeadline.getTime()));
+    const attemptStatus = attempt?.submittedAt ? 'SUBMITTED' : attempt ? 'STARTED' : 'NOT_STARTED';
+    return {
+      ...exam,
+      deadline,
+      durationMinutes: duration,
+      availabilityStatus: now < exam.startDate ? 'NOT_STARTED' : now > deadline ? 'EXPIRED' : 'AVAILABLE',
+      attemptStatus,
+      startedAt: attempt?.startedAt,
+      submittedAt: attempt?.submittedAt ?? undefined,
+      submission: attempt?.submittedAt ? {
+        ...attempt,
+        gradeScore: attempt.score != null && attempt.maxScore
+          ? Math.round((attempt.score / attempt.maxScore) * 100) / 10
+          : undefined
+      } : undefined
+    };
+  }));
 };
 
 export const listStudentExamQuestions: PortalHandler = async (req, res) => {
@@ -405,6 +420,12 @@ export const submitStudentExam: PortalHandler = async (req, res) => {
   const normalizedAnswers = answers as Array<{ questionId: string; alternativeId: string }>;
   if (new Set(normalizedAnswers.map(answer => answer.questionId)).size !== normalizedAnswers.length) {
     return res.status(400).json({ message: 'Questão respondida mais de uma vez' });
+  }
+  const expectedQuestionIds = new Set(exam.questions.map(question => question.id));
+  const submittedQuestionIds = new Set(normalizedAnswers.map(answer => answer.questionId));
+  if (submittedQuestionIds.size !== expectedQuestionIds.size
+    || [...expectedQuestionIds].some(questionId => !submittedQuestionIds.has(questionId))) {
+    return res.status(400).json({ message: 'Todas as questões devem ser respondidas exatamente uma vez' });
   }
   const answerReferencesAreValid = normalizedAnswers.every(answer => {
     const question = exam.questions.find(item => item.id === answer.questionId);
