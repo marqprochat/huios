@@ -372,6 +372,8 @@ export const listStudentExamQuestions: PortalHandler = async (req, res) => {
     where: { id: req.params.id, disciplineId: { in: disciplineIds }, isPublished: true, startDate: { lte: now }, endDate: { gte: now } },
     select: {
       id: true,
+      endDate: true,
+      duration: true,
       submissions: { where: { studentId }, select: { id: true, submittedAt: true } },
       questions: {
         orderBy: { order: 'asc' },
@@ -388,9 +390,15 @@ export const listStudentExamQuestions: PortalHandler = async (req, res) => {
   });
   const currentSubmission = await prisma.examSubmission.findUnique({
     where: { examId_studentId: { examId: exam.id, studentId } },
-    select: { submittedAt: true }
+    select: { startedAt: true, submittedAt: true }
   });
   if (currentSubmission?.submittedAt) return res.status(409).json({ message: 'Prova já foi submetida' });
+  if (!currentSubmission) return res.status(409).json({ message: 'Prova ainda não iniciada' });
+  const durationDeadline = exam.duration
+    ? new Date(currentSubmission.startedAt.getTime() + exam.duration * 60_000)
+    : exam.endDate;
+  const effectiveDeadline = new Date(Math.min(exam.endDate.getTime(), durationDeadline.getTime()));
+  if (now > effectiveDeadline) return res.status(410).json({ message: 'Tempo da prova encerrado' });
   return res.json(exam.questions.map(({ statement, ...question }) => ({ ...question, text: statement })));
 };
 

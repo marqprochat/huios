@@ -367,7 +367,7 @@ describe('portal routes', () => {
       submissions: [], questions: [{ id: 'question-1', statement: 'Question?', alternatives: [{ id: 'alt-1', text: 'Answer' }] }]
     } as never);
     vi.spyOn(prisma.examSubmission, 'upsert').mockResolvedValue({ id: 'submission-1', startedAt: new Date(), submittedAt: null } as never);
-    vi.spyOn(prisma.examSubmission, 'findUnique').mockResolvedValue({ id: 'submission-1', submittedAt: null } as never);
+    vi.spyOn(prisma.examSubmission, 'findUnique').mockResolvedValue({ id: 'submission-1', startedAt: new Date(), submittedAt: null } as never);
     const response = await request(app).get('/api/portal/provas/exam-1/questoes').set('Authorization', `Bearer ${token}`);
     expect(response.status).toBe(200);
     expect(response.body).toEqual([{ id: 'question-1', text: 'Question?', alternatives: [{ id: 'alt-1', text: 'Answer' }] }]);
@@ -378,7 +378,10 @@ describe('portal routes', () => {
 
   it('resumes an unfinished attempt without replacing its startedAt', async () => {
     const startedAt = new Date(Date.now() - 5 * 60_000);
-    vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({ id: 'exam-1', submissions: [{ id: 's', startedAt, submittedAt: null }], questions: [] } as never);
+    vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({
+      id: 'exam-1', endDate: new Date(Date.now() + 60 * 60_000), duration: 30,
+      submissions: [{ id: 's', startedAt, submittedAt: null }], questions: []
+    } as never);
     const upsert = vi.spyOn(prisma.examSubmission, 'upsert').mockResolvedValue({ id: 's', startedAt, submittedAt: null } as never);
     vi.spyOn(prisma.examSubmission, 'findUnique').mockResolvedValue({ id: 's', startedAt, submittedAt: null } as never);
     const response = await request(app).get('/api/portal/provas/exam-1/questoes').set('Authorization', `Bearer ${token}`);
@@ -386,6 +389,23 @@ describe('portal routes', () => {
     expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ update: {} }));
     const createdAt = upsert.mock.calls[0]?.[0].create.startedAt;
     expect(new Date(createdAt!).getTime()).toBeGreaterThan(startedAt.getTime());
+  });
+
+  it('does not return questions when the attempt duration expired before the global deadline', async () => {
+    const startedAt = new Date(Date.now() - 31 * 60_000);
+    vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({
+      id: 'exam-1', endDate: new Date(Date.now() + 60 * 60_000), duration: 30,
+      submissions: [{ id: 's', startedAt, submittedAt: null }],
+      questions: [{ id: 'question-1', statement: 'Must stay hidden', alternatives: [] }]
+    } as never);
+    vi.spyOn(prisma.examSubmission, 'upsert').mockResolvedValue({ id: 's', startedAt, submittedAt: null } as never);
+    vi.spyOn(prisma.examSubmission, 'findUnique').mockResolvedValue({ id: 's', startedAt, submittedAt: null } as never);
+
+    const response = await request(app).get('/api/portal/provas/exam-1/questoes').set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(410);
+    expect(response.body).toEqual({ message: 'Tempo da prova encerrado' });
+    expect(response.body).not.toHaveProperty('questions');
   });
 
   it.each([
