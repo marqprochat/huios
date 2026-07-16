@@ -46,10 +46,10 @@ async function request<T>(
 
   if (!res.ok) {
     const body: unknown = await res.json().catch(() => undefined);
-    const message = typeof body === 'object' && body !== null &&
-      'message' in body && typeof body.message === 'string'
-      ? body.message
-      : `HTTP ${res.status}`;
+    const record = typeof body === 'object' && body !== null ? body as Record<string, unknown> : undefined;
+    const message = typeof record?.message === 'string'
+      ? record.message
+      : typeof record?.error === 'string' ? record.error : `HTTP ${res.status}`;
     throw new ApiError('http', message, res.status);
   }
 

@@ -26,7 +26,20 @@ describe('academic presentation rules', () => {
   });
 
   it('does not turn missing grades into zeroes', () => {
-    expect(summarizeGrades([{ disciplineId: '1', disciplineName: 'Direito', finalGrade: undefined }])).toEqual({ average: null, gradedCount: 0 });
+    expect(summarizeGrades([{ id: 'g1', disciplineId: '1', disciplineName: 'Direito', finalGrade: undefined, weight: 1 }])).toEqual(expect.objectContaining({ average: null, gradedCount: 0 }));
+  });
+
+  it('aggregates multiple grade items per discipline with their official weights', () => {
+    const result = summarizeGrades([
+      { id: 'g1', disciplineId: 'd1', disciplineName: 'Direito', value: 6, weight: 1 },
+      { id: 'g2', disciplineId: 'd1', disciplineName: 'Direito', value: 9, weight: 2 },
+      { id: 'g3', disciplineId: 'd2', disciplineName: 'Ética', value: 8, weight: 1 },
+    ]);
+    expect(result.disciplines).toEqual([
+      expect.objectContaining({ disciplineId: 'd1', value: 8 }),
+      expect.objectContaining({ disciplineId: 'd2', value: 8 }),
+    ]);
+    expect(result.average).toBe(8);
   });
 
   it('labels future exams as not started and preserves Prisma civil lesson dates', () => {

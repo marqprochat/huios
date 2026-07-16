@@ -45,8 +45,23 @@ export function calculateAttendanceRate(items: Pick<AbsenceSummary, 'totalLesson
 }
 
 export function summarizeGrades(grades: Grade[]) {
-  const values = grades.map(item => item.finalGrade ?? item.value).filter((value): value is number => value != null);
-  return { average: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null, gradedCount: values.length };
+  const groups = new Map<string, Grade[]>();
+  for (const grade of grades) {
+    const disciplineGrades = groups.get(grade.disciplineId) ?? [];
+    disciplineGrades.push(grade);
+    groups.set(grade.disciplineId, disciplineGrades);
+  }
+  const disciplines = [...groups.values()].map(items => {
+    const graded = items.map(item => ({ item, value: item.finalGrade ?? item.value }))
+      .filter((entry): entry is { item: Grade; value: number } => entry.value != null);
+    const totalWeight = graded.reduce((sum, entry) => sum + entry.item.weight, 0);
+    const value = totalWeight > 0
+      ? graded.reduce((sum, entry) => sum + entry.value * entry.item.weight, 0) / totalWeight
+      : null;
+    return { disciplineId: items[0].disciplineId, disciplineName: items[0].disciplineName, value, items };
+  });
+  const values = disciplines.map(item => item.value).filter((value): value is number => value != null);
+  return { average: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null, gradedCount: values.length, disciplines };
 }
 
 export function groupLessonsByDate(lessons: Lesson[]) {

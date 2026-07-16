@@ -14,9 +14,9 @@ export default function ProvasScreen() {
   const [tab, setTab] = useState<'pending' | 'done'>('pending');
   const router = useRouter();
   const query = useQuery({ queryKey: ['provas'], queryFn: getProvas });
-  const exams = (query.data ?? []).filter(item => tab === 'done' ? Boolean(item.submission) : !item.submission);
+  const exams = (query.data ?? []).filter(item => tab === 'done' ? item.attemptStatus === 'SUBMITTED' || Boolean(item.submission?.submittedAt) : item.attemptStatus !== 'SUBMITTED' && !item.submission?.submittedAt);
   return <View className="flex-1 bg-slate-50">
-    <ScreenHeader title="Provas" subtitle={`${(query.data ?? []).filter(item => !item.submission).length} pendentes`} />
+    <ScreenHeader title="Provas" subtitle={`${(query.data ?? []).filter(item => item.attemptStatus !== 'SUBMITTED' && !item.submission?.submittedAt).length} pendentes`} />
     <View className="mx-4 mt-4 flex-row rounded-xl bg-slate-200 p-1" accessibilityRole="tablist">
       {([['pending', 'Pendentes'], ['done', 'Realizadas']] as const).map(([key, label]) => <TouchableOpacity key={key} accessibilityRole="tab" accessibilityState={{ selected: tab === key }} onPress={() => setTab(key)} className={`min-h-11 flex-1 items-center justify-center rounded-lg ${tab === key ? 'bg-white' : ''}`}><Text className={tab === key ? 'font-semibold text-primary' : 'text-slate-600'}>{label}</Text></TouchableOpacity>)}
     </View>
@@ -28,7 +28,7 @@ export default function ProvasScreen() {
           <Text className="mt-1 text-sm text-slate-500">{exam.discipline?.name ?? 'Disciplina não informada'}</Text>
           <View className="mt-3 flex-row items-center gap-2"><AppIcon name="schedule" size={16} /><Text className={availability === 'Disponível' ? 'text-sm text-amber-700' : 'text-sm text-slate-600'}>{availability === 'Disponível' ? formatExamDeadline(exam.deadline) : availability}</Text></View>
           {exam.durationMinutes != null && <View className="mt-2 flex-row items-center gap-2"><AppIcon name="timer" size={16} /><Text className="text-sm text-slate-600">{exam.durationMinutes} min</Text></View>}
-          {exam.submission ? <Text className="mt-3 font-bold text-emerald-700">Nota: {exam.submission.gradeScore?.toFixed(1) ?? 'Aguardando correção'}</Text> : availability === 'Disponível' && <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Iniciar ${exam.title}`} onPress={() => router.push(`/provas/${exam.id}`)} className="mt-4 min-h-11 items-center justify-center rounded-xl bg-primary"><Text className="font-semibold text-white">Iniciar</Text></TouchableOpacity>}
+          {exam.attemptStatus === 'SUBMITTED' || exam.submission?.submittedAt ? <Text className="mt-3 font-bold text-emerald-700">Nota: {exam.submission?.gradeScore?.toFixed(1) ?? 'Aguardando correção'}</Text> : availability === 'Disponível' && <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${exam.attemptStatus === 'STARTED' ? 'Continuar' : 'Iniciar'} ${exam.title}`} onPress={() => router.push(`/provas/${exam.id}`)} className="mt-4 min-h-11 items-center justify-center rounded-xl bg-primary"><Text className="font-semibold text-white">{exam.attemptStatus === 'STARTED' ? 'Continuar' : 'Iniciar'}</Text></TouchableOpacity>}
         </View>;
       })}
     </ScrollView>

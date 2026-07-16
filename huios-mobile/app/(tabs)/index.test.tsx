@@ -174,7 +174,7 @@ describe('Home data normalization', () => {
       { id: 'active', title: 'Ativa', startDate: '2026-07-15T14:00:00.000Z', deadline: '2026-07-15T16:00:00.000Z' },
       { id: 'future', title: 'Futura', startDate: '2026-07-15T16:00:00.000Z', deadline: '2026-07-15T17:00:00.000Z' },
       { id: 'expired', title: 'Expirada', startDate: '2026-07-15T12:00:00.000Z', deadline: '2026-07-15T14:00:00.000Z' },
-      { id: 'done', title: 'Feita', startDate: '2026-07-15T14:00:00.000Z', deadline: '2026-07-15T16:00:00.000Z', submission: { id: 's', submittedAt: '2026-07-15T14:30:00.000Z' } },
+      { id: 'done', title: 'Feita', startDate: '2026-07-15T14:00:00.000Z', deadline: '2026-07-15T16:00:00.000Z', submission: { id: 's', startedAt: '2026-07-15T14:00:00.000Z', submittedAt: '2026-07-15T14:30:00.000Z' } },
     ], now)).toBe(1);
   });
 });

@@ -59,13 +59,17 @@ export interface Exam {
   discipline?: { id: string; name: string };
   submission?: ExamSubmission;
   availabilityStatus?: 'NOT_STARTED' | 'AVAILABLE' | 'EXPIRED';
+  attemptStatus?: 'NOT_STARTED' | 'STARTED' | 'SUBMITTED';
+  startedAt?: string;
+  submittedAt?: string;
 }
 
 export interface ExamSubmission {
   id: string;
   score?: number;
   gradeScore?: number;
-  submittedAt: string;
+  startedAt: string;
+  submittedAt?: string;
 }
 
 export interface Question {
@@ -80,11 +84,13 @@ export interface Alternative {
 }
 
 export interface Grade {
+  id: string;
   disciplineId: string;
   disciplineName: string;
   value?: number;
   examScore?: number;
   finalGrade?: number;
+  weight: number;
 }
 
 export interface AbsenceSummary {
