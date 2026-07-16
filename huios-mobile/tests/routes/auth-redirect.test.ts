@@ -1,4 +1,4 @@
-import { getAuthRedirect } from './auth-redirect';
+import { getAuthRedirect } from '../../app/auth-redirect';
 
 describe('getAuthRedirect', () => {
   it('protects private routes when there is no authenticated session', () => {

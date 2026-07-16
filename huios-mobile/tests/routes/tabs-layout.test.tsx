@@ -25,7 +25,7 @@ jest.mock('expo-router', () => {
   return { Tabs };
 });
 
-import TabsLayout, { TAB_ROUTES, unstable_settings } from './_layout';
+import TabsLayout, { TAB_ROUTES, unstable_settings } from '../../app/(tabs)/_layout';
 
 describe('barra de abas', () => {
   it('renderiza exatamente quatro telas com names, labels e ícones aprovados', () => {

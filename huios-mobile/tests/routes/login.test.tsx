@@ -1,6 +1,6 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { ApiError } from '@/services/api';
-import LoginScreen from './login';
+import LoginScreen from '../../app/(auth)/login';
 
 const mockLogin = jest.fn();
 const mockReplace = jest.fn();

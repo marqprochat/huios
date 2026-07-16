@@ -8,7 +8,7 @@ import DashboardScreen, {
   getSaoPauloDateKey,
   shouldStackCards,
   sortLessonsByStartTime,
-} from './index';
+} from '../../app/(tabs)/index';
 import type { Lesson } from '@/types';
 
 const mockPush = jest.fn();

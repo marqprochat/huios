@@ -21,7 +21,7 @@ jest.mock('@/components/AppIcon', () => ({
   AppIcon: () => null,
 }));
 
-import MaisScreen from './mais';
+import MaisScreen from '../../app/(tabs)/mais';
 
 describe('menu Mais', () => {
   beforeEach(() => jest.clearAllMocks());

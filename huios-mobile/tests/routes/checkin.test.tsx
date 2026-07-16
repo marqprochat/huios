@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react-native';
-import CheckinScreen from './[id]';
+import CheckinScreen from '../../app/checkin/[id]';
 
 let mockLesson = { id: 'lesson-1', date: '2026-07-15T00:00:00.000Z', startTime: null as string | null, endTime: null as string | null, discipline: { id: 'd', name: 'Direito' } };
 

@@ -1,4 +1,4 @@
-import { ROOT_NAVIGATION_SETTINGS, returnFromSecondaryScreen } from './secondary-navigation';
+import { ROOT_NAVIGATION_SETTINGS, returnFromSecondaryScreen } from '../../app/secondary-navigation';
 
 describe('navegação das telas secundárias', () => {
   it('ancora deep links no grupo de abas', () => {

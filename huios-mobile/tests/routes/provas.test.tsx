@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { useQuery } from '@tanstack/react-query';
-import ProvasScreen from './provas';
+import ProvasScreen from '../../app/(tabs)/provas';
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
