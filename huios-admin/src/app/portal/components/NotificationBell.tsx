@@ -77,8 +77,13 @@ export default function NotificationBell() {
     setOpen(false);
     if (notif.disciplineId) {
       router.push(`/portal/avaliacoes/${notif.disciplineId}`);
+    } else if (notif.type === 'PAYMENT_DUE_TODAY' || notif.type === 'PAYMENT_OVERDUE') {
+      router.push('/portal/financeiro');
     }
   };
+
+  const notifIcon = (type: string) =>
+    type === 'PAYMENT_DUE_TODAY' || type === 'PAYMENT_OVERDUE' ? 'payments' : 'rate_review';
 
   const formatRelative = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -136,7 +141,7 @@ export default function NotificationBell() {
                 >
                   <div className="flex items-start gap-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${!notif.read ? 'bg-[#135bec]/15' : 'bg-slate-100'}`}>
-                      <span className={`material-symbols-outlined text-sm ${!notif.read ? 'text-[#135bec]' : 'text-slate-400'}`}>rate_review</span>
+                      <span className={`material-symbols-outlined text-sm ${!notif.read ? 'text-[#135bec]' : 'text-slate-400'}`}>{notifIcon(notif.type)}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={`text-xs font-semibold truncate ${!notif.read ? 'text-slate-800' : 'text-slate-600'}`}>

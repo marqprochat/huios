@@ -26,7 +26,12 @@ export default async function FinanceiroPage() {
       where: { type: 'DESPESA', status: { in: ['PENDENTE', 'VENCIDO'] } },
     }),
     (prisma as any).financialTransaction.count({
-      where: { status: 'VENCIDO' },
+      where: {
+        OR: [
+          { status: 'VENCIDO' },
+          { status: 'PENDENTE', dueDate: { lt: now } },
+        ],
+      },
     }),
     (prisma as any).financialTransaction.aggregate({
       _sum: { amount: true },

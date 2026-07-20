@@ -129,7 +129,8 @@
       "Bash(rm huios-mobile/__tests__/dashboard.test.tsx)",
       "Bash(rmdir huios-mobile/__tests__)",
       "Bash(grep -oE \"\\\\`\\\\\\\\\\\\$\\\\{'/\\\\\\(tabs\\\\\\)'\\\\}[^\\\\`]*\\\\`|\\\\`/\\\\\\(tabs\\\\\\)[^\\\\`]*\\\\`\" .expo/types/router.d.ts)",
-      "Bash(npx jest *)"
+      "Bash(npx jest *)",
+      "Bash(npm install *)"
     ],
     "additionalDirectories": [
       "P:\\APPS\\huios\\huios\\huios-admin\\src\\app\\api\\avaliacoes\\[disciplineId]"

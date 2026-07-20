@@ -48,10 +48,12 @@ export async function GET(req: Request) {
         return { month: label, receita: v.receita, despesa: v.despesa, saldo: v.receita - v.despesa };
       });
 
-    // 2. Defaulters
+    // 2. Defaulters (VENCIDO explícito, ou PENDENTE com vencimento já passado)
     const now = new Date();
+    const isOverdue = (tx: any) =>
+      tx.status === 'VENCIDO' || (tx.status === 'PENDENTE' && new Date(tx.dueDate) < now);
     const defaulters = transactions
-      .filter((tx: any) => tx.type === 'RECEITA' && tx.status === 'VENCIDO' && tx.student)
+      .filter((tx: any) => tx.type === 'RECEITA' && tx.student && isOverdue(tx))
       .map((tx: any) => ({
         studentName: tx.student.name,
         studentId: tx.student.id,
