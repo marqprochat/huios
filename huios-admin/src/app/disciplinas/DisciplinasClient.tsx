@@ -16,10 +16,11 @@ interface DisciplinaData {
 export default function DisciplinasClient({ disciplinas, availableYears }: { disciplinas: DisciplinaData[]; availableYears: number[] }) {
     const currentYear = new Date().getFullYear();
     const [selectedYear, setSelectedYear] = useState<string>(String(currentYear));
+    const [search, setSearch] = useState('');
 
-    const filtered = selectedYear === 'all'
-        ? disciplinas
-        : disciplinas.filter(d => d.year === parseInt(selectedYear));
+    const filtered = disciplinas
+        .filter(d => selectedYear === 'all' || d.year === parseInt(selectedYear))
+        .filter(d => d.name.toLowerCase().includes(search.trim().toLowerCase()));
 
     return (
         <div className="max-w-[1600px] mx-auto p-4 lg:p-8 space-y-6">
@@ -29,6 +30,16 @@ export default function DisciplinasClient({ disciplinas, availableYears }: { dis
                     <p className="text-slate-500 dark:text-slate-400">Gerencie as disciplinas das turmas</p>
                 </div>
                 <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <span className="material-symbols-outlined text-slate-400 text-sm absolute left-3 top-1/2 -translate-y-1/2">search</span>
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Buscar disciplina..."
+                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white w-56"
+                        />
+                    </div>
                     <div className="flex items-center gap-2">
                         <span className="material-symbols-outlined text-slate-400 text-sm">calendar_today</span>
                         <select
@@ -66,7 +77,9 @@ export default function DisciplinasClient({ disciplinas, availableYears }: { dis
                             {filtered.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
-                                        {selectedYear === 'all' ? 'Nenhuma disciplina cadastrada.' : `Nenhuma disciplina em ${selectedYear}.`}
+                                        {search.trim()
+                                            ? 'Nenhuma disciplina encontrada.'
+                                            : selectedYear === 'all' ? 'Nenhuma disciplina cadastrada.' : `Nenhuma disciplina em ${selectedYear}.`}
                                     </td>
                                 </tr>
                             ) : null}
