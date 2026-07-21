@@ -49,6 +49,7 @@ model Student {
   absenceJustifications AbsenceJustification[]
   financialTransactions FinancialTransaction[]
   studentNotifications StudentNotification[]
+  eventAttendances EventAttendance[]
 
   // Vínculos de matrícula
   familyId String?
@@ -195,6 +196,7 @@ model CourseClass {
   course      Course       @relation(fields: [courseId], references: [id])
   disciplines Discipline[]
   enrollments Enrollment[]
+  events      Event[]
 }
 
 model Discipline {
@@ -745,4 +747,60 @@ model CouponRedemption {
   createdAt    DateTime @default(now())
 
   @@index([couponId, studentId])
+}
+
+// ============================================================
+// EVENTOS INSTITUCIONAIS (calendário)
+// ============================================================
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  type        String?  // texto livre: "Formatura", "Conferência", etc.
+  description String?
+
+  date      DateTime
+  startTime DateTime?
+  endTime   DateTime?
+
+  // Vínculo opcional com turmas; vazio (nenhuma relação) = evento geral
+  courseClasses CourseClass[]
+
+  // Check-in opcional
+  requiresCheckIn Boolean @default(false)
+  locationName    String?
+  latitude        Float?
+  longitude       Float?
+  radiusMeters    Int     @default(100)
+
+  attendances EventAttendance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EventAttendance {
+  id        String @id @default(uuid())
+  eventId   String
+  event     Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  status AttendanceStatus @default(PENDING)
+
+  checkInAt   DateTime?
+  checkInLat  Float?
+  checkInLong Float?
+  distance    Float?
+
+  checkOutAt       DateTime?
+  checkOutLat      Float?
+  checkOutLong     Float?
+  checkOutDistance Float?
+
+  markedById String?
+  markedAt   DateTime?
+  notes      String?
+
+  @@unique([eventId, studentId])
 }
