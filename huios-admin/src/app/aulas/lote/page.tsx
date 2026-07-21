@@ -20,6 +20,7 @@ export default function LoteAulasPage() {
   const [disciplinas, setDisciplinas] = useState<Discipline[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [disciplineSearch, setDisciplineSearch] = useState('');
   
   const [formData, setFormData] = useState({
     disciplineIds: [] as string[],
@@ -65,10 +66,15 @@ export default function LoteAulasPage() {
       return;
     }
 
-    const start = new Date(formData.startDate);
-    const end = new Date(formData.endDate);
+    const parseLocalDate = (dateStr: string) => {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    };
+
+    const start = parseLocalDate(formData.startDate);
+    const end = parseLocalDate(formData.endDate);
     const dates: string[] = [];
-    
+
     let current = new Date(start);
     while (current <= end) {
       if (formData.weekDays.includes(current.getDay())) {
@@ -143,10 +149,31 @@ export default function LoteAulasPage() {
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">
                 Disciplinas / Turmas *
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800">
-                {disciplinas.map((d) => (
-                  <label key={d.id} className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors group">
-                    <div className="relative flex items-center mt-0.5">
+              <div className="relative mb-3">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">
+                  search
+                </span>
+                <input
+                  type="text"
+                  placeholder="Pesquisar disciplina..."
+                  value={disciplineSearch}
+                  onChange={e => setDisciplineSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all"
+                />
+              </div>
+              <div className="flex flex-col gap-2 max-h-60 overflow-y-auto p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800">
+                {disciplinas
+                  .filter(d => {
+                    const term = disciplineSearch.trim().toLowerCase();
+                    if (!term) return true;
+                    return (
+                      d.name.toLowerCase().includes(term) ||
+                      d.courseClasses.some(cc => cc.name.toLowerCase().includes(term))
+                    );
+                  })
+                  .map((d) => (
+                  <label key={d.id} className="flex items-center gap-3 p-3 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors group">
+                    <div className="relative flex items-center">
                       <input
                         type="checkbox"
                         checked={formData.disciplineIds.includes(d.id)}
