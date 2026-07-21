@@ -27,8 +27,8 @@ export default function LoteAulasPage() {
     startDate: '',
     endDate: '',
     weekDays: [] as number[], // 0 = Sunday, 1 = Monday...
-    startTime: '19:00',
-    endTime: '22:00',
+    startTime: '19:30',
+    endTime: '22:10',
     locationName: '',
     latitude: '',
     longitude: '',
