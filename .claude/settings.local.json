@@ -130,7 +130,11 @@
       "Bash(rmdir huios-mobile/__tests__)",
       "Bash(grep -oE \"\\\\`\\\\\\\\\\\\$\\\\{'/\\\\\\(tabs\\\\\\)'\\\\}[^\\\\`]*\\\\`|\\\\`/\\\\\\(tabs\\\\\\)[^\\\\`]*\\\\`\" .expo/types/router.d.ts)",
       "Bash(npx jest *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(sleep 5; cat /tmp/nextdev.log 2>/dev/null | tail -30)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3002/aulas/eventos/novo)",
+      "Bash(npx tsx *)",
+      "Bash(git push *)"
     ],
     "additionalDirectories": [
       "P:\\APPS\\huios\\huios\\huios-admin\\src\\app\\api\\avaliacoes\\[disciplineId]"
