@@ -7,9 +7,12 @@ import { hashPassword } from './auth';
 import { resolveMonthlyPrice, PriceTier, CoursePriceTiers } from './pricing';
 import { CouponEffect, discountedMonthly, redeemCoupon, validateCoupon } from './coupons';
 
-function addMonths(date: Date, months: number): Date {
-  const d = new Date(date);
-  d.setMonth(d.getMonth() + months);
+/** Vencimento de mensalidade: sempre dia 10 do mês, independente da data de inscrição. */
+function mensalidadeDueDate(base: Date, monthsAhead: number): Date {
+  const d = new Date(base);
+  d.setDate(1); // evita overflow de mês (ex: dia 31 + 1 mês)
+  d.setMonth(d.getMonth() + monthsAhead);
+  d.setDate(10);
   return d;
 }
 
@@ -73,7 +76,7 @@ export async function gerarMensalidades(opts: {
 
   if (monthlyAmount > 0) {
     for (let i = 0; i < installments; i++) {
-      const dueDate = addMonths(base, i + 1);
+      const dueDate = mensalidadeDueDate(base, i + 1);
       const amount = discountedMonthly(coupon, monthlyAmount, i);
       const t = await (prisma as any).financialTransaction.create({
         data: {
