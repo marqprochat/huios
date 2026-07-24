@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useStudent } from '../components/PortalShell';
-import { getAttendanceApprovalStatus } from '@/lib/attendanceStatus';
+import { getAttendanceApprovalStatus, getAttendancePercentage } from '@/lib/attendanceStatus';
 
-const ABSENT_FOR_FAIL = 2;
+const ABSENT_FOR_SUMMARY = 2;
+const ABSENT_FOR_FAIL = 3;
 
 interface Attendance {
   present: number;
@@ -90,7 +91,7 @@ export default function BoletimPage() {
     return m !== null && m < 7;
   });
 
-  const presencaPendencies = presencaDiscs.filter(d => d.attendance.absent >= ABSENT_FOR_FAIL);
+  const presencaPendencies = presencaDiscs.filter(d => d.attendance.absent >= ABSENT_FOR_SUMMARY);
 
   const totalPendencies = gradePendencies.length + presencaPendencies.length;
 
@@ -226,9 +227,7 @@ export default function BoletimPage() {
               {presencaDiscs.map((disc) => {
                 const att = disc.attendance;
                 const status = getAttendanceStatus(att);
-                const freqPct = att.total > 0
-                  ? Math.round(((att.present + att.excused) / att.total) * 100)
-                  : null;
+                const freqPct = att.total > 0 ? getAttendancePercentage(att) : null;
 
                 return (
                   <div key={disc.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">

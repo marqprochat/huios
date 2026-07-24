@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 import { getAttendanceApprovalStatus } from '@/lib/attendanceStatus';
 import { revalidatePath } from 'next/cache';
 
-const ABSENT_FOR_FAIL = 2;
+const ABSENT_FOR_FAIL = 3;
 
 export async function getReportCardData(studentId: string) {
   try {

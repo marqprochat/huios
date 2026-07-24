@@ -8,13 +8,18 @@ export type AttendanceSummary = {
 
 export type AttendanceApprovalStatus = 'Aguardando' | 'Aprovado' | 'Reprovado';
 
+export function getAttendancePercentage(attendance: AttendanceSummary): number {
+  if (attendance.total === 0) return 0;
+  return Math.round(
+    ((attendance.present + attendance.excused) / attendance.total) * 100,
+  );
+}
+
 export function getAttendanceApprovalStatus(
   attendance: AttendanceSummary,
-  absentForFail = 2,
+  absentForFail = 3,
 ): AttendanceApprovalStatus {
-  const consolidated = attendance.present + attendance.absent + attendance.excused;
-
-  if (consolidated === 0) return 'Aguardando';
   if (attendance.absent >= absentForFail) return 'Reprovado';
-  return 'Aprovado';
+  if (getAttendancePercentage(attendance) >= 75) return 'Aprovado';
+  return 'Aguardando';
 }

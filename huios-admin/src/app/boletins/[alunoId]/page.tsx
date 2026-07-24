@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useToast } from '@/app/components/Toast/useToast';
 import { getReportCardData, createManualGrade, updateManualGrade, deleteManualGrade } from './actions';
+import { getAttendancePercentage } from '@/lib/attendanceStatus';
 
 interface Grade {
   id: string;
@@ -39,7 +40,7 @@ interface DisciplineData {
   status: string;
 }
 
-const ABSENT_FOR_FAIL = 2;
+const ABSENT_FOR_FAIL = 3;
 
 interface StudentData {
   id: string;
@@ -508,9 +509,7 @@ export default function BoletimAlunoPage() {
           )}
           {presencaDiscs.map((disciplineData) => {
             const att = disciplineData.attendance;
-            const freqPct = att.total > 0
-              ? Math.round(((att.present + att.excused) / att.total) * 100)
-              : null;
+            const freqPct = att.total > 0 ? getAttendancePercentage(att) : null;
 
             return (
               <div
