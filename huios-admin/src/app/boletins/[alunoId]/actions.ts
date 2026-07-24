@@ -1,6 +1,7 @@
 'use server';
 
 import prisma from '@/lib/prisma';
+import { getAttendanceApprovalStatus } from '@/lib/attendanceStatus';
 import { revalidatePath } from 'next/cache';
 
 const ABSENT_FOR_FAIL = 2;
@@ -76,11 +77,7 @@ export async function getReportCardData(studentId: string) {
 
           if (modality === 'POR_PRESENCA') {
             // Attendance-based: no grades, approval depends on frequency
-            const status = attendance.total === 0
-              ? 'Aguardando'
-              : attendance.absent >= ABSENT_FOR_FAIL
-                ? 'Reprovado'
-                : 'Aprovado';
+            const status = getAttendanceApprovalStatus(attendance, ABSENT_FOR_FAIL);
 
             reportCard.push({
               discipline: {

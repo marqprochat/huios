@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useStudent } from '../components/PortalShell';
+import { getAttendanceApprovalStatus } from '@/lib/attendanceStatus';
 
 const ABSENT_FOR_FAIL = 2;
 
@@ -68,8 +69,9 @@ export default function BoletimPage() {
   };
 
   const getAttendanceStatus = (att: Attendance) => {
-    if (att.total === 0) return { label: 'Aguardando', color: 'text-slate-400', bg: 'bg-slate-50' };
-    if (att.absent >= ABSENT_FOR_FAIL) return { label: 'Reprovado', color: 'text-red-600', bg: 'bg-red-50' };
+    const status = getAttendanceApprovalStatus(att, ABSENT_FOR_FAIL);
+    if (status === 'Aguardando') return { label: status, color: 'text-slate-400', bg: 'bg-slate-50' };
+    if (status === 'Reprovado') return { label: status, color: 'text-red-600', bg: 'bg-red-50' };
     return { label: 'Aprovado', color: 'text-emerald-600', bg: 'bg-emerald-50' };
   };
 
