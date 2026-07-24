@@ -51,6 +51,9 @@ COPY --from=builder /app/public ./public
 # Copy prisma schema (needed for runtime prisma client)
 COPY --from=builder /app/prisma ./prisma
 
+# The Prisma CLI is required at startup to keep the production schema in sync.
+COPY --from=builder /app/node_modules ./node_modules
+
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "npx prisma db push && node server.js"]
