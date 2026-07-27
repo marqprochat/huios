@@ -162,6 +162,9 @@ export default function AulasPage() {
                           <div className={`text-[9px] font-bold truncate ${getDisciplineColor(lesson.discipline.name).replace('bg-', 'text-')}`}>
                             {lesson.discipline.name}
                           </div>
+                          <div className="text-[8px] text-slate-500 truncate" title={lesson.discipline.teacher?.name || 'Professor não definido'}>
+                            {lesson.discipline.teacher?.name || 'Professor não definido'}
+                          </div>
                           {attended && (
                             <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-emerald-500 rounded-full"></span>
                           )}
