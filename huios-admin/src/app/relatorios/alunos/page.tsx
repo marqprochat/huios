@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { exportCSV } from '@/lib/exportCSV';
+import { exportStudentReportPDF } from '@/lib/exportStudentReportPDF';
 
 interface Row {
   studentId: string; studentName: string; studentEmail: string | null;
@@ -25,6 +25,7 @@ export default function RelatorioAlunosPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   const [classId, setClassId] = useState('');
   const [status, setStatus] = useState('');
@@ -55,23 +56,40 @@ export default function RelatorioAlunosPage() {
     return true;
   }), [rows, modality, search]);
 
-  const handleExport = () => {
-    exportCSV('alunos', ['Aluno', 'Email', 'Turma', 'Curso', 'Modalidade', 'Situação', 'Média', 'Frequência %', 'Faltas'],
-      filtered.map(r => [
-        r.studentName, r.studentEmail ?? '',
-        r.className, r.courseName,
-        r.modality === 'POR_PRESENCA' ? 'Por Presença' : 'Por Nota',
-        STATUS_CONFIG[r.enrollmentStatus]?.label ?? r.enrollmentStatus,
-        r.avgGrade ?? '—', r.freqPct ?? '—', r.absentCount,
-      ]));
-  };
-
   const stats = useMemo(() => ({
     total: filtered.length,
     cursando: filtered.filter(r => r.enrollmentStatus === 'CURSANDO').length,
     aprovado: filtered.filter(r => r.enrollmentStatus === 'APROVADO').length,
     reprovado: filtered.filter(r => r.enrollmentStatus === 'REPROVADO').length,
   }), [filtered]);
+
+  const handleExportPDF = async () => {
+    setExportingPDF(true);
+    try {
+      const selectedClass = classes.find(item => item.id === classId);
+      await exportStudentReportPDF({
+        generatedAt: new Date(),
+        filters: {
+          className: selectedClass ? `${selectedClass.name} — ${selectedClass.course.name}` : 'Todas',
+          status: status ? (STATUS_CONFIG[status]?.label ?? status) : 'Todas',
+          modality: modality ? (modality === 'POR_PRESENCA' ? 'Por Presença' : 'Por Nota') : 'Todas',
+          search: search.trim() || 'Não informada',
+        },
+        stats,
+        rows: filtered.map(row => ({
+          studentName: row.studentName,
+          className: row.className,
+          modality: row.modality === 'POR_PRESENCA' ? 'Por Presença' : 'Por Nota',
+          status: STATUS_CONFIG[row.enrollmentStatus]?.label ?? row.enrollmentStatus,
+          avgGrade: row.modality !== 'POR_PRESENCA' && row.avgGrade !== null ? row.avgGrade.toFixed(1) : '—',
+          frequency: row.freqPct !== null ? `${row.freqPct}%` : '—',
+          absences: row.absentCount,
+        })),
+      });
+    } finally {
+      setExportingPDF(false);
+    }
+  };
 
   return (
     <div className="max-w-[1600px] mx-auto p-4 lg:p-8 space-y-6">
@@ -86,8 +104,8 @@ export default function RelatorioAlunosPage() {
           </div>
         </div>
         {filtered.length > 0 && (
-          <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all">
-            <span className="material-symbols-outlined text-sm">download</span>Exportar CSV
+          <button onClick={handleExportPDF} disabled={exportingPDF} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all disabled:cursor-not-allowed disabled:opacity-60">
+            <span className="material-symbols-outlined text-sm">picture_as_pdf</span>{exportingPDF ? 'Gerando PDF...' : 'Exportar PDF'}
           </button>
         )}
       </div>
