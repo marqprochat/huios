@@ -86,10 +86,13 @@ model TeamMember {
   area          String?
   role          String   @default("MONITOR") // MONITOR, LIDER_DE_TURMA, VOLUNTARIO
   studentId     String?
+  userId        String?  @unique
+  active        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   student       Student? @relation(fields: [studentId], references: [id])
+  user          User?    @relation(fields: [userId], references: [id])
 }
 
 model Module {
@@ -147,11 +150,61 @@ model User {
   email      String      @unique
   password   String
   role       String      @default("ALUNO") // ALUNO, MONITOR, COORDENADOR, SUPER_ADMIN
+  adminRoleId String?
+  adminRole   Role?       @relation(fields: [adminRoleId], references: [id])
   active     Boolean     @default(true)
+  mustChangePassword Boolean @default(false)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
   student    Student?
+  teamMember TeamMember?
+  auditLogs  AuditLog[]  @relation("AuditActor")
   pushTokens PushToken[]
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  key         String           @unique
+  name        String
+  description String?
+  active      Boolean          @default(true)
+  protected   Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  key         String           @unique
+  module      String
+  action      String
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  changes   Json?
+  createdAt DateTime @default(now())
+  actor     User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([entity, entityId])
 }
 
 model PushToken {
