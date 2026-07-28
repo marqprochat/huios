@@ -10,8 +10,8 @@ Usar as dependências `jspdf` e `jspdf-autotable` no cliente. Elas produzirão u
 
 ## Experiência na tela
 
-- Manter a exportação CSV existente.
-- Exibir, ao lado dela, o botão `Exportar PDF` quando houver ao menos um resultado filtrado.
+- Remover a exportação CSV existente.
+- Exibir um único botão `Exportar PDF` quando houver ao menos um resultado filtrado.
 - O botão gera e baixa o arquivo imediatamente; enquanto o arquivo é preparado, permanece desabilitado e informa que a exportação está em andamento.
 - O nome do arquivo identifica o relatório e a data de geração, por exemplo `relatorio-alunos-2026-07-28.pdf`.
 
