@@ -93,6 +93,7 @@ model TeamMember {
 
   student       Student? @relation(fields: [studentId], references: [id])
   user          User?    @relation(fields: [userId], references: [id])
+  courseClassAssignments TeamMemberCourseClass[] @relation("TeamMemberCourseClassAssignments")
 }
 
 model Module {
@@ -250,6 +251,21 @@ model CourseClass {
   disciplines Discipline[]
   enrollments Enrollment[]
   events      Event[]
+  teamMemberAssignments TeamMemberCourseClass[] @relation("CourseClassTeamMemberAssignments")
+}
+
+model TeamMemberCourseClass {
+  teamMemberId String
+  courseClassId String
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  teamMember TeamMember  @relation("TeamMemberCourseClassAssignments", fields: [teamMemberId], references: [id], onDelete: Cascade)
+  courseClass CourseClass @relation("CourseClassTeamMemberAssignments", fields: [courseClassId], references: [id], onDelete: Cascade)
+
+  @@id([teamMemberId, courseClassId])
+  @@index([courseClassId, active])
 }
 
 model Discipline {

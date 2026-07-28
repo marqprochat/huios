@@ -1,4 +1,17 @@
--- Create RBAC tables.
+-- Reconcile the legacy migration name for a fresh deploy while preserving
+-- already-upgraded databases that already use "TeamMember".
+DO $$
+BEGIN
+    IF to_regclass('public."TeamMember"') IS NULL
+       AND to_regclass('public."Monitor"') IS NOT NULL THEN
+        ALTER TABLE "Monitor" RENAME TO "TeamMember";
+    END IF;
+END $$;
+
+-- The legacy "Monitor" table did not have this application-level role column.
+ALTER TABLE "TeamMember" ADD COLUMN IF NOT EXISTS "role" TEXT NOT NULL DEFAULT 'MONITOR';
+
+-- Create RBAC and class-scope tables.
 CREATE TABLE "Role" (
     "id" TEXT NOT NULL,
     "key" TEXT NOT NULL,
@@ -41,17 +54,28 @@ CREATE TABLE "AuditLog" (
     CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id")
 );
 
+CREATE TABLE "TeamMemberCourseClass" (
+    "teamMemberId" TEXT NOT NULL,
+    "courseClassId" TEXT NOT NULL,
+    "active" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "TeamMemberCourseClass_pkey" PRIMARY KEY ("teamMemberId", "courseClassId")
+);
+
 -- Keep these additions nullable for the existing records.
-ALTER TABLE "User" ADD COLUMN "adminRoleId" TEXT;
-ALTER TABLE "User" ADD COLUMN "mustChangePassword" BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE "TeamMember" ADD COLUMN "userId" TEXT;
-ALTER TABLE "TeamMember" ADD COLUMN "active" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "adminRoleId" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "mustChangePassword" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "TeamMember" ADD COLUMN IF NOT EXISTS "userId" TEXT;
+ALTER TABLE "TeamMember" ADD COLUMN IF NOT EXISTS "active" BOOLEAN NOT NULL DEFAULT true;
 
 CREATE UNIQUE INDEX "Role_key_key" ON "Role"("key");
 CREATE UNIQUE INDEX "Permission_key_key" ON "Permission"("key");
 CREATE UNIQUE INDEX "TeamMember_userId_key" ON "TeamMember"("userId");
 CREATE INDEX "AuditLog_actorId_idx" ON "AuditLog"("actorId");
 CREATE INDEX "AuditLog_entity_entityId_idx" ON "AuditLog"("entity", "entityId");
+CREATE INDEX "TeamMemberCourseClass_courseClassId_active_idx" ON "TeamMemberCourseClass"("courseClassId", "active");
 
 ALTER TABLE "User" ADD CONSTRAINT "User_adminRoleId_fkey"
     FOREIGN KEY ("adminRoleId") REFERENCES "Role"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -63,6 +87,10 @@ ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_permissionId_fkey"
     FOREIGN KEY ("permissionId") REFERENCES "Permission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_actorId_fkey"
     FOREIGN KEY ("actorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "TeamMemberCourseClass" ADD CONSTRAINT "TeamMemberCourseClass_teamMemberId_fkey"
+    FOREIGN KEY ("teamMemberId") REFERENCES "TeamMember"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "TeamMemberCourseClass" ADD CONSTRAINT "TeamMemberCourseClass_courseClassId_fkey"
+    FOREIGN KEY ("courseClassId") REFERENCES "CourseClass"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- Fixed UUIDs make this seed independent of database UUID extensions and rerunnable.
 INSERT INTO "Role" ("id", "key", "name", "active", "protected", "createdAt", "updatedAt") VALUES

@@ -37,9 +37,26 @@
 
 ## Commit
 
-`77ca2ac` — `feat: add rbac data model`
+`2b385b1` — `feat: add rbac data model`
 
 ## Concerns
 
 - The literal `npx` commands cannot execute in this environment because PowerShell blocks `npx.ps1`; equivalent package-local `.cmd` Prisma commands were used for the completed checks.
 - API Prisma client generation was not run because coordination explicitly stopped further Prisma retries after the bounded attempt window. The API schema itself validated successfully.
+
+## Round 1 fixes
+
+- Fixed the fresh-deploy migration-history mismatch: the migration now renames legacy `Monitor` to `TeamMember` only when `TeamMember` is absent, then adds the legacy-missing `role` column. Databases already upgraded to `TeamMember` are left unchanged.
+- Added the explicit `TeamMemberCourseClass` assignment join model and table. It has a composite primary key, active flag, timestamps, cascade foreign keys, and named relations so scope resolution can traverse `User -> TeamMember -> courseClassAssignments`.
+- Kept the RBAC models and the new assignment model textually identical across the admin and API schemas.
+
+## Round 1 commands and results
+
+| Command | Result |
+| --- | --- |
+| `& 'huios-admin\\node_modules\\.bin\\prisma.cmd' validate --schema 'huios-admin\\prisma\\schema.prisma'` | Passed: `The schema at huios-admin\\prisma\\schema.prisma is valid`; `EXIT=0`. |
+| `& 'huios-api\\node_modules\\.bin\\prisma.cmd' validate --schema 'huios-api\\prisma\\schema.prisma'` | Passed: `The schema at huios-api\\prisma\\schema.prisma is valid`; `EXIT=0`. |
+| `& 'huios-admin\\node_modules\\.bin\\prisma.cmd' generate --schema 'huios-admin\\prisma\\schema.prisma'` | Passed: Prisma Client 6.19.2 generated in 3.15s; `EXIT=0`. |
+| `& 'huios-api\\node_modules\\.bin\\prisma.cmd' generate --schema 'huios-api\\prisma\\schema.prisma'` | Passed: Prisma Client 6.19.2 generated in 2.56s; `EXIT=0`. |
+| `git diff --check` | Passed: no whitespace errors. |
+| RBAC and assignment model parity check | Passed: `Role`, `Permission`, `RolePermission`, `AuditLog`, and `TeamMemberCourseClass` are identical. |
