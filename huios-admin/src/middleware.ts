@@ -1,71 +1,88 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-import { jwtVerify } from 'jose'
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
 
 const JWT_SECRET = new TextEncoder().encode(
     process.env.JWT_SECRET || 'huios-secret-key-change-in-production'
-)
+);
 
-const COOKIE_NAME = 'huios-session'
+const COOKIE_NAME = 'huios-session';
 
-const PUBLIC_PATHS = ['/login', '/portal/login', '/api/auth/', '/api/portal/', '/api/proxy/', '/api/matricula/', '/api/pagamentos/']
+const PUBLIC_PATHS = [
+    '/login',
+    '/portal/login',
+    '/api/auth/',
+    '/api/portal/',
+    '/api/proxy/',
+    '/api/matricula/',
+    '/api/pagamentos/',
+];
 
-// Matrícula pública: exato '/matricula' ou subrotas '/matricula/...', mas NÃO '/matriculas' (admin).
 function isPublicEnroll(pathname: string): boolean {
-    return pathname === '/matricula' || pathname.startsWith('/matricula/')
+    return pathname === '/matricula' || pathname.startsWith('/matricula/');
 }
 
-export async function middleware(request: NextRequest) {
-    const { pathname } = request.nextUrl
-
-    // Allow public paths
-    if (PUBLIC_PATHS.some(path => pathname.startsWith(path)) || isPublicEnroll(pathname)) {
-        return;
-    }
-
-    // Allow static files and Next.js internals
-    if (
+function isStaticPath(pathname: string): boolean {
+    return (
         pathname.startsWith('/_next') ||
         pathname.startsWith('/favicon') ||
         pathname.includes('.')
-    ) {
+    );
+}
+
+export async function middleware(request: NextRequest) {
+    const { pathname } = request.nextUrl;
+
+    if (isStaticPath(pathname)) {
         return;
     }
 
-    const token = request.cookies.get(COOKIE_NAME)?.value
+    const isPublicPath =
+        PUBLIC_PATHS.some((path) => pathname.startsWith(path)) ||
+        isPublicEnroll(pathname);
+    const token = request.cookies.get(COOKIE_NAME)?.value;
 
     if (!token) {
-        // Redirect to appropriate login
-        if (pathname.startsWith('/portal')) {
-            return NextResponse.redirect(new URL('/portal/login', request.url))
-        }
-        return NextResponse.redirect(new URL('/login', request.url))
+        if (isPublicPath) return;
+
+        const loginUrl = pathname.startsWith('/portal')
+            ? '/portal/login'
+            : '/login';
+        return NextResponse.redirect(new URL(loginUrl, request.url));
     }
 
     try {
-        const { payload } = await jwtVerify(token, JWT_SECRET)
-        const role = (payload as any).role as string
+        const { payload } = await jwtVerify(token, JWT_SECRET);
+        const mustChangePassword = payload.mustChangePassword === true;
+        const isPasswordChangePath =
+            pathname === '/trocar-senha' ||
+            pathname.startsWith('/api/auth/');
 
-        // ALUNO trying to access admin area → redirect to portal
-        if (role === 'ALUNO' && !pathname.startsWith('/portal') && !pathname.startsWith('/api')) {
-            return NextResponse.redirect(new URL('/portal', request.url))
+        if (mustChangePassword && !isPasswordChangePath) {
+            return NextResponse.redirect(
+                new URL('/trocar-senha', request.url)
+            );
         }
 
-        // Non-ALUNO trying to access portal → redirect to admin
-        if (role !== 'ALUNO' && pathname.startsWith('/portal') && !pathname.startsWith('/api')) {
-            return NextResponse.redirect(new URL('/', request.url))
-        }
-
-        return NextResponse.next()
+        return NextResponse.next();
     } catch {
-        // Invalid or expired token
-        const loginUrl = pathname.startsWith('/portal') ? '/portal/login' : '/login'
-        const response = NextResponse.redirect(new URL(loginUrl, request.url))
-        response.cookies.set(COOKIE_NAME, '', { maxAge: 0, path: '/' })
-        return response
+        if (isPublicPath) {
+            const response = NextResponse.next();
+            response.cookies.set(COOKIE_NAME, '', { maxAge: 0, path: '/' });
+            return response;
+        }
+
+        const loginUrl = pathname.startsWith('/portal')
+            ? '/portal/login'
+            : '/login';
+        const response = NextResponse.redirect(
+            new URL(loginUrl, request.url)
+        );
+        response.cookies.set(COOKIE_NAME, '', { maxAge: 0, path: '/' });
+        return response;
     }
 }
 
 export const config = {
     matcher: ['/((?!_next/static|_next/image|favicon.ico|uploads).*)'],
-}
+};

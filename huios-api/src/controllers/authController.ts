@@ -7,11 +7,36 @@ import { AuthRequest } from '../middlewares/auth';
 const JWT_SECRET = process.env.JWT_SECRET || 'huios-secret-key-change-in-production';
 
 export const login = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const email = typeof req.body.email === 'string'
+    ? req.body.email.trim().toLowerCase()
+    : '';
+  const password = typeof req.body.password === 'string' ? req.body.password : '';
 
   try {
+    if (!email || !password) {
+      return res.status(401).json({ message: 'Credenciais inválidas' });
+    }
+
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        password: true,
+        role: true,
+        active: true,
+        mustChangePassword: true,
+        student: { select: { id: true } },
+        adminRole: {
+          select: {
+            id: true,
+            key: true,
+            name: true,
+            active: true
+          }
+        }
+      }
     });
 
     if (!user) {
@@ -28,24 +53,39 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Credenciais inválidas' });
     }
 
+    const activeAdminRole = user.adminRole?.active ? user.adminRole : null;
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      {
+        id: user.id,
+        email: user.email,
+        mustChangePassword: user.mustChangePassword
+      },
       JWT_SECRET,
       { expiresIn: '1d' }
     );
 
-    res.json({
+    return res.json({
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: activeAdminRole?.key ?? user.role,
+        isStudent: Boolean(user.student),
+        isAdmin: Boolean(activeAdminRole),
+        mustChangePassword: user.mustChangePassword,
+        adminRole: activeAdminRole
+          ? {
+              id: activeAdminRole.id,
+              key: activeAdminRole.key,
+              name: activeAdminRole.name
+            }
+          : null
       },
       token
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Erro interno do servidor' });
+    return res.status(500).json({ message: 'Erro interno do servidor' });
   }
 };
 
@@ -58,6 +98,21 @@ export const getMe = async (req: AuthRequest, res: Response) => {
         name: true,
         email: true,
         role: true,
+        mustChangePassword: true,
+        teamMember: { select: { id: true } },
+        adminRole: {
+          select: {
+            id: true,
+            key: true,
+            name: true,
+            active: true,
+            permissions: {
+              select: {
+                permission: { select: { key: true } }
+              }
+            }
+          }
+        },
         student: {
           select: {
             id: true,
@@ -82,17 +137,40 @@ export const getMe = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    if (!user) return res.status(404).json({ message: 'Usuário não encontrado' });
+    if (!user) {
+      return res.status(404).json({ message: 'Usuário não encontrado' });
+    }
+
+    const activeAdminRole = user.adminRole?.active ? user.adminRole : null;
 
     return res.json({
-      ...user,
-      student: user.student ? {
-        ...user.student,
-        enrollments: user.student.enrollments.map(({ class: courseClass, ...enrollment }) => ({
-          ...enrollment,
-          courseClass
-        }))
-      } : undefined
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: activeAdminRole?.key ?? user.role,
+      isStudent: Boolean(user.student),
+      isAdmin: Boolean(activeAdminRole),
+      mustChangePassword: user.mustChangePassword,
+      adminRole: activeAdminRole
+        ? {
+            id: activeAdminRole.id,
+            key: activeAdminRole.key,
+            name: activeAdminRole.name
+          }
+        : null,
+      permissions: activeAdminRole
+        ? activeAdminRole.permissions.map(({ permission }) => permission.key)
+        : [],
+      teamMember: user.teamMember,
+      student: user.student
+        ? {
+            ...user.student,
+            enrollments: user.student.enrollments.map(({ class: courseClass, ...enrollment }) => ({
+              ...enrollment,
+              courseClass
+            }))
+          }
+        : null
     });
   } catch (error) {
     console.error('Get profile error:', error);

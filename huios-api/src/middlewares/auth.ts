@@ -1,26 +1,121 @@
-import express, { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import express, { NextFunction, Response } from 'express';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import { prisma } from '../services/prisma';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'huios-secret-key-change-in-production';
+
+export interface CurrentAccess {
+  id: string;
+  email: string;
+  role: string;
+  isStudent: boolean;
+  isAdmin: boolean;
+  mustChangePassword: boolean;
+  studentId: string | null;
+  teamMemberId: string | null;
+  adminRole: {
+    id: string;
+    key: string;
+    name: string;
+  } | null;
+  permissions: string[];
+}
 
 export interface AuthRequest extends express.Request {
   user?: any;
 }
 
-export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers['authorization'];
+function isIdentityPayload(payload: string | JwtPayload): payload is JwtPayload & { id: string } {
+  return typeof payload !== 'string' && typeof payload.id === 'string';
+}
 
-  const token = authHeader && authHeader.split(' ')[1];
+export const authenticateToken = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  const authHeader = req.headers.authorization;
+  const [scheme, token] = authHeader?.split(' ') ?? [];
 
-  if (!token) {
+  if (scheme !== 'Bearer' || !token) {
     return res.status(401).json({ message: 'No token provided' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-    if (err) {
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+
+    if (!isIdentityPayload(payload)) {
       return res.status(403).json({ message: 'Token is invalid or expired' });
     }
-    req.user = user;
-    next();
-  });
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.id },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        active: true,
+        mustChangePassword: true,
+        student: { select: { id: true } },
+        teamMember: { select: { id: true } },
+        adminRole: {
+          select: {
+            id: true,
+            key: true,
+            name: true,
+            active: true,
+            permissions: {
+              select: {
+                permission: { select: { key: true } }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!user || !user.active) {
+      return res.status(403).json({ message: 'Usuário inativo ou não encontrado' });
+    }
+
+    const activeAdminRole = user.adminRole?.active ? user.adminRole : null;
+
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: activeAdminRole?.key ?? user.role,
+      isStudent: Boolean(user.student),
+      isAdmin: Boolean(activeAdminRole),
+      mustChangePassword: user.mustChangePassword,
+      studentId: user.student?.id ?? null,
+      teamMemberId: user.teamMember?.id ?? null,
+      adminRole: activeAdminRole
+        ? {
+            id: activeAdminRole.id,
+            key: activeAdminRole.key,
+            name: activeAdminRole.name
+          }
+        : null,
+      permissions: activeAdminRole
+        ? activeAdminRole.permissions.map(({ permission }) => permission.key)
+        : []
+    };
+
+    const requestPath = `${req.baseUrl}${req.path}`;
+    if (user.mustChangePassword && requestPath !== '/api/auth/me') {
+      return res.status(403).json({
+        code: 'PASSWORD_CHANGE_REQUIRED',
+        message: 'Troca de senha obrigatória'
+      });
+    }
+
+    return next();
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.TokenExpiredError) {
+      return res.status(403).json({ message: 'Token is invalid or expired' });
+    }
+
+    console.error('Authentication error:', error);
+    return res.status(500).json({ message: 'Erro interno do servidor' });
+  }
 };
