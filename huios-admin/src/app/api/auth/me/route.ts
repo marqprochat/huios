@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth'
+import { getAccessContext } from '@/lib/permissions/server'
 
 export async function GET() {
-    const session = await getSession()
+    const context = await getAccessContext()
 
-    if (!session) {
+    if (!context) {
         return NextResponse.json(
             { error: 'Não autenticado.' },
             { status: 401 }
@@ -13,10 +13,16 @@ export async function GET() {
 
     return NextResponse.json({
         user: {
-            userId: session.userId,
-            name: session.name,
-            email: session.email,
-            role: session.role,
+            id: context.userId,
+            name: context.name,
+            email: context.email,
+            isStudent: context.isStudent,
+            isAdmin: context.isAdmin,
+            isSuperAdmin: context.isSuperAdmin,
+            mustChangePassword: context.mustChangePassword,
+            role: context.role,
+            assignedClassIds: context.assignedClassIds,
+            permissions: [...context.permissions],
         }
     })
 }
