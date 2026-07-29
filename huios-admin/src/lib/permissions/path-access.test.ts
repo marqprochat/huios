@@ -69,6 +69,7 @@ test('team and role management are Super Admin-only for all child paths', () => 
     `/equipe/${UUID}/editar`,
     '/funcoes',
     '/funcoes/nova',
+    `/funcoes/${UUID}`,
     `/funcoes/${UUID}/editar`,
   ]) {
     assert.deepEqual(resolvePathRequirement(path), { kind: 'super-admin' })

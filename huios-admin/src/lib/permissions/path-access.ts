@@ -62,6 +62,7 @@ const pathPermissions: PathPermission[] = [
   { pattern: '/equipe', requirement: { kind: 'super-admin' } },
   { pattern: '/funcoes/:id/editar', requirement: { kind: 'super-admin' } },
   { pattern: '/funcoes/nova', requirement: { kind: 'super-admin' } },
+  { pattern: '/funcoes/:id', requirement: { kind: 'super-admin' } },
   { pattern: '/funcoes', requirement: { kind: 'super-admin' } },
   { pattern: '/professores', requirement: { kind: 'permission', permission: 'professores.visualizar' } },
   { pattern: '/disciplinas', requirement: { kind: 'permission', permission: 'disciplinas.visualizar' } },
