@@ -8,7 +8,10 @@ interface UserData {
     userId: string;
     name: string;
     email: string;
-    role: string;
+    role: { id: string; key: string; name: string } | null;
+    permissions: string[];
+    isStudent: boolean;
+    isSuperAdmin: boolean;
 }
 
 interface HeaderProps {
