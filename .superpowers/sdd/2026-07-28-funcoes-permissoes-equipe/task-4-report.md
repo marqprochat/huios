@@ -87,3 +87,24 @@ After implementation, the same suite passed all 10 tests.
 ### Remaining verification note
 
 - The final focused admin lint rerun was interrupted after its only reported issue (`no-explicit-any` in the touched student identity route) had been removed. No lint pass is claimed for this fix round.
+
+## Fix round 2
+
+### Finding addressed
+
+- `getSession()` no longer returns the role hint decoded from the JWT after database revalidation.
+- The current user lookup now includes the current student link and administrative role key/status.
+- The returned compatibility role is derived on every request: the active current administrative role key, otherwise `ALUNO` only for a current student link, otherwise an empty non-authorizing value.
+- `getIdentitySession()` remains the explicit token-identity parser used only by identity and password-change flows; it does not become an authorization source.
+- Role changes, removal, and deactivation therefore take effect immediately even in legacy handlers that still compare `session.role`.
+
+### TDD and verification
+
+The new tests first failed with the stale token role (`SUPER_ADMIN`) after simulating a database change to `COORDENADOR` or removal of the administrative role.
+
+| Command | Result |
+| --- | --- |
+| `cd huios-admin; tsx --test src/lib/auth.test.ts src/app/api/auth/aluno/login/route.test.ts src/lib/permissions/server.test.ts` | PASS — 14 tests |
+| `cd huios-admin; eslint src/lib/auth.ts src/lib/auth.test.ts src/lib/session-policy.ts` | PASS — exit 0 |
+
+The tests also apply the representative legacy settings guard expression and verify that a student-only role (`ALUNO`) and a user with no current context are denied despite a stale `SUPER_ADMIN` token hint.

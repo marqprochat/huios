@@ -74,6 +74,15 @@ export async function getSession(): Promise<SessionPayload | null> {
         select: {
             active: true,
             mustChangePassword: true,
+            student: {
+                select: { id: true },
+            },
+            adminRole: {
+                select: {
+                    key: true,
+                    active: true,
+                },
+            },
         },
     }));
 }
