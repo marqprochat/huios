@@ -6,6 +6,8 @@ import {
   resolvePathRequirement,
 } from './path-access'
 
+const UUID = '11111111-1111-4111-8111-111111111111'
+
 test('specific create and edit routes take precedence over module display routes', () => {
   const modules = [
     'alunos',
@@ -27,7 +29,7 @@ test('specific create and edit routes take precedence over module display routes
       { kind: 'permission', permission: `${moduleName}.criar` },
     )
     assert.deepEqual(
-      resolvePathRequirement(`/${moduleName}/record-1/editar`),
+      resolvePathRequirement(`/${moduleName}/${UUID}/editar`),
       { kind: 'permission', permission: `${moduleName}.editar` },
     )
   }
@@ -38,11 +40,11 @@ test('academic special paths use their exact mutation permission', () => {
     kind: 'permission',
     permission: 'aulas.criar',
   })
-  assert.deepEqual(resolvePathRequirement('/aulas/aula-1/editar'), {
+  assert.deepEqual(resolvePathRequirement(`/aulas/${UUID}/editar`), {
     kind: 'permission',
     permission: 'aulas.editar',
   })
-  assert.deepEqual(resolvePathRequirement('/aulas/aula-1/presenca'), {
+  assert.deepEqual(resolvePathRequirement(`/aulas/${UUID}/presenca`), {
     kind: 'permission',
     permission: 'presenca.registrar',
   })
@@ -50,11 +52,11 @@ test('academic special paths use their exact mutation permission', () => {
     kind: 'permission',
     permission: 'provas.criar',
   })
-  assert.deepEqual(resolvePathRequirement('/provas/prova-1/duplicar'), {
+  assert.deepEqual(resolvePathRequirement(`/provas/${UUID}/duplicar`), {
     kind: 'permission',
     permission: 'provas.criar',
   })
-  assert.deepEqual(resolvePathRequirement('/provas/prova-1/questoes'), {
+  assert.deepEqual(resolvePathRequirement(`/provas/${UUID}/questoes`), {
     kind: 'permission',
     permission: 'provas.editar',
   })
@@ -64,13 +66,32 @@ test('team and role management are Super Admin-only for all child paths', () => 
   for (const path of [
     '/equipe',
     '/equipe/novo',
-    '/equipe/member-1/editar',
+    `/equipe/${UUID}/editar`,
     '/funcoes',
     '/funcoes/nova',
-    '/funcoes/role-1/editar',
+    `/funcoes/${UUID}/editar`,
   ]) {
     assert.deepEqual(resolvePathRequirement(path), { kind: 'super-admin' })
   }
+})
+
+test('allows explicitly declared detail and family child routes', () => {
+  assert.deepEqual(resolvePathRequirement(`/alunos/${UUID}`), {
+    kind: 'permission',
+    permission: 'alunos.visualizar',
+  })
+  assert.deepEqual(resolvePathRequirement(`/boletins/${UUID}`), {
+    kind: 'permission',
+    permission: 'boletins.visualizar',
+  })
+  assert.deepEqual(resolvePathRequirement('/relatorios/presenca'), {
+    kind: 'permission',
+    permission: 'relatorios.visualizar',
+  })
+  assert.deepEqual(resolvePathRequirement('/financeiro/contas-a-pagar'), {
+    kind: 'permission',
+    permission: 'financeiro.visualizar',
+  })
 })
 
 test('covers dashboard, operational, report, financial and settings routes', () => {
@@ -126,8 +147,23 @@ test('does not confuse public enrollment with admin enrollments', () => {
 })
 
 test('unknown administrative paths deny by default', () => {
-  assert.deepEqual(resolvePathRequirement('/administracao-futura'), {
-    kind: 'deny',
-    reason: 'unknown',
-  })
+  for (const path of [
+    '/administracao-futura',
+    '/alunos/importar',
+    '/alunos/novo/operacao-futura',
+    `/disciplinas/${UUID}/editar/operacao-futura`,
+    '/relatorios/futuro',
+    '/financeiro/importar',
+    '/equipe/importar',
+    '/funcoes/importar',
+    '/login/operacao-futura',
+    '/trocar-senha/operacao-futura',
+    '/acesso-negado/operacao-futura',
+  ]) {
+    assert.deepEqual(
+      resolvePathRequirement(path),
+      { kind: 'deny', reason: 'unknown' },
+      path,
+    )
+  }
 })

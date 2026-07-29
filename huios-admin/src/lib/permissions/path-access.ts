@@ -44,6 +44,10 @@ const pathPermissions: PathPermission[] = [
   { pattern: '/financeiro/contas-a-receber', requirement: { kind: 'permission', permission: 'financeiro.visualizar' } },
   { pattern: '/financeiro/contas-a-pagar', requirement: { kind: 'permission', permission: 'financeiro.visualizar' } },
   { pattern: '/financeiro/categorias', requirement: { kind: 'permission', permission: 'financeiro.visualizar' } },
+  { pattern: '/relatorios/presenca', requirement: { kind: 'permission', permission: 'relatorios.visualizar' } },
+  { pattern: '/relatorios/provas', requirement: { kind: 'permission', permission: 'relatorios.visualizar' } },
+  { pattern: '/relatorios/alunos', requirement: { kind: 'permission', permission: 'relatorios.visualizar' } },
+  { pattern: '/relatorios/notas', requirement: { kind: 'permission', permission: 'relatorios.visualizar' } },
   { pattern: '/alunos/novo', requirement: { kind: 'permission', permission: 'alunos.criar' } },
   { pattern: '/igrejas/novo', requirement: { kind: 'permission', permission: 'igrejas.criar' } },
   { pattern: '/cursos/novo', requirement: { kind: 'permission', permission: 'cursos.criar' } },
@@ -53,7 +57,11 @@ const pathPermissions: PathPermission[] = [
   { pattern: '/aulas/lote', requirement: { kind: 'permission', permission: 'aulas.criar' } },
   { pattern: '/aulas/novo', requirement: { kind: 'permission', permission: 'aulas.criar' } },
   { pattern: '/cupons/novo', requirement: { kind: 'permission', permission: 'financeiro.criar' } },
+  { pattern: '/equipe/:id/editar', requirement: { kind: 'super-admin' } },
+  { pattern: '/equipe/novo', requirement: { kind: 'super-admin' } },
   { pattern: '/equipe', requirement: { kind: 'super-admin' } },
+  { pattern: '/funcoes/:id/editar', requirement: { kind: 'super-admin' } },
+  { pattern: '/funcoes/nova', requirement: { kind: 'super-admin' } },
   { pattern: '/funcoes', requirement: { kind: 'super-admin' } },
   { pattern: '/professores', requirement: { kind: 'permission', permission: 'professores.visualizar' } },
   { pattern: '/disciplinas', requirement: { kind: 'permission', permission: 'disciplinas.visualizar' } },
@@ -63,7 +71,9 @@ const pathPermissions: PathPermission[] = [
   { pattern: '/relatorios', requirement: { kind: 'permission', permission: 'relatorios.visualizar' } },
   { pattern: '/financeiro', requirement: { kind: 'permission', permission: 'financeiro.visualizar' } },
   { pattern: '/pendencias', requirement: { kind: 'permission', permission: 'presenca.visualizar' } },
+  { pattern: '/boletins/:id', requirement: { kind: 'permission', permission: 'boletins.visualizar' } },
   { pattern: '/boletins', requirement: { kind: 'permission', permission: 'boletins.visualizar' } },
+  { pattern: '/alunos/:id', requirement: { kind: 'permission', permission: 'alunos.visualizar' } },
   { pattern: '/igrejas', requirement: { kind: 'permission', permission: 'igrejas.visualizar' } },
   { pattern: '/alunos', requirement: { kind: 'permission', permission: 'alunos.visualizar' } },
   { pattern: '/cursos', requirement: { kind: 'permission', permission: 'cursos.visualizar' } },
@@ -90,30 +100,36 @@ function hasPathPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`)
 }
 
+function isDatabaseId(segment: string): boolean {
+  return /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|c[a-z0-9]{20,31})$/i.test(segment)
+}
+
 function matchesPattern(pathname: string, pattern: string): boolean {
   if (pattern === '/') return pathname === '/'
 
   const pathSegments = pathname.slice(1).split('/')
   const patternSegments = pattern.slice(1).split('/')
-  if (pathSegments.length < patternSegments.length) return false
+  if (pathSegments.length !== patternSegments.length) return false
 
   return patternSegments.every((segment, index) => (
-    segment.startsWith(':') || segment === pathSegments[index]
+    segment.startsWith(':')
+      ? isDatabaseId(pathSegments[index])
+      : segment === pathSegments[index]
   ))
 }
 
 export function resolvePathRequirement(pathname: string): PathRequirement {
   const normalized = normalizePath(pathname)
 
-  if (hasPathPrefix(normalized, '/trocar-senha')) {
+  if (normalized === '/trocar-senha') {
     return { kind: 'password-change' }
   }
-  if (hasPathPrefix(normalized, '/acesso-negado')) {
+  if (normalized === '/acesso-negado') {
     return { kind: 'access-denied' }
   }
   if (
-    hasPathPrefix(normalized, '/login') ||
-    hasPathPrefix(normalized, '/portal/login') ||
+    normalized === '/login' ||
+    normalized === '/portal/login' ||
     hasPathPrefix(normalized, '/matricula')
   ) {
     return { kind: 'public' }
