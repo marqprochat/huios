@@ -53,17 +53,14 @@ export default async function EquipePage() {
                                             <div className="text-xs">{member.phone || '-'}</div>
                                         </td>
                                         <td className="p-4">
-                                            <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
-                                                member.role === 'LIDER_DE_TURMA' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                                member.role === 'VOLUNTARIO' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                            }`}>
-                                                {member.role === 'LIDER_DE_TURMA' ? 'Líder de Turma' : 
-                                                 member.role === 'VOLUNTARIO' ? 'Voluntário' : 'Monitor'}
+                                            <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                                                {member.user?.adminRole?.name || 'Sem função'}
                                             </span>
+                                            {(!member.active || member.user?.active === false) && <span className="ml-1 px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-500">Inativa</span>}
                                             {member.area && (
                                                 <div className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">{member.area}</div>
                                             )}
+                                            {member.courseClassAssignments.length > 0 && <div className="text-[10px] text-slate-500 mt-1">{member.courseClassAssignments.length} turma(s) atribuída(s)</div>}
                                         </td>
                                         <td className="p-4 text-right">
                                             <div className="flex items-center justify-end gap-2">

@@ -1,6 +1,6 @@
 'use client';
 
-import { createTeamMember, fetchStudentsForTeam } from '../actions';
+import { createTeamMember, fetchAssignableRoles, fetchCourseClassesForTeam, fetchStudentsForTeam } from '../actions';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,9 @@ export default function NovoMembroPage() {
     const router = useRouter();
     const { toast } = useToast();
     const [students, setStudents] = useState<any[]>([]);
+    const [roles, setRoles] = useState<any[]>([]);
+    const [courseClasses, setCourseClasses] = useState<any[]>([]);
+    const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
     const [selectedStudent, setSelectedStudent] = useState<string>('');
     const [isPending, setIsPending] = useState(false);
 
@@ -23,14 +26,15 @@ export default function NovoMembroPage() {
         birthDate: '',
         maritalStatus: '',
         area: '',
-        role: 'MONITOR',
         address: ''
     });
 
     useEffect(() => {
         async function loadStudents() {
-            const data = await fetchStudentsForTeam();
-            setStudents(data);
+            const [studentData, roleData, classData] = await Promise.all([
+                fetchStudentsForTeam(), fetchAssignableRoles(), fetchCourseClassesForTeam(),
+            ]);
+            setStudents(studentData); setRoles(roleData); setCourseClasses(classData);
         }
         loadStudents();
     }, []);
@@ -50,7 +54,6 @@ export default function NovoMembroPage() {
                     birthDate: student.birthDate ? new Date(student.birthDate).toISOString().split('T')[0] : '',
                     maritalStatus: student.maritalStatus || '',
                     area: '',
-                    role: 'MONITOR',
                     address: student.address || ''
                 });
             }
@@ -64,7 +67,6 @@ export default function NovoMembroPage() {
                 birthDate: '',
                 maritalStatus: '',
                 area: '',
-                role: 'MONITOR',
                 address: ''
             });
         }
@@ -202,17 +204,27 @@ export default function NovoMembroPage() {
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label htmlFor="role" className="text-sm font-bold text-slate-700 dark:text-slate-300">Função <span className="text-red-500">*</span></label>
-                                <select id="role" name="role" value={formData.role} onChange={handleChange} required className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white">
-                                    <option value="MONITOR">Monitor</option>
-                                    <option value="LIDER_DE_TURMA">Líder de Turma</option>
-                                    <option value="VOLUNTARIO">Voluntário</option>
+                                <label htmlFor="roleId" className="text-sm font-bold text-slate-700 dark:text-slate-300">Função de acesso <span className="text-red-500">*</span></label>
+                                <select id="roleId" name="roleId" required className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white">
+                                    <option value="">Selecione...</option>
+                                    {roles.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-2">
                                 <label htmlFor="area" className="text-sm font-bold text-slate-700 dark:text-slate-300">Área de Atuação</label>
                                 <input type="text" id="area" name="area" value={formData.area} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="Ex: Recepção, Logística, Áudio..." />
                             </div>
+                            <div className="space-y-2 md:col-span-2">
+                                <label htmlFor="temporaryPassword" className="text-sm font-bold text-slate-700 dark:text-slate-300">Senha temporária <span className="text-red-500">*</span></label>
+                                <input type="password" id="temporaryPassword" name="temporaryPassword" minLength={8} required className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="Mínimo de 8 caracteres" />
+                                <p className="text-xs text-slate-500">O membro deverá trocar esta senha no primeiro acesso.</p>
+                            </div>
+                            <fieldset className="space-y-2 md:col-span-2">
+                                <legend className="text-sm font-bold text-slate-700 dark:text-slate-300">Turmas atribuídas</legend>
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    {courseClasses.map(courseClass => <label key={courseClass.id} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700"><input type="checkbox" name="courseClassIds" value={courseClass.id} checked={selectedClasses.includes(courseClass.id)} onChange={() => setSelectedClasses(current => current.includes(courseClass.id) ? current.filter(id => id !== courseClass.id) : [...current, courseClass.id])} />{courseClass.course.name} — {courseClass.name}</label>)}
+                                </div>
+                            </fieldset>
                         </div>
                     </div>
 

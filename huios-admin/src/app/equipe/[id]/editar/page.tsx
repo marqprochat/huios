@@ -12,15 +12,24 @@ export default async function EditarMembroPage({ params }: EditarMembroProps) {
     const { id } = await params;
     
     // Fetch member
-    const member = await prisma.teamMember.findUnique({
-        where: { id }
-    });
+    const [member, roles, courseClasses] = await Promise.all([
+        prisma.teamMember.findUnique({
+            where: { id },
+            include: { user: { include: { adminRole: true } }, courseClassAssignments: { where: { active: true }, select: { courseClassId: true } } }
+        }),
+        prisma.role.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, protected: true } }),
+        prisma.courseClass.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, course: { select: { name: true } } } }),
+    ]);
 
     if (!member) {
         notFound();
     }
 
     const birthDateStr = member.birthDate ? member.birthDate.toISOString().split('T')[0] : '';
+    const updateAction = async (formData: FormData) => {
+        'use server';
+        await updateTeamMember(id, formData);
+    };
 
     return (
         <div className="max-w-[900px] mx-auto p-4 lg:p-8 space-y-6">
@@ -35,7 +44,7 @@ export default async function EditarMembroPage({ params }: EditarMembroProps) {
             </div>
 
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8">
-                <form action={updateTeamMember.bind(null, id)} className="space-y-8">
+                <form action={updateAction} className="space-y-8">
                     
                     {member.studentId && (
                         <input type="hidden" name="studentId" value={member.studentId} />
@@ -99,16 +108,25 @@ export default async function EditarMembroPage({ params }: EditarMembroProps) {
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label htmlFor="role" className="text-sm font-bold text-slate-700 dark:text-slate-300">Função <span className="text-red-500">*</span></label>
-                                <select id="role" name="role" defaultValue={member.role} required className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white">
-                                    <option value="MONITOR">Monitor</option>
-                                    <option value="LIDER_DE_TURMA">Líder de Turma</option>
-                                    <option value="VOLUNTARIO">Voluntário</option>
+                                <label htmlFor="roleId" className="text-sm font-bold text-slate-700 dark:text-slate-300">Função de acesso <span className="text-red-500">*</span></label>
+                                <select id="roleId" name="roleId" defaultValue={member.user?.adminRoleId || ''} required className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white">
+                                    <option value="">Selecione...</option>
+                                    {roles.map(role => <option key={role.id} value={role.id}>{role.name}{role.protected ? ' (protegida)' : ''}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-2">
                                 <label htmlFor="area" className="text-sm font-bold text-slate-700 dark:text-slate-300">Área de Atuação</label>
                                 <input type="text" id="area" name="area" defaultValue={member.area || ''} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white" placeholder="Ex: Recepção, Logística, Áudio..." />
+                            </div>
+                            <fieldset className="space-y-2 md:col-span-2">
+                                <legend className="text-sm font-bold text-slate-700 dark:text-slate-300">Turmas atribuídas</legend>
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    {courseClasses.map(courseClass => <label key={courseClass.id} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700"><input type="checkbox" name="courseClassIds" value={courseClass.id} defaultChecked={member.courseClassAssignments.some(assignment => assignment.courseClassId === courseClass.id)} />{courseClass.course.name} — {courseClass.name}</label>)}
+                                </div>
+                            </fieldset>
+                            <div className="space-y-2">
+                                <label htmlFor="active" className="text-sm font-bold text-slate-700 dark:text-slate-300">Status da conta</label>
+                                <select id="active" name="active" defaultValue={member.active && member.user?.active !== false ? 'true' : 'false'} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white"><option value="true">Ativa</option><option value="false">Desativada</option></select>
                             </div>
                         </div>
                     </div>
