@@ -171,6 +171,7 @@ type AuthorizationPrisma = {
     createMany(args: unknown): Promise<unknown>
   }
   user: {
+    findUnique(args: unknown): Promise<{ id: string } | null>
     upsert(args: unknown): Promise<unknown>
   }
 }
@@ -215,15 +216,16 @@ export async function syncAuthorizationSeed(prisma: AuthorizationPrisma): Promis
     }
   }
 
-  const masterPassword = process.env.SUPER_ADMIN_INITIAL_PASSWORD ?? 'admin123'
-  const password = await bcrypt.hash(masterPassword, 12)
   const adminRoleId = roleIds.get('SUPER_ADMIN')
   if (!adminRoleId) throw new Error('Missing seeded role: SUPER_ADMIN')
+  const existingMaster = await prisma.user.findUnique({ where: { email: 'admin@huios.com.br' } })
+  const masterPassword = process.env.SUPER_ADMIN_INITIAL_PASSWORD ?? 'admin123'
+  const password = await bcrypt.hash(masterPassword, 12)
 
   await prisma.user.upsert({
     where: { email: 'admin@huios.com.br' },
     update: {
-      password,
+      ...(existingMaster ? {} : { password }),
       role: 'SUPER_ADMIN',
       adminRoleId,
       active: true,
