@@ -31,6 +31,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET:-huios-secret-key-change-in-production}
+      SUPER_ADMIN_INITIAL_PASSWORD: ${SUPER_ADMIN_INITIAL_PASSWORD:-admin123}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       PORT: 3001
       NODE_ENV: production

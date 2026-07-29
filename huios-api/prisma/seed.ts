@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
-import { syncAuthorizationSeed } from '../../huios-admin/src/lib/permissions/catalog'
+import { syncAuthorizationSeed } from '../src/auth/authorization-seed'
 
 const prisma = new PrismaClient()
 
