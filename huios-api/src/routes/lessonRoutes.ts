@@ -22,6 +22,8 @@ import {
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { authenticateToken } from '../middlewares/auth';
+import { requireApiPermission } from '../auth/permissions';
 
 // Configure multer storage
 const storage = multer.diskStorage({
@@ -51,24 +53,24 @@ const upload = multer({
 const router = Router();
 
 // Lesson routes
-router.get('/', getLessons);
-router.get('/:id', getLessonById);
-router.post('/', createLesson);
-router.put('/:id', updateLesson);
-router.delete('/:id', deleteLesson);
+router.get('/', authenticateToken, requireApiPermission('aulas.visualizar'), getLessons);
+router.get('/:id', authenticateToken, requireApiPermission('aulas.visualizar'), getLessonById);
+router.post('/', authenticateToken, requireApiPermission('aulas.criar'), createLesson);
+router.put('/:id', authenticateToken, requireApiPermission('aulas.editar'), updateLesson);
+router.delete('/:id', authenticateToken, requireApiPermission('aulas.excluir'), deleteLesson);
 
 // Check-in/out route (mobile)
-router.post('/:lessonId/checkin', checkIn);
-router.post('/:lessonId/checkout', checkOut);
+router.post('/:lessonId/checkin', authenticateToken, requireApiPermission('presenca.registrar'), checkIn);
+router.post('/:lessonId/checkout', authenticateToken, requireApiPermission('presenca.registrar'), checkOut);
 
 // Attendance routes (nested under lesson)
-router.get('/:lessonId/attendances', getAttendancesByLesson);
-router.put('/:lessonId/attendances/bulk', bulkUpdateAttendances);
+router.get('/:lessonId/attendances', authenticateToken, requireApiPermission('presenca.visualizar'), getAttendancesByLesson);
+router.put('/:lessonId/attendances/bulk', authenticateToken, requireApiPermission('presenca.registrar'), bulkUpdateAttendances);
 
 // Material routes (nested under lesson)
-router.post('/:lessonId/materials', upload.single('file'), uploadMaterial);
-router.get('/:lessonId/materials', getMaterialsByLesson);
-router.get('/:lessonId/materials/:id/download', downloadMaterial);
-router.delete('/:lessonId/materials/:id', deleteMaterial);
+router.post('/:lessonId/materials', authenticateToken, requireApiPermission('aulas.editar'), upload.single('file'), uploadMaterial);
+router.get('/:lessonId/materials', authenticateToken, requireApiPermission('aulas.visualizar'), getMaterialsByLesson);
+router.get('/:lessonId/materials/:id/download', authenticateToken, requireApiPermission('aulas.visualizar'), downloadMaterial);
+router.delete('/:lessonId/materials/:id', authenticateToken, requireApiPermission('aulas.editar'), deleteMaterial);
 
 export default router;

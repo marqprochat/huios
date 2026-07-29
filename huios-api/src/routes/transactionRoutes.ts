@@ -9,6 +9,8 @@ import {
   downloadAttachment,
   viewAttachment,
 } from '../controllers/attachmentController';
+import { authenticateToken } from '../middlewares/auth';
+import { requireApiPermission } from '../auth/permissions';
 
 // Armazenamento em disco (mesmo padrão dos materiais de aula).
 const storage = multer.diskStorage({
@@ -39,10 +41,10 @@ const upload = multer({
 
 const router = Router();
 
-router.post('/:transactionId/attachments', upload.single('file'), uploadAttachment);
-router.get('/:transactionId/attachments', getAttachmentsByTransaction);
-router.get('/:transactionId/attachments/:id/download', downloadAttachment);
-router.get('/:transactionId/attachments/:id/view', viewAttachment);
-router.delete('/:transactionId/attachments/:id', deleteAttachment);
+router.post('/:transactionId/attachments', authenticateToken, requireApiPermission('financeiro.editar'), upload.single('file'), uploadAttachment);
+router.get('/:transactionId/attachments', authenticateToken, requireApiPermission('financeiro.visualizar'), getAttachmentsByTransaction);
+router.get('/:transactionId/attachments/:id/download', authenticateToken, requireApiPermission('financeiro.visualizar'), downloadAttachment);
+router.get('/:transactionId/attachments/:id/view', authenticateToken, requireApiPermission('financeiro.visualizar'), viewAttachment);
+router.delete('/:transactionId/attachments/:id', authenticateToken, requireApiPermission('financeiro.excluir'), deleteAttachment);
 
 export default router;
