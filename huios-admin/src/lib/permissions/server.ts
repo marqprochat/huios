@@ -1,4 +1,4 @@
-import { getSession } from '@/lib/auth'
+import { getIdentitySession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 
 import { PERMISSIONS, type PermissionKey } from './catalog'
@@ -94,7 +94,7 @@ async function findUserById(userId: string): Promise<AccessUserRecord | null> {
 }
 
 const defaultDependencies: AccessContextDependencies = {
-  getSession,
+  getSession: getIdentitySession,
   findUserById,
 }
 

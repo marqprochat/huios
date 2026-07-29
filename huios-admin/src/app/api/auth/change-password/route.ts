@@ -1,16 +1,12 @@
-import { SignJWT } from 'jose';
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import {
     COOKIE_NAME,
-    getSession,
+    getIdentitySession,
     hashPassword,
+    signToken,
     verifyPassword,
 } from '@/lib/auth';
-
-const JWT_SECRET = new TextEncoder().encode(
-    process.env.JWT_SECRET || 'huios-secret-key-change-in-production'
-);
 
 function sessionUserId(session: unknown): string | null {
     if (!session || typeof session !== 'object') return null;
@@ -23,7 +19,7 @@ function sessionUserId(session: unknown): string | null {
 
 export async function POST(request: Request) {
     try {
-        const session = await getSession();
+        const session = await getIdentitySession();
         const userId = sessionUserId(session);
 
         if (!userId) {
@@ -69,13 +65,16 @@ export async function POST(request: Request) {
             where: { id: userId },
             select: {
                 id: true,
+                name: true,
                 email: true,
                 password: true,
+                role: true,
                 active: true,
                 student: { select: { id: true } },
                 adminRole: {
                     select: {
                         id: true,
+                        key: true,
                         active: true,
                     },
                 },
@@ -124,16 +123,17 @@ export async function POST(request: Request) {
             },
         });
 
-        const token = await new SignJWT({
+        const role = user.adminRole?.active
+            ? user.adminRole.key
+            : user.role;
+        const token = await signToken({
             id: user.id,
             userId: user.id,
+            name: user.name,
             email: user.email,
+            role,
             mustChangePassword: false,
-        })
-            .setProtectedHeader({ alg: 'HS256' })
-            .setIssuedAt()
-            .setExpirationTime('1d')
-            .sign(JWT_SECRET);
+        });
 
         const response = NextResponse.json({
             success: true,

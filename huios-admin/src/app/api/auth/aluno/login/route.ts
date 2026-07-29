@@ -2,10 +2,39 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { verifyPassword, signToken, COOKIE_NAME } from '@/lib/auth'
 
+interface StudentSessionUser {
+    id: string
+    name: string
+    email: string
+    role: string
+    mustChangePassword: boolean
+    adminRole: {
+        key: string
+        active: boolean
+    } | null
+}
+
+export async function createStudentSession(user: StudentSessionUser) {
+    const role = user.adminRole?.active ? user.adminRole.key : user.role
+    const token = await signToken({
+        id: user.id,
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        role,
+        mustChangePassword: user.mustChangePassword,
+    })
+
+    return { token, role }
+}
+
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { email, password } = body;
+        const email = typeof body.email === 'string'
+            ? body.email.trim().toLowerCase()
+            : ''
+        const password = typeof body.password === 'string' ? body.password : ''
 
         if (!email || !password) {
             return NextResponse.json(
@@ -18,6 +47,12 @@ export async function POST(request: Request) {
         const user = await prisma.user.findUnique({
             where: { email },
             include: {
+                adminRole: {
+                    select: {
+                        key: true,
+                        active: true,
+                    }
+                },
                 student: {
                     include: {
                         enrollments: {
@@ -33,7 +68,7 @@ export async function POST(request: Request) {
             }
         });
 
-        if (!user || user.role !== 'ALUNO') {
+        if (!user || !user.student) {
             return NextResponse.json(
                 { error: 'Credenciais inválidas.' },
                 { status: 401 }
@@ -56,12 +91,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const token = await signToken({
-            userId: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role
-        });
+        const { token, role } = await createStudentSession(user)
 
         const response = NextResponse.json({
             success: true,
@@ -69,7 +99,8 @@ export async function POST(request: Request) {
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                role: user.role,
+                role,
+                mustChangePassword: user.mustChangePassword,
                 studentId: user.student?.id,
             }
         });

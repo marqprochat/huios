@@ -1,25 +1,9 @@
 import express, { NextFunction, Response } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { prisma } from '../services/prisma';
+import { getJwtSecret } from '../utils/jwtSecret';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'huios-secret-key-change-in-production';
-
-export interface CurrentAccess {
-  id: string;
-  email: string;
-  role: string;
-  isStudent: boolean;
-  isAdmin: boolean;
-  mustChangePassword: boolean;
-  studentId: string | null;
-  teamMemberId: string | null;
-  adminRole: {
-    id: string;
-    key: string;
-    name: string;
-  } | null;
-  permissions: string[];
-}
+const JWT_SECRET = getJwtSecret();
 
 export interface AuthRequest extends express.Request {
   user?: any;
@@ -101,7 +85,7 @@ export const authenticateToken = async (
         : []
     };
 
-    const requestPath = `${req.baseUrl}${req.path}`;
+    const requestPath = `${req.baseUrl}${req.path}`.replace(/\/+$/, '');
     if (user.mustChangePassword && requestPath !== '/api/auth/me') {
       return res.status(403).json({
         code: 'PASSWORD_CHANGE_REQUIRED',

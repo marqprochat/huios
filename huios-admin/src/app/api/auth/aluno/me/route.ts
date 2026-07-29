@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { getSession } from '@/lib/auth'
+import { getIdentitySession } from '@/lib/auth'
 
 export async function GET() {
     try {
-        const session = await getSession();
+        const session = await getIdentitySession();
 
         if (!session) {
             return NextResponse.json(
@@ -70,14 +70,10 @@ export async function GET() {
             },
             student: user.student
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Get student me error detail:', error);
         return NextResponse.json(
-            { 
-                error: 'Erro ao carregar dados',
-                message: error.message,
-                code: error.code
-            },
+            { error: 'Erro ao carregar dados' },
             { status: 500 }
         );
     }

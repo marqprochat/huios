@@ -61,3 +61,29 @@ After implementation, the same suite passed all 10 tests.
 ## Concerns
 
 - The full admin TypeScript check remains blocked by the unrelated existing TS5097 error in `src/lib/attendanceStatus.test.mts`. Focused lint for all Task 4 admin files passes.
+
+## Fix round 1
+
+### Findings addressed
+
+- Added the current legacy-compatible `role` claim to Express, student-login, and refreshed password-change tokens strictly as a routing/transition hint. Permission claims remain absent, and Express authorization continues to ignore token role in favor of the current database record.
+- Closed the student-login bypass by signing both `mustChangePassword` and the current role hint and by using the student relation, rather than the mutually exclusive legacy `ALUNO` role, to admit portal login.
+- Made ordinary Next sessions definitive: `getSession()` now re-reads `active` and `mustChangePassword` and denies protected handlers when the current database state is inactive or still requires password change. Identity/session and password-change handlers explicitly use `getIdentitySession()` so they remain available.
+- Added current-session policy coverage and student-session token coverage, including the dual-context role hint and absence of permission authority claims.
+- Removed the known JWT fallback outside `development` and `test`. Missing or repository-known fallback secrets now fail closed in other environments in both API and admin auth paths.
+- Normalized trailing slashes before the Express `/api/auth/me` password-change exception.
+- Removed the unused `CurrentAccess` declaration.
+- Updated the portal controller authentication fixture to mirror the complete current-user access record required by database revalidation.
+
+### Verification obtained
+
+| Command | Result |
+| --- | --- |
+| `cd huios-api; npm.cmd test -- src/controllers/authController.test.ts src/controllers/portalController.test.ts` | PASS — 2 files, 57 tests |
+| `cd huios-api; npm.cmd run build` | PASS — TypeScript exit 0 |
+| `cd huios-admin; tsx --test src/lib/permissions/server.test.ts src/lib/auth.test.ts src/app/api/auth/aluno/login/route.test.ts` | PASS — 11 tests |
+| `cd huios-admin; tsc --noEmit` | Reported the new test's read-only `NODE_ENV` assignment and the pre-existing TS5097; the assignment was removed afterward, but the command was not rerun |
+
+### Remaining verification note
+
+- The final focused admin lint rerun was interrupted after its only reported issue (`no-explicit-any` in the touched student identity route) had been removed. No lint pass is claimed for this fix round.

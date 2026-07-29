@@ -3,8 +3,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../services/prisma';
 import { AuthRequest } from '../middlewares/auth';
+import { getJwtSecret } from '../utils/jwtSecret';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'huios-secret-key-change-in-production';
+const JWT_SECRET = getJwtSecret();
 
 export const login = async (req: Request, res: Response) => {
   const email = typeof req.body.email === 'string'
@@ -58,6 +59,7 @@ export const login = async (req: Request, res: Response) => {
       {
         id: user.id,
         email: user.email,
+        role: activeAdminRole?.key ?? user.role,
         mustChangePassword: user.mustChangePassword
       },
       JWT_SECRET,

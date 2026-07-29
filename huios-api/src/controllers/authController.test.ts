@@ -42,7 +42,7 @@ describe('POST /api/auth/login', () => {
     vi.restoreAllMocks();
   });
 
-  it('normalizes the email and returns both current access contexts without authority claims', async () => {
+  it('normalizes email and signs only identity, routing hints, and no permission authority', async () => {
     const findUnique = vi.spyOn(prisma.user, 'findUnique').mockResolvedValue({
       ...activeAccessUser,
       password: 'stored-hash',
@@ -96,9 +96,9 @@ describe('POST /api/auth/login', () => {
     expect(claims).toMatchObject({
       id: 'user-1',
       email: 'ana@example.com',
+      role: 'COORDENADOR',
       mustChangePassword: true
     });
-    expect(claims).not.toHaveProperty('role');
     expect(claims).not.toHaveProperty('permissions');
   });
 
@@ -320,6 +320,36 @@ describe('GET /api/auth/me', () => {
     expect(response.body.student).not.toHaveProperty('cpf');
   });
 
+  it('allows the equivalent trailing-slash session route during a pending password change', async () => {
+    vi.spyOn(prisma.user, 'findUnique')
+      .mockResolvedValueOnce({
+        ...activeAccessUser,
+        mustChangePassword: true
+      } as never)
+      .mockResolvedValueOnce({
+        id: 'user-1',
+        name: 'Ana Souza',
+        email: 'ana@example.com',
+        role: 'ALUNO',
+        mustChangePassword: true,
+        teamMember: { id: 'member-1' },
+        adminRole: activeAccessUser.adminRole,
+        student: {
+          id: 'student-1',
+          name: 'Ana Souza',
+          phone: null,
+          enrollments: []
+        }
+      } as never);
+
+    const response = await request(app)
+      .get('/api/auth/me/')
+      .set('Authorization', `Bearer ${identityToken()}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.mustChangePassword).toBe(true);
+  });
+
   it('returns a controlled 500 when current access cannot be read', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     vi.spyOn(prisma.user, 'findUnique').mockRejectedValue(new Error('database unavailable'));
@@ -330,5 +360,29 @@ describe('GET /api/auth/me', () => {
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ message: 'Erro interno do servidor' });
+  });
+});
+
+describe('JWT secret configuration', () => {
+  it('fails closed outside development and test when JWT_SECRET is missing', async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousJwtSecret = process.env.JWT_SECRET;
+
+    try {
+      process.env.NODE_ENV = 'production';
+      delete process.env.JWT_SECRET;
+      vi.resetModules();
+
+      await expect(import('../middlewares/auth')).rejects.toThrow(
+        'JWT_SECRET is required outside development and test'
+      );
+    } finally {
+      if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previousNodeEnv;
+
+      if (previousJwtSecret === undefined) delete process.env.JWT_SECRET;
+      else process.env.JWT_SECRET = previousJwtSecret;
+      vi.resetModules();
+    }
   });
 });

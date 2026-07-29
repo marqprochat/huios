@@ -13,7 +13,14 @@ const token = jwt.sign(
 
 function authenticate() {
   vi.spyOn(prisma.user, 'findUnique').mockResolvedValue({
-    student: { id: 'student-1', enrollments: [{ classId: 'class-1' }] }
+    id: 'user-1',
+    email: 'student@example.com',
+    role: 'ALUNO',
+    active: true,
+    mustChangePassword: false,
+    student: { id: 'student-1', enrollments: [{ classId: 'class-1' }] },
+    teamMember: null,
+    adminRole: null
   } as never);
   vi.spyOn(prisma.discipline, 'findMany').mockResolvedValue([{ id: 'discipline-1' }] as never);
 }
