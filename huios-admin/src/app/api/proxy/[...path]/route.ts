@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { COOKIE_NAME } from '@/lib/auth';
 
 function getApiBase() {
   // Sempre resolve em runtime
@@ -34,7 +35,8 @@ async function proxyRequest(request: NextRequest, params: Promise<{ path: string
   const contentType = request.headers.get('content-type');
   if (contentType) headers.set('Content-Type', contentType);
   
-  const authorization = request.headers.get('authorization');
+  const sessionToken = request.cookies.get(COOKIE_NAME)?.value;
+  const authorization = request.headers.get('authorization') || (sessionToken ? `Bearer ${sessionToken}` : null);
   if (authorization) headers.set('Authorization', authorization);
 
   const fetchOptions: RequestInit = {
