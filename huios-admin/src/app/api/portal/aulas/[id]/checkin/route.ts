@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
+import { resolveAttendanceLocation } from './attendance-location'
 
 export async function POST(
     request: Request,
@@ -111,24 +112,33 @@ export async function POST(
             }
         }
 
-        if (!lesson.latitude || !lesson.longitude) {
+        const institutionLocation = await prisma.systemSettings.findFirst({
+            select: {
+                latitude: true,
+                longitude: true,
+                radiusMeters: true,
+            }
+        });
+        const effectiveLocation = resolveAttendanceLocation(lesson, institutionLocation);
+
+        if (!effectiveLocation) {
             return NextResponse.json({ error: 'Aula não possui localização definida. Procure a secretaria.' }, { status: 400 });
         }
 
         // Calculate distance
         const distance = calculateDistance(
-            lesson.latitude,
-            lesson.longitude,
+            effectiveLocation.latitude!,
+            effectiveLocation.longitude!,
             parseFloat(latitude),
             parseFloat(longitude)
         );
 
         // Check if within radius
-        const isWithinRadius = distance <= lesson.radiusMeters;
+        const isWithinRadius = distance <= effectiveLocation.radiusMeters;
 
         if (!isWithinRadius) {
              return NextResponse.json({ 
-                error: `Você está fora do local da aula. Aproxime-se e tente novamente. Tolerância: ${lesson.radiusMeters}m.` 
+                error: `Você está fora do local da aula. Aproxime-se e tente novamente. Tolerância: ${effectiveLocation.radiusMeters}m.`
             }, { status: 400 });
         }
 
