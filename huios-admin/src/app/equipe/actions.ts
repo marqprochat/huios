@@ -54,6 +54,14 @@ export async function fetchStudentsForTeam() {
   })
 }
 
+export async function fetchTeachersForTeam() {
+  await requireSuperAdmin()
+  return prisma.teacher.findMany({
+    orderBy: { name: 'asc' },
+    select: { id: true, name: true, email: true, phone: true, cpf: true },
+  })
+}
+
 export async function fetchAssignableRoles() {
   await requireSuperAdmin()
   return prisma.role.findMany({ where: { active: true, protected: false }, orderBy: { name: 'asc' }, select: { id: true, name: true, key: true } })

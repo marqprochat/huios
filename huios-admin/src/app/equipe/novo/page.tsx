@@ -1,6 +1,6 @@
 'use client';
 
-import { createTeamMember, fetchAssignableRoles, fetchCourseClassesForTeam, fetchStudentsForTeam } from '../actions';
+import { createTeamMember, fetchAssignableRoles, fetchCourseClassesForTeam, fetchStudentsForTeam, fetchTeachersForTeam } from '../actions';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,7 @@ export default function NovoMembroPage() {
     const router = useRouter();
     const { toast } = useToast();
     const [students, setStudents] = useState<any[]>([]);
+    const [teachers, setTeachers] = useState<any[]>([]);
     const [roles, setRoles] = useState<any[]>([]);
     const [courseClasses, setCourseClasses] = useState<any[]>([]);
     const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
@@ -31,30 +32,34 @@ export default function NovoMembroPage() {
 
     useEffect(() => {
         async function loadStudents() {
-            const [studentData, roleData, classData] = await Promise.all([
-                fetchStudentsForTeam(), fetchAssignableRoles(), fetchCourseClassesForTeam(),
+            const [studentData, teacherData, roleData, classData] = await Promise.all([
+                fetchStudentsForTeam(), fetchTeachersForTeam(), fetchAssignableRoles(), fetchCourseClassesForTeam(),
             ]);
-            setStudents(studentData); setRoles(roleData); setCourseClasses(classData);
+            setStudents(studentData); setTeachers(teacherData); setRoles(roleData); setCourseClasses(classData);
         }
         loadStudents();
     }, []);
 
     const handleStudentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const studentId = e.target.value;
+        const selectedValue = e.target.value;
+        const [source, personId] = selectedValue.split(':');
+        const studentId = source === 'student' ? personId : '';
         setSelectedStudent(studentId);
 
-        if (studentId) {
-            const student = students.find(s => s.id === studentId);
-            if (student) {
+        if (personId) {
+            const person = source === 'teacher'
+                ? teachers.find(teacher => teacher.id === personId)
+                : students.find(student => student.id === personId);
+            if (person) {
                 setFormData({
-                    name: student.name,
-                    email: student.email,
-                    phone: maskPhone(student.phone || ''),
-                    cpf: maskCpf(student.cpf || ''),
-                    birthDate: student.birthDate ? new Date(student.birthDate).toISOString().split('T')[0] : '',
-                    maritalStatus: student.maritalStatus || '',
+                    name: person.name,
+                    email: person.email,
+                    phone: maskPhone(person.phone || ''),
+                    cpf: maskCpf(person.cpf || ''),
+                    birthDate: person.birthDate ? new Date(person.birthDate).toISOString().split('T')[0] : '',
+                    maritalStatus: person.maritalStatus || '',
                     area: '',
-                    address: student.address || ''
+                    address: person.address || ''
                 });
             }
         } else {
@@ -137,8 +142,13 @@ export default function NovoMembroPage() {
                     >
                         <option value="">Não (Cadastrar novo)</option>
                         {students.map(student => (
-                            <option key={student.id} value={student.id}>
+                            <option key={`student:${student.id}`} value={`student:${student.id}`}>
                                 {student.name} ({student.email})
+                            </option>
+                        ))}
+                        {teachers.map(teacher => (
+                            <option key={`teacher:${teacher.id}`} value={`teacher:${teacher.id}`}>
+                                {teacher.name} ({teacher.email}) — Professor
                             </option>
                         ))}
                     </select>
