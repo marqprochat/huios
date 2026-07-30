@@ -6,6 +6,7 @@ import { markAsPaid, deleteTransaction } from '../actions';
 import { TransactionForm } from '../TransactionForm';
 import { exportCSV } from '@/lib/exportCSV';
 import { formatDateBR } from '@/lib/date-utils';
+import { getEffectiveStatus, matchesMonth, matchesStatus } from './transaction-filters';
 
 interface Category { id: string; name: string; color: string | null }
 interface Teacher { id: string; name: string }
@@ -32,6 +33,7 @@ interface Props {
   teachers: Teacher[];
   paymentForms?: NamedItem[];
   accounts?: NamedItem[];
+  initialStatus?: string;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
@@ -45,9 +47,9 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fmtDate = (d: string) => formatDateBR(d);
 
-export function ContasPagarClient({ transactions: initial, categories, teachers, paymentForms = [], accounts = [] }: Props) {
+export function ContasPagarClient({ transactions: initial, categories, teachers, paymentForms = [], accounts = [], initialStatus = '' }: Props) {
   const [transactions, setTransactions] = useState(initial);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [monthFilter, setMonthFilter] = useState('');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -55,15 +57,13 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
   const [isPending, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
+    const today = new Date();
     return transactions.filter(t => {
-      if (statusFilter && t.status !== statusFilter) return false;
-      if (monthFilter) {
-        const d = new Date(t.dueDate);
-        const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        if (ym !== monthFilter) return false;
-      }
+      if (!matchesStatus(t, statusFilter, today)) return false;
+      if (!matchesMonth(t.dueDate, monthFilter)) return false;
       if (search) {
-        const q = search.toLowerCase();
+        const q = search.trim().toLocaleLowerCase('pt-BR');
+        if (!q) return true;
         if (!t.description.toLowerCase().includes(q) && !t.teacher?.name.toLowerCase().includes(q)) return false;
       }
       return true;
@@ -71,9 +71,9 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
   }, [transactions, statusFilter, monthFilter, search]);
 
   const totals = useMemo(() => ({
-    pendente: filtered.filter(t => t.status === 'PENDENTE').reduce((s, t) => s + t.amount, 0),
-    pago: filtered.filter(t => t.status === 'PAGO').reduce((s, t) => s + t.amount, 0),
-    vencido: filtered.filter(t => t.status === 'VENCIDO').reduce((s, t) => s + t.amount, 0),
+    pendente: filtered.filter(t => getEffectiveStatus(t) === 'PENDENTE').reduce((s, t) => s + t.amount, 0),
+    pago: filtered.filter(t => getEffectiveStatus(t) === 'PAGO').reduce((s, t) => s + t.amount, 0),
+    vencido: filtered.filter(t => getEffectiveStatus(t) === 'VENCIDO').reduce((s, t) => s + t.amount, 0),
   }), [filtered]);
 
   const handleMarkPaid = (id: string) => {
@@ -214,8 +214,9 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filtered.map(t => {
-                  const st = STATUS_CONFIG[t.status] ?? STATUS_CONFIG.PENDENTE;
-                  const isOverdue = t.status === 'PENDENTE' && new Date(t.dueDate) < new Date();
+                  const effectiveStatus = getEffectiveStatus(t);
+                  const st = STATUS_CONFIG[effectiveStatus] ?? STATUS_CONFIG.PENDENTE;
+                  const isOverdue = effectiveStatus === 'VENCIDO';
                   return (
                     <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                       <td className="px-5 py-3.5 text-sm font-medium text-slate-700 dark:text-slate-300">{t.description}</td>

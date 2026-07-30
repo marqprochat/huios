@@ -1,7 +1,17 @@
 import prisma from '@/lib/prisma';
 import { ContasPagarClient } from './ContasPagarClient';
 
-export default async function ContasPagarPage() {
+const VALID_STATUSES = new Set(['PENDENTE', 'PAGO', 'VENCIDO', 'CANCELADO', 'ISENTO']);
+
+export default async function ContasPagarPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string | string[] }>;
+}) {
+  const requestedStatus = (await searchParams).status;
+  const initialStatus = typeof requestedStatus === 'string' && VALID_STATUSES.has(requestedStatus)
+    ? requestedStatus
+    : '';
   const [transactions, categories, teachers, paymentForms, accounts] = await Promise.all([
     (prisma as any).financialTransaction.findMany({
       where: { type: 'DESPESA' },
@@ -33,5 +43,5 @@ export default async function ContasPagarPage() {
     }),
   ]);
 
-  return <ContasPagarClient transactions={transactions} categories={categories} teachers={teachers as any} paymentForms={paymentForms} accounts={accounts} />;
+  return <ContasPagarClient transactions={transactions} categories={categories} teachers={teachers as any} paymentForms={paymentForms} accounts={accounts} initialStatus={initialStatus} />;
 }
