@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toLocalDate } from '@/lib/date-utils';
-import { API_URL } from '@/lib/api';
+import { submitStudentAttendance } from './student-attendance-client';
 
 interface Lesson {
   id: string;
@@ -31,7 +31,6 @@ export default function CheckInPage() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [locationError, setLocationError] = useState('');
   const [checkInResult, setCheckInResult] = useState<any>(null);
-  const [studentId, setStudentId] = useState<string>('');
   const [locationPermission, setLocationPermission] = useState<'unknown' | 'granted' | 'prompt' | 'denied'>('unknown');
   const [requestingPermission, setRequestingPermission] = useState(false);
 
@@ -78,13 +77,6 @@ export default function CheckInPage() {
 
   const fetchData = async () => {
     try {
-      // Get student ID
-      const meRes = await fetch('/api/auth/aluno/me');
-      if (meRes.ok) {
-        const meData = await meRes.json();
-        setStudentId(meData.student.id);
-      }
-
       // Get lessons to find this one
       const lessonsRes = await fetch('/api/portal/aulas');
       if (lessonsRes.ok) {
@@ -155,27 +147,19 @@ export default function CheckInPage() {
     const realLessonId = lesson.id;
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-          try {
-            const response = await fetch(`${API_URL}/api/lessons/${realLessonId}/checkin`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              studentId,
+        try {
+          const data = await submitStudentAttendance(
+            realLessonId,
+            'checkin',
+            {
               latitude: position.coords.latitude,
-              longitude: position.coords.longitude
-            })
-          });
-
-          const data = await response.json();
-
-          if (response.ok) {
-            setCheckInResult(data);
-          } else {
-            setLocationError(data.error || 'Erro ao realizar check-in');
-          }
+              longitude: position.coords.longitude,
+            },
+          );
+          setCheckInResult(data);
         } catch (error) {
           console.error(error);
-          setLocationError('Erro ao conectar com o servidor');
+          setLocationError(error instanceof Error ? error.message : 'Erro ao conectar com o servidor');
         } finally {
           setCheckingIn(false);
         }
@@ -209,27 +193,19 @@ export default function CheckInPage() {
     const realLessonId = lesson.id;
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-          try {
-            const response = await fetch(`${API_URL}/api/lessons/${realLessonId}/checkout`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              studentId,
+        try {
+          const data = await submitStudentAttendance(
+            realLessonId,
+            'checkout',
+            {
               latitude: position.coords.latitude,
-              longitude: position.coords.longitude
-            })
-          });
-
-          const data = await response.json();
-
-          if (response.ok) {
-            setCheckInResult(data);
-          } else {
-            setLocationError(data.error || 'Erro ao realizar check-out');
-          }
+              longitude: position.coords.longitude,
+            },
+          );
+          setCheckInResult(data);
         } catch (error) {
           console.error(error);
-          setLocationError('Erro ao conectar com o servidor');
+          setLocationError(error instanceof Error ? error.message : 'Erro ao conectar com o servidor');
         } finally {
           setCheckingOut(false);
         }
