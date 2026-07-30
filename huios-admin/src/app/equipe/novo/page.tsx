@@ -17,6 +17,10 @@ export default function NovoMembroPage() {
     const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
     const [selectedStudent, setSelectedStudent] = useState<string>('');
     const [isPending, setIsPending] = useState(false);
+    const people = [
+        ...students.map(student => ({ ...student, source: 'student' as const, label: 'Aluno' })),
+        ...teachers.map(teacher => ({ ...teacher, source: 'teacher' as const, label: 'Professor' })),
+    ].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
     // Form states
     const [formData, setFormData] = useState({
@@ -132,23 +136,18 @@ export default function NovoMembroPage() {
                 <div className="mb-8 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
                     <div className="flex items-center gap-3 mb-2">
                         <span className="material-symbols-outlined text-primary">link</span>
-                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Este membro já é um aluno?</h3>
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">O membro já é um aluno ou professor?</h3>
                     </div>
-                    <p className="text-xs text-slate-500 mb-4">Selecione um aluno abaixo para preencher os dados automaticamente.</p>
+                    <p className="text-xs text-slate-500 mb-4">Selecione um aluno ou professor abaixo para preencher os dados automaticamente.</p>
                     <select
                         value={selectedStudent}
                         onChange={handleStudentChange}
                         className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white"
                     >
                         <option value="">Não (Cadastrar novo)</option>
-                        {students.map(student => (
-                            <option key={`student:${student.id}`} value={`student:${student.id}`}>
-                                {student.name} ({student.email})
-                            </option>
-                        ))}
-                        {teachers.map(teacher => (
-                            <option key={`teacher:${teacher.id}`} value={`teacher:${teacher.id}`}>
-                                {teacher.name} ({teacher.email}) — Professor
+                        {people.map(person => (
+                            <option key={`${person.source}:${person.id}`} value={`${person.source}:${person.id}`}>
+                                {person.name} ({person.email}) — {person.label}
                             </option>
                         ))}
                     </select>
