@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   getAttendanceApprovalStatus,
   getAttendancePercentage,
-} from './attendanceStatus.ts';
+} from './attendanceStatus';
 
 test('keeps attendance-based course waiting while every attendance is pending', () => {
   assert.equal(

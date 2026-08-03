@@ -12,7 +12,7 @@ import {
   type RoleListItem,
   type RoleMutationClient,
   type RoleRecord,
-} from './actions.ts'
+} from './actions'
 
 type Call = {
   operation: string
