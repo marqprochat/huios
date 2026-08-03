@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { resolveAttendanceLocation } from './attendance-location'
+import { getAttendanceWindow } from './attendance-window.mjs'
 
 export async function POST(
     request: Request,
@@ -74,13 +75,11 @@ export async function POST(
             console.error("Could not read checkin config, using default 30 min", e);
         }
 
-        const earlyBuffer = bufferMinutes * 60 * 1000;
-        const lateBuffer = bufferMinutes * 60 * 1000;
-
         if (start && end) {
             if (action === 'checkin') {
-                const checkInStart = new Date(start.getTime() - earlyBuffer);
-                const checkInEnd = new Date(start.getTime() + lateBuffer);
+                const checkInWindow = getAttendanceWindow('checkin', start, end, bufferMinutes);
+                const checkInStart = checkInWindow.start;
+                const checkInEnd = checkInWindow.end;
 
                 if (now < checkInStart) {
                     return NextResponse.json({ 
@@ -94,9 +93,10 @@ export async function POST(
                     }, { status: 400 });
                 }
             } else if (action === 'checkout') {
-                // Checkout permitted after lesson finishes, or perhaps slightly before. Let's say right at end time and up to lateBuffer after that
-                const checkOutStart = new Date(end.getTime());
-                const checkOutEnd = new Date(end.getTime() + lateBuffer);
+                // A saída pode ser registrada na tolerância final da aula e até o limite posterior.
+                const checkOutWindow = getAttendanceWindow('checkout', start, end, bufferMinutes);
+                const checkOutStart = checkOutWindow.start;
+                const checkOutEnd = checkOutWindow.end;
 
                 if (now < checkOutStart) {
                      return NextResponse.json({ 
