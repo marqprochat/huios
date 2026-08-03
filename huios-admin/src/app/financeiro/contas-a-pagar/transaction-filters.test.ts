@@ -29,6 +29,13 @@ test('the pending filter excludes transactions that are already overdue by date'
   assert.equal(matchesStatus({ status: 'PENDENTE', dueDate: '2026-07-29T00:00:00.000Z' }, 'PENDENTE', today), false);
 });
 
+test('the open filter includes pending and overdue transactions', () => {
+  assert.equal(matchesStatus({ status: 'PENDENTE', dueDate: '2026-07-30T00:00:00.000Z' }, 'ABERTO', today), true);
+  assert.equal(matchesStatus({ status: 'PENDENTE', dueDate: '2026-07-29T00:00:00.000Z' }, 'ABERTO', today), true);
+  assert.equal(matchesStatus({ status: 'VENCIDO', dueDate: '2026-08-10T00:00:00.000Z' }, 'ABERTO', today), true);
+  assert.equal(matchesStatus({ status: 'PAGO', dueDate: '2026-07-29T00:00:00.000Z' }, 'ABERTO', today), false);
+});
+
 test('matches the due month by its literal UTC date without timezone shifting', () => {
   assert.equal(matchesMonth('2026-08-01T00:00:00.000Z', '2026-08'), true);
   assert.equal(matchesMonth('2026-08-01T00:00:00.000Z', '2026-07'), false);

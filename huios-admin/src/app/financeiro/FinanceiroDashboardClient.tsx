@@ -67,7 +67,7 @@ export function FinanceiroDashboardClient({ kpis, upcoming, months }: Props) {
           <p className="text-xs text-slate-400 mt-1">Pendente + Vencido</p>
         </Link>
 
-        <Link href="/financeiro/contas-a-pagar?status=PENDENTE" className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 hover:border-red-300 transition-colors">
+        <Link href="/financeiro/contas-a-pagar?status=ABERTO" className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 hover:border-red-300 transition-colors">
           <div className="flex items-start justify-between">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">A Pagar</p>
             <span className="material-symbols-outlined text-red-500 text-xl">arrow_upward</span>

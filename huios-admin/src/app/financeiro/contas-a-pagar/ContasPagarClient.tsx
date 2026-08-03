@@ -37,6 +37,7 @@ interface Props {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
+  ABERTO:    { label: 'Em aberto', bg: 'bg-amber-100',   color: 'text-amber-700' },
   PENDENTE:  { label: 'Pendente',  bg: 'bg-amber-100',   color: 'text-amber-700' },
   PAGO:      { label: 'Pago',      bg: 'bg-emerald-100', color: 'text-emerald-700' },
   VENCIDO:   { label: 'Vencido',   bg: 'bg-red-100',     color: 'text-red-700' },
@@ -218,7 +219,7 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
                   const st = STATUS_CONFIG[effectiveStatus] ?? STATUS_CONFIG.PENDENTE;
                   const isOverdue = effectiveStatus === 'VENCIDO';
                   return (
-                    <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                    <tr key={t.id} className={`${isOverdue ? 'bg-red-50/50 dark:bg-red-950/20' : ''} hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors`}>
                       <td className="px-5 py-3.5 text-sm font-medium text-slate-700 dark:text-slate-300">{t.description}</td>
                       <td className="px-5 py-3.5">
                         {t.category ? (

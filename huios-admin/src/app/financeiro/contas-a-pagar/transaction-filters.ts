@@ -25,7 +25,11 @@ export function matchesStatus(
   statusFilter: string,
   today = new Date(),
 ): boolean {
-  return !statusFilter || getEffectiveStatus(transaction, today) === statusFilter;
+  if (!statusFilter) return true;
+
+  const effectiveStatus = getEffectiveStatus(transaction, today);
+  if (statusFilter === 'ABERTO') return effectiveStatus === 'PENDENTE' || effectiveStatus === 'VENCIDO';
+  return effectiveStatus === statusFilter;
 }
 
 export function matchesMonth(dueDate: string, monthFilter: string): boolean {

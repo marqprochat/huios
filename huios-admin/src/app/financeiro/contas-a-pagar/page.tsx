@@ -1,7 +1,7 @@
 import prisma from '@/lib/prisma';
 import { ContasPagarClient } from './ContasPagarClient';
 
-const VALID_STATUSES = new Set(['PENDENTE', 'PAGO', 'VENCIDO', 'CANCELADO', 'ISENTO']);
+const VALID_STATUSES = new Set(['ABERTO', 'PENDENTE', 'PAGO', 'VENCIDO', 'CANCELADO', 'ISENTO']);
 
 export default async function ContasPagarPage({
   searchParams,
