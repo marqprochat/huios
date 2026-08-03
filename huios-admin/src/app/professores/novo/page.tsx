@@ -1,8 +1,10 @@
 import { createProfessor } from '../actions';
 import { MaskedInput } from '../../components/MaskedInput';
 import Link from 'next/link';
+import { requirePermission } from '@/lib/permissions/server';
 
-export default function NovoProfessorPage() {
+export default async function NovoProfessorPage() {
+    await requirePermission('professores.criar');
     return (
         <div className="max-w-[800px] mx-auto p-4 lg:p-8 space-y-6">
             <div className="flex items-center gap-4">

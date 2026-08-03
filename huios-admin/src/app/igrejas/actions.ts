@@ -1,15 +1,12 @@
 'use server'
 
 import prisma from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
+import { requirePermission } from '@/lib/permissions/server';
 import { revalidatePath } from 'next/cache';
 import { randomUUID } from 'crypto';
 
-async function requireCoordinator() {
-  const session = await getSession();
-  if (!session || (session.role !== 'COORDENADOR' && session.role !== 'SUPER_ADMIN')) {
-    throw new Error('Não autorizado');
-  }
+async function requireCoordinator(permission: 'igrejas.criar' | 'igrejas.editar' | 'igrejas.excluir') {
+  await requirePermission(permission);
 }
 
 function slugify(name: string): string {
@@ -23,7 +20,7 @@ function slugify(name: string): string {
 }
 
 export async function createChurch(prevState: any, formData: FormData) {
-  await requireCoordinator();
+  await requireCoordinator('igrejas.criar');
   const name = (formData.get('name') as string)?.trim();
   const type = formData.get('type') as string;
   if (!name) return { success: false, message: 'Nome é obrigatório' };
@@ -44,7 +41,7 @@ export async function createChurch(prevState: any, formData: FormData) {
 }
 
 export async function updateChurch(id: string, prevState: any, formData: FormData) {
-  await requireCoordinator();
+  await requireCoordinator('igrejas.editar');
   const name = (formData.get('name') as string)?.trim();
   const type = formData.get('type') as string;
   const isActive = formData.get('isActive') === 'true';
@@ -71,7 +68,7 @@ export async function updateChurch(id: string, prevState: any, formData: FormDat
 }
 
 export async function regenerateChurchLink(id: string) {
-  await requireCoordinator();
+  await requireCoordinator('igrejas.editar');
   try {
     const church = await (prisma as any).church.findUnique({ where: { id } });
     if (!church?.isPartner) return { success: false, message: 'Apenas igrejas parceiras têm link.' };
@@ -85,7 +82,7 @@ export async function regenerateChurchLink(id: string) {
 }
 
 export async function deleteChurch(id: string) {
-  await requireCoordinator();
+  await requireCoordinator('igrejas.excluir');
   try {
     const count = await prisma.enrollment.count({ where: { churchId: id } as any });
     if (count > 0) {

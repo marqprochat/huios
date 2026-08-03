@@ -1,12 +1,20 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
+import { requirePermission } from '@/lib/permissions/server';
+import type { PermissionKey } from '@/lib/permissions/catalog';
 import { fetchPublicKey } from '@/lib/pagbank';
 import { fetchAccessToken, registerWebhook, getSantanderConfig } from '@/lib/santander';
 
 export const dynamic = 'force-dynamic';
 
-const ALLOWED_ROLES = ['SUPER_ADMIN', 'COORDENADOR'];
+async function deniedUnless(permission: PermissionKey): Promise<NextResponse | null> {
+  try {
+    await requirePermission(permission);
+    return null;
+  } catch {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
+  }
+}
 
 function mask(token?: string | null): string | null {
   if (!token) return null;
@@ -23,10 +31,8 @@ async function ensureSettings(): Promise<any> {
 
 // GET — retorna a configuração SEM expor os segredos (apenas mascarados).
 export async function GET() {
-  const session = await getSession();
-  if (!session || !ALLOWED_ROLES.includes(session.role)) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  }
+  const denied = await deniedUnless('configuracoes.visualizar');
+  if (denied) return denied;
   const s = await (prisma as any).systemSettings.findFirst();
   return NextResponse.json({
     paymentProvider: s?.paymentProvider === 'santander' ? 'santander' : 'pagbank',
@@ -64,10 +70,8 @@ export async function GET() {
 
 // PUT — salva configuração. Segredos só são atualizados se vierem preenchidos.
 export async function PUT(req: Request) {
-  const session = await getSession();
-  if (!session || !ALLOWED_ROLES.includes(session.role)) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  }
+  const denied = await deniedUnless('configuracoes.editar');
+  if (denied) return denied;
   try {
     const body = await req.json();
     const {
@@ -148,10 +152,8 @@ export async function PUT(req: Request) {
 // POST — testa a conexão do provedor informado (?provider=pagbank|santander).
 // PagBank: gera/salva a chave pública. Santander: obtém token e registra o webhook.
 export async function POST(req: Request) {
-  const session = await getSession();
-  if (!session || !ALLOWED_ROLES.includes(session.role)) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  }
+  const denied = await deniedUnless('configuracoes.editar');
+  if (denied) return denied;
   const provider = new URL(req.url).searchParams.get('provider') || 'pagbank';
 
   try {

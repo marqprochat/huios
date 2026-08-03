@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { normalizeCode } from '@/lib/coupons';
+import { requirePermission } from '@/lib/permissions/server';
 
 function parseForm(formData: FormData) {
   const code = normalizeCode(formData.get('code') as string);
@@ -68,6 +69,7 @@ function validate(data: ReturnType<typeof parseForm>): string | null {
 }
 
 export async function createCoupon(prevState: any, formData: FormData) {
+  await requirePermission('financeiro.criar');
   const data = parseForm(formData);
   const err = validate(data);
   if (err) return { success: false, message: err };
@@ -83,6 +85,7 @@ export async function createCoupon(prevState: any, formData: FormData) {
 }
 
 export async function updateCoupon(id: string, prevState: any, formData: FormData) {
+  await requirePermission('financeiro.editar');
   const data = parseForm(formData);
   const err = validate(data);
   if (err) return { success: false, message: err };
@@ -98,11 +101,13 @@ export async function updateCoupon(id: string, prevState: any, formData: FormDat
 }
 
 export async function toggleCoupon(id: string, isActive: boolean) {
+  await requirePermission('financeiro.editar');
   await (prisma as any).coupon.update({ where: { id }, data: { isActive } });
   revalidatePath('/cupons');
 }
 
 export async function deleteCoupon(id: string) {
+  await requirePermission('financeiro.excluir');
   // Se já foi usado, apenas desativa (preserva o histórico de resgates).
   const used = await (prisma as any).couponRedemption.count({ where: { couponId: id } });
   if (used > 0) {

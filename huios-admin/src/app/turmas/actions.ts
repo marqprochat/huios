@@ -3,8 +3,10 @@
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { requirePermission } from '@/lib/permissions/server';
 
 export async function createCourseClass(formData: FormData) {
+    await requirePermission('turmas.criar');
     const name = formData.get('name') as string;
     const startDate = formData.get('startDate') as string;
     const endDate = formData.get('endDate') as string;
@@ -34,6 +36,7 @@ export async function createCourseClass(formData: FormData) {
 }
 
 export async function updateCourseClass(id: string, formData: FormData) {
+    await requirePermission('turmas.editar');
     const name = formData.get('name') as string;
     const startDate = formData.get('startDate') as string;
     const endDate = formData.get('endDate') as string;
@@ -65,6 +68,7 @@ export async function updateCourseClass(id: string, formData: FormData) {
 
 /** Abre/fecha a matrícula de uma turma. */
 export async function setEnrollmentStatus(id: string, status: 'ABERTA' | 'FECHADA') {
+    await requirePermission('turmas.editar');
     try {
         await prisma.courseClass.update({
             where: { id },
@@ -78,6 +82,7 @@ export async function setEnrollmentStatus(id: string, status: 'ABERTA' | 'FECHAD
 }
 
 export async function deleteCourseClass(id: string) {
+    await requirePermission('turmas.excluir');
     try {
         await prisma.courseClass.delete({
             where: { id }

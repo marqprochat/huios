@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createEnrollmentCharge } from '@/app/financeiro/actions';
 import { sincronizarPresencas } from '@/lib/enrollment';
+import { requirePermission } from '@/lib/permissions/server';
 
 interface ClassWithRelations {
     id: string;
@@ -21,6 +22,7 @@ interface ClassWithRelations {
 }
 
 export async function fetchClasses(): Promise<ClassWithRelations[]> {
+    await requirePermission('turmas.visualizar');
     try {
         const classes = await prisma.courseClass.findMany({
             include: { course: true },
@@ -34,6 +36,7 @@ export async function fetchClasses(): Promise<ClassWithRelations[]> {
 }
 
 export async function createAluno(prevState: any, formData: FormData) {
+    await requirePermission('alunos.criar');
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
     const phone = formData.get('phone') as string;
@@ -134,6 +137,7 @@ export async function createAluno(prevState: any, formData: FormData) {
 }
 
 export async function updateAluno(id: string, prevState: any, formData: FormData) {
+    await requirePermission('alunos.editar');
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
     const phone = formData.get('phone') as string;
@@ -213,6 +217,7 @@ export async function updateAluno(id: string, prevState: any, formData: FormData
 }
 
 export async function createStudentLogin(studentId: string) {
+    await requirePermission('alunos.editar');
     try {
         const student = await prisma.student.findUnique({
             where: { id: studentId },
@@ -263,6 +268,7 @@ export async function createStudentLogin(studentId: string) {
 }
 
 export async function changeStudentPassword(studentId: string, newPassword: string) {
+    await requirePermission('alunos.editar');
     if (!newPassword || newPassword.length < 6) {
         return { success: false, message: 'A senha deve ter pelo menos 6 caracteres.' };
     }
@@ -291,6 +297,7 @@ export async function changeStudentPassword(studentId: string, newPassword: stri
 }
 
 export async function deleteAluno(id: string) {
+    await requirePermission('alunos.excluir');
     try {
         await prisma.$transaction(async (tx) => {
             // Buscar o aluno (e seu usuário vinculado) + matrículas

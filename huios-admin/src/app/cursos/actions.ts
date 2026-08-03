@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import fs from 'fs';
 import path from 'path';
+import { requirePermission } from '@/lib/permissions/server';
 
 async function saveFile(file: File | null): Promise<string | null> {
     if (!file || file.size === 0) return null;
@@ -25,6 +26,7 @@ async function saveFile(file: File | null): Promise<string | null> {
 }
 
 export async function createCourse(formData: FormData) {
+    await requirePermission('cursos.criar');
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const status = formData.get('status') as string;
@@ -52,6 +54,7 @@ export async function createCourse(formData: FormData) {
 }
 
 export async function updateCourse(id: string, formData: FormData) {
+    await requirePermission('cursos.editar');
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const status = formData.get('status') as string;
@@ -85,6 +88,7 @@ export async function updateCourse(id: string, formData: FormData) {
 }
 
 export async function deleteCourse(id: string) {
+    await requirePermission('cursos.excluir');
     try {
         await prisma.course.delete({
             where: { id }

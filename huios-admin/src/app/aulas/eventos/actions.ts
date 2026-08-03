@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
+import { requirePermission } from '@/lib/permissions/server';
 
 // Aplica o fuso horário do Brasil (America/Sao_Paulo, UTC-3 fixo) a uma string
 // de data/hora "solta" vinda do formulário (sem timezone), igual ao padrão
@@ -16,6 +17,7 @@ function parseLocalToUTC(localStr: string): Date {
 }
 
 export async function createEvent(formData: FormData) {
+  await requirePermission('aulas.criar');
   try {
     const title = formData.get('title') as string;
     const type = (formData.get('type') as string) || null;
@@ -86,11 +88,13 @@ export async function createEvent(formData: FormData) {
 }
 
 export async function createEventWithRedirect(formData: FormData) {
+  await requirePermission('aulas.criar');
   await createEvent(formData);
   redirect('/aulas');
 }
 
 export async function deleteEvent(id: string) {
+  await requirePermission('aulas.excluir');
   try {
     await prisma.event.delete({ where: { id } });
     revalidatePath('/aulas');

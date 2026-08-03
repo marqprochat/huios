@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { getSession } from '@/lib/auth'
+import { requirePermission } from '@/lib/permissions/server'
 
 export async function GET() {
     try {
+        await requirePermission('configuracoes.visualizar');
         const settings = await prisma.systemSettings.findFirst();
         return NextResponse.json(settings || {});
     } catch (error) {
@@ -14,10 +15,7 @@ export async function GET() {
 
 export async function PUT(req: Request) {
     try {
-        const session = await getSession();
-        if (!session || session.role !== 'SUPER_ADMIN') {
-            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-        }
+        await requirePermission('configuracoes.editar');
 
         const data = await req.json();
         const { locationName, latitude, longitude, radiusMeters } = data;

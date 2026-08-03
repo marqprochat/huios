@@ -3,10 +3,12 @@
 import prisma from '@/lib/prisma';
 import { getAttendanceApprovalStatus } from '@/lib/attendanceStatus';
 import { revalidatePath } from 'next/cache';
+import { requirePermission } from '@/lib/permissions/server';
 
 const ABSENT_FOR_FAIL = 3;
 
 export async function getReportCardData(studentId: string) {
+  await requirePermission('boletins.visualizar');
   try {
     const student = await prisma.student.findUnique({
       where: { id: studentId },
@@ -143,6 +145,7 @@ export async function createManualGrade(data: {
   description?: string;
   type: string;
 }) {
+  await requirePermission('boletins.editar');
   try {
     const { studentId, disciplineId, score, weight, title, description, type } = data;
     
@@ -178,6 +181,7 @@ export async function updateManualGrade(data: {
   title?: string;
   description?: string;
 }) {
+  await requirePermission('boletins.editar');
   try {
     const { gradeId, studentId, score, weight, title, description } = data;
 
@@ -204,6 +208,7 @@ export async function updateManualGrade(data: {
 }
 
 export async function deleteManualGrade(gradeId: string, studentId: string) {
+  await requirePermission('boletins.editar');
   try {
     await prisma.grade.delete({
       where: { id: gradeId }

@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Sidebar } from "./Sidebar"
 import { Header } from "./Header"
+import { resolvePathRequirement } from "@/lib/permissions/path-access"
 
 interface UserData {
     userId: string
@@ -37,7 +38,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 const res = await fetch("/api/auth/me")
                 if (res.ok) {
                     const data = await res.json()
-                    setUser(data.user)
+                    const nextUser = data.user as UserData
+                    setUser(nextUser)
+
+                    const requirement = resolvePathRequirement(pathname)
+                    const allowed = requirement.kind === "public" ||
+                        requirement.kind === "portal" ||
+                        requirement.kind === "password-change" ||
+                        requirement.kind === "access-denied" ||
+                        (requirement.kind === "permission" &&
+                            (nextUser.isSuperAdmin || nextUser.permissions.includes(requirement.permission))) ||
+                        (requirement.kind === "super-admin" && nextUser.isSuperAdmin)
+
+                    if (!allowed) {
+                        router.replace("/acesso-negado")
+                    }
                 }
             } catch {
                 // Silently fail - middleware handles redirect
@@ -47,7 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }
 
         fetchUser()
-    }, [isBare, pathname])
+    }, [isBare, pathname, router])
 
     async function handleLogout() {
         await fetch("/api/auth/logout", { method: "POST" })

@@ -113,6 +113,29 @@ test('explicit permissions allow their key and deny absent keys', async () => {
   assert.equal(canAccess(context, 'alunos.excluir'), false)
 })
 
+test('visualizar does not grant mutation permissions across CRUD modules', async () => {
+  const context = await resolveAccessContext(dependencies(userRecord({
+    adminRole: role({
+      permissions: [
+        { permission: { key: 'alunos.visualizar' } },
+        { permission: { key: 'professores.visualizar' } },
+        { permission: { key: 'cursos.visualizar' } },
+      ],
+    }),
+  })))
+
+  assert.ok(context)
+  const guards = createAuthorizationGuards(async () => context)
+
+  for (const permission of [
+    'alunos.criar', 'alunos.editar', 'alunos.excluir',
+    'professores.criar', 'professores.editar', 'professores.excluir',
+    'cursos.criar', 'cursos.editar', 'cursos.excluir',
+  ] as const) {
+    await assert.rejects(guards.requirePermission(permission), ForbiddenError)
+  }
+})
+
 test('supports student-only and dual student/admin contexts', async () => {
   const studentOnly = await resolveAccessContext(dependencies(userRecord({
     student: { id: 'student-1' },

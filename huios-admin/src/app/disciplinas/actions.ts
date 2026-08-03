@@ -3,8 +3,10 @@
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { requirePermission } from '@/lib/permissions/server';
 
 export async function createDiscipline(formData: FormData) {
+    await requirePermission('disciplinas.criar');
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const workloadStr = formData.get('workload') as string;
@@ -37,6 +39,7 @@ export async function createDiscipline(formData: FormData) {
 }
 
 export async function createDisciplinesBatch(formData: FormData) {
+    await requirePermission('disciplinas.criar');
     const namesText = formData.get('names') as string;
     const courseClassIds = formData.getAll('courseClassIds') as string[];
     const teacherId = formData.get('teacherId') as string;
@@ -73,6 +76,7 @@ export async function createDisciplinesBatch(formData: FormData) {
 }
 
 export async function updateDiscipline(id: string, formData: FormData) {
+    await requirePermission('disciplinas.editar');
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const workloadStr = formData.get('workload') as string;
@@ -106,6 +110,7 @@ export async function updateDiscipline(id: string, formData: FormData) {
 }
 
 export async function deleteDiscipline(id: string) {
+    await requirePermission('disciplinas.excluir');
     try {
         await prisma.discipline.delete({
             where: { id }

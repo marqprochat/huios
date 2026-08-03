@@ -3,8 +3,10 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
+import { requirePermission } from '@/lib/permissions/server';
 
 export async function createExam(formData: FormData) {
+  await requirePermission('provas.criar');
   const title = formData.get('title') as string;
   const description = formData.get('description') as string;
   const disciplineId = formData.get('disciplineId') as string;
@@ -44,6 +46,7 @@ export async function createExam(formData: FormData) {
 }
 
 export async function updateExam(id: string, formData: FormData) {
+  await requirePermission('provas.editar');
   const title = formData.get('title') as string;
   const description = formData.get('description') as string;
   const disciplineId = formData.get('disciplineId') as string;
@@ -81,6 +84,7 @@ export async function updateExam(id: string, formData: FormData) {
 }
 
 export async function publishExam(id: string): Promise<void> {
+  await requirePermission('provas.aplicar');
   try {
     await prisma.exam.update({
       where: { id },
@@ -95,6 +99,7 @@ export async function publishExam(id: string): Promise<void> {
 }
 
 export async function unpublishExam(id: string): Promise<void> {
+  await requirePermission('provas.aplicar');
   try {
     await prisma.exam.update({
       where: { id },
@@ -109,6 +114,7 @@ export async function unpublishExam(id: string): Promise<void> {
 }
 
 export async function duplicateExam(id: string, newStartDate: string, newEndDate: string, newTitle?: string) {
+  await requirePermission('provas.criar');
   try {
     const original = await prisma.exam.findUnique({
       where: { id },
@@ -168,6 +174,7 @@ export async function duplicateExam(id: string, newStartDate: string, newEndDate
 }
 
 export async function deleteExam(id: string) {
+  await requirePermission('provas.excluir');
   try {
     await prisma.exam.delete({
       where: { id }
@@ -182,6 +189,7 @@ export async function deleteExam(id: string) {
 }
 
 export async function createQuestion(examId: string, formData: FormData) {
+  await requirePermission('provas.editar');
   try {
     const statement = formData.get('statement') as string;
     const weight = formData.get('weight') as string;
@@ -214,6 +222,7 @@ export async function createQuestion(examId: string, formData: FormData) {
 }
 
 export async function updateQuestion(id: string, formData: FormData) {
+  await requirePermission('provas.editar');
   try {
     const statement = formData.get('statement') as string;
     const weight = formData.get('weight') as string;
@@ -249,6 +258,7 @@ export async function updateQuestion(id: string, formData: FormData) {
 }
 
 export async function deleteQuestion(id: string, examId: string) {
+  await requirePermission('provas.editar');
   try {
     await prisma.question.delete({
       where: { id }

@@ -2,8 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import prisma from '@/lib/prisma';
+import { requirePermission } from '@/lib/permissions/server';
 
 export async function createGrade(formData: FormData) {
+  await requirePermission('boletins.editar');
   try {
     const studentId = formData.get('studentId') as string;
     const disciplineId = formData.get('disciplineId') as string;
@@ -35,6 +37,7 @@ export async function createGrade(formData: FormData) {
 }
 
 export async function updateGrade(id: string, formData: FormData) {
+  await requirePermission('boletins.editar');
   try {
     const score = formData.get('score') as string;
     const weight = formData.get('weight') as string;
@@ -60,6 +63,7 @@ export async function updateGrade(id: string, formData: FormData) {
 }
 
 export async function deleteGrade(id: string) {
+  await requirePermission('boletins.editar');
   try {
     await prisma.grade.delete({
       where: { id }

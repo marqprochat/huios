@@ -3,6 +3,7 @@ import { MaskedInput } from '../../../components/MaskedInput';
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
+import { requirePermission } from '@/lib/permissions/server';
 
 interface EditarProfessorProps {
     params: Promise<{
@@ -11,6 +12,7 @@ interface EditarProfessorProps {
 }
 
 export default async function EditarProfessorPage({ params }: EditarProfessorProps) {
+    await requirePermission('professores.editar');
     const { id } = await params;
     
     // Fetch teacher

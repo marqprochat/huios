@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { getSession } from '@/lib/auth'
+import { requirePermission } from '@/lib/permissions/server'
 
 export async function GET(
     request: Request,
     { params }: { params: Promise<{ disciplineId: string }> }
 ) {
     try {
-        const session = await getSession();
-        if (!session || (session.role !== 'SUPER_ADMIN' && session.role !== 'COORDENADOR')) {
+        try {
+            await requirePermission('avaliacoes.visualizar');
+        } catch {
             return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
         }
 

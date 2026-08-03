@@ -2,8 +2,10 @@
 
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { requirePermission } from '@/lib/permissions/server';
 
 export async function getStudentData(studentId: string) {
+    await requirePermission('alunos.visualizar');
     try {
         const student = await prisma.student.findUnique({
             where: { id: studentId },
@@ -43,6 +45,7 @@ export async function updateEnrollmentStatus(
     statusReason: string,
     studentId: string
 ) {
+    await requirePermission('matriculas.editar');
     try {
         await prisma.enrollment.update({
             where: { id: enrollmentId },

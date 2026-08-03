@@ -5,10 +5,12 @@ import { revalidatePath } from 'next/cache';
 import { gerarMensalidades } from '@/lib/enrollment';
 import { resolveMonthlyPrice } from '@/lib/pricing';
 import { validateCoupon, redeemCoupon, type CouponEffect } from '@/lib/coupons';
+import { requirePermission } from '@/lib/permissions/server';
 
 // ─── Categories ─────────────────────────────────────────────────────────────
 
 export async function createCategory(prevState: any, formData: FormData) {
+  await requirePermission('financeiro.criar');
   const name = formData.get('name') as string;
   const type = formData.get('type') as string | null;
   const color = formData.get('color') as string;
@@ -32,6 +34,7 @@ export async function createCategory(prevState: any, formData: FormData) {
 }
 
 export async function updateCategory(id: string, prevState: any, formData: FormData) {
+  await requirePermission('financeiro.editar');
   const name = formData.get('name') as string;
   const type = formData.get('type') as string | null;
   const color = formData.get('color') as string;
@@ -58,6 +61,7 @@ export async function updateCategory(id: string, prevState: any, formData: FormD
 }
 
 export async function deleteCategory(id: string) {
+  await requirePermission('financeiro.excluir');
   const count = await (prisma as any).financialTransaction.count({ where: { categoryId: id } });
   if (count > 0) {
     await (prisma as any).financialCategory.update({ where: { id }, data: { isActive: false } });
@@ -70,6 +74,7 @@ export async function deleteCategory(id: string) {
 // ─── Course Prices ───────────────────────────────────────────────────────────
 
 export async function upsertCoursePrice(courseId: string, prevState: any, formData: FormData) {
+  await requirePermission('financeiro.editar');
   const description = formData.get('description') as string;
   const isActive = formData.get('isActive') !== 'false';
 
@@ -115,6 +120,7 @@ export async function upsertCoursePrice(courseId: string, prevState: any, formDa
 // ─── Transactions ────────────────────────────────────────────────────────────
 
 export async function createTransaction(prevState: any, formData: FormData) {
+  await requirePermission('financeiro.criar');
   const type = formData.get('type') as string;
   const categoryId = formData.get('categoryId') as string;
   const description = formData.get('description') as string;
@@ -171,6 +177,7 @@ export async function createTransaction(prevState: any, formData: FormData) {
  * opcionalmente parcelada em N meses. Uma FinancialTransaction por aluno × parcela.
  */
 export async function createBulkTransactions(prevState: any, formData: FormData) {
+  await requirePermission('financeiro.criar');
   const categoryId = formData.get('categoryId') as string;
   const description = formData.get('description') as string;
   const amountRaw = formData.get('amount') as string;
@@ -256,6 +263,7 @@ export async function createBulkTransactions(prevState: any, formData: FormData)
 }
 
 export async function updateTransaction(id: string, prevState: any, formData: FormData) {
+  await requirePermission('financeiro.editar');
   const categoryId = formData.get('categoryId') as string;
   const description = formData.get('description') as string;
   const amountRaw = formData.get('amount') as string;
@@ -306,6 +314,7 @@ export async function updateTransaction(id: string, prevState: any, formData: Fo
 }
 
 export async function markAsPaid(id: string, paymentMethod?: string) {
+  await requirePermission('financeiro.conciliar');
   try {
     await (prisma as any).financialTransaction.update({
       where: { id },
@@ -325,6 +334,7 @@ export async function markAsPaid(id: string, paymentMethod?: string) {
 }
 
 export async function deleteTransaction(id: string) {
+  await requirePermission('financeiro.excluir');
   // A conta pode ter pagamentos (Payment) vinculados — ex.: conta paga via gateway.
   // A FK Payment_transactionId_fkey impede excluir a conta antes dos pagamentos,
   // então removemos os dependentes na mesma transação de banco.
@@ -340,6 +350,7 @@ export async function deleteTransaction(id: string) {
 // ─── Formas de Pagamento e Contas (cadastro rápido) ─────────────────────────
 
 export async function createPaymentForm(name: string) {
+  await requirePermission('financeiro.editar');
   const n = (name || '').trim();
   if (!n) return { success: false, message: 'Nome é obrigatório' };
   try {
@@ -353,6 +364,7 @@ export async function createPaymentForm(name: string) {
 }
 
 export async function createAccount(name: string) {
+  await requirePermission('financeiro.editar');
   const n = (name || '').trim();
   if (!n) return { success: false, message: 'Nome é obrigatório' };
   try {
@@ -368,6 +380,7 @@ export async function createAccount(name: string) {
 // ─── Auto-charge helper (called from alunos/actions.ts) ──────────────────────
 
 export async function createEnrollmentCharge(studentId: string, enrollmentId: string, classId: string, couponCode?: string | null) {
+  await requirePermission('financeiro.criar');
   try {
     const courseClass = await prisma.courseClass.findUnique({
       where: { id: classId },

@@ -3,8 +3,10 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
+import { requirePermission } from '@/lib/permissions/server';
 
 export async function createLesson(formData: FormData) {
+  await requirePermission('aulas.criar');
   try {
     const disciplineIds = formData.getAll('disciplineIds') as string[];
     const date = formData.get('date') as string;
@@ -74,6 +76,7 @@ export async function createLesson(formData: FormData) {
 }
 
 export async function createLessonWithRedirect(formData: FormData) {
+  await requirePermission('aulas.criar');
   await createLesson(formData);
   redirect('/aulas');
 }
@@ -89,6 +92,7 @@ export async function createBulkLessons(data: {
   radiusMeters: number;
   description?: string;
 }) {
+  await requirePermission('aulas.criar');
   try {
     const { 
       disciplineIds, 
@@ -164,6 +168,7 @@ export async function createBulkLessons(data: {
 }
 
 export async function updateLesson(id: string, formData: FormData) {
+  await requirePermission('aulas.editar');
   try {
     const disciplineIds = formData.getAll('disciplineIds') as string[];
     const date = formData.get('date') as string;
@@ -210,6 +215,7 @@ export async function updateLesson(id: string, formData: FormData) {
 }
 
 export async function deleteLesson(id: string) {
+  await requirePermission('aulas.excluir');
   try {
     await prisma.lesson.delete({
       where: { id }
@@ -224,6 +230,7 @@ export async function deleteLesson(id: string) {
 }
 
 export async function updateAttendance(id: string, status: string, notes?: string) {
+  await requirePermission('presenca.editar');
   try {
     await prisma.attendance.update({
       where: { id },
@@ -243,6 +250,7 @@ export async function updateAttendance(id: string, status: string, notes?: strin
 }
 
 export async function bulkUpdateAttendances(lessonId: string, attendances: { id: string; status: string }[]) {
+  await requirePermission('presenca.editar');
   try {
     const updates = attendances.map(async (att) => {
       return prisma.attendance.update({
@@ -265,6 +273,7 @@ export async function bulkUpdateAttendances(lessonId: string, attendances: { id:
 }
 
 export async function deleteLessonMaterial(id: string) {
+  await requirePermission('aulas.editar');
   try {
     const material = await prisma.lessonMaterial.findUnique({
       where: { id }
@@ -289,6 +298,7 @@ export async function deleteLessonMaterial(id: string) {
 }
 
 export async function getLessonMaterials(lessonId: string) {
+  await requirePermission('aulas.visualizar');
   try {
     return await prisma.lessonMaterial.findMany({
       where: { lessonId },

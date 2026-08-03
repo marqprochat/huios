@@ -13,9 +13,12 @@ interface Professor {
 
 interface ProfessoresClientProps {
   professores: Professor[];
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
-export function ProfessoresClient({ professores }: ProfessoresClientProps) {
+export function ProfessoresClient({ professores, canCreate, canEdit, canDelete }: ProfessoresClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredProfessores = useMemo(() => {
@@ -45,13 +48,15 @@ export function ProfessoresClient({ professores }: ProfessoresClientProps) {
             placeholder="Buscar professor..."
             onSearch={setSearchQuery}
           />
-          <Link
-            href="/professores/novo"
-            className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20 whitespace-nowrap"
-          >
-            <span className="material-symbols-outlined text-sm">assignment_add</span>
-            Novo Professor
-          </Link>
+          {canCreate && (
+            <Link
+              href="/professores/novo"
+              className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20 whitespace-nowrap"
+            >
+              <span className="material-symbols-outlined text-sm">assignment_add</span>
+              Novo Professor
+            </Link>
+          )}
         </div>
       </div>
 
@@ -100,16 +105,18 @@ export function ProfessoresClient({ professores }: ProfessoresClientProps) {
                   <td className="px-6 py-4 text-sm">{prof.email}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <Link
-                        href={`/professores/${prof.id}/editar`}
-                        className="text-slate-400 hover:text-primary transition-colors"
-                        title="Editar Professor"
-                      >
-                        <span className="material-symbols-outlined text-xl">
-                          edit
-                        </span>
-                      </Link>
-                      <DeleteButton id={prof.id} />
+                      {canEdit && (
+                        <Link
+                          href={`/professores/${prof.id}/editar`}
+                          className="text-slate-400 hover:text-primary transition-colors"
+                          title="Editar Professor"
+                        >
+                          <span className="material-symbols-outlined text-xl">
+                            edit
+                          </span>
+                        </Link>
+                      )}
+                      {canDelete && <DeleteButton id={prof.id} />}
                     </div>
                   </td>
                 </tr>
