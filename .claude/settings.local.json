@@ -134,7 +134,11 @@
       "Bash(sleep 5; cat /tmp/nextdev.log 2>/dev/null | tail -30)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3002/aulas/eventos/novo)",
       "Bash(npx tsx *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "PowerShell(Get-ChildItem -Path \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\src\\\\app\" -Recurse -Directory | Where-Object { $_.Name -match 'equipe|usuario|user' } | Select-Object -ExpandProperty FullName)",
+      "PowerShell(Get-ChildItem -Path \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\src\\\\app\\\\equipe\" -Recurse -File | Select-Object -ExpandProperty FullName; Write-Output \"--- API ---\"; Get-ChildItem -Path \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\src\\\\app\\\\api\" -Recurse -Directory | Where-Object { $_.Name -match 'equipe|usuario|user|senha|password' } | Select-Object -ExpandProperty FullName)",
+      "PowerShell(npx tsc --noEmit -p \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\tsconfig.json\" 2>&1)",
+      "PowerShell(& \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\node_modules\\\\.bin\\\\tsc.cmd\" --noEmit -p \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\tsconfig.json\" 2>&1)"
     ],
     "additionalDirectories": [
       "P:\\APPS\\huios\\huios\\huios-admin\\src\\app\\api\\avaliacoes\\[disciplineId]"

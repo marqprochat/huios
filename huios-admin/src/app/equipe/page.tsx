@@ -4,6 +4,7 @@ import { requirePageAccess } from '@/lib/permissions/page-guard'
 import { canAccess } from '@/lib/permissions/server'
 
 import { DeleteButton } from './DeleteButton'
+import { ResetPasswordButton } from './ResetPasswordButton'
 import { fetchTeamMembers } from './actions'
 
 export default async function EquipePage() {
@@ -122,6 +123,9 @@ export default async function EquipePage() {
                                 edit
                               </span>
                             </Link>
+                          )}
+                          {canEdit && member.user && (
+                            <ResetPasswordButton id={member.id} name={member.name} />
                           )}
                           {canDelete && <DeleteButton id={member.id} />}
                         </div>
