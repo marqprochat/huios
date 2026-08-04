@@ -23,6 +23,8 @@ interface Attendance {
   };
   checkInAt: string | null;
   distance: number | null;
+  checkOutAt: string | null;
+  checkOutDistance: number | null;
   markedAt: string | null;
 }
 
@@ -347,6 +349,7 @@ export default function PresencaPage() {
                     <tr>
                       <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Aluno</th>
                       <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Check-in</th>
+                      <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Check-out</th>
                       <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Status</th>
                       <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Ação</th>
                     </tr>
@@ -364,9 +367,25 @@ export default function PresencaPage() {
                               <div className="font-medium text-green-600">
                                 {formatTime(attendance.checkInAt)}
                               </div>
-                              {attendance.distance && (
+                              {attendance.distance !== null && attendance.distance !== undefined && (
                                 <div className="text-xs text-slate-500">
                                   {Math.round(attendance.distance)}m de distância
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">--:--</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          {attendance.checkOutAt ? (
+                            <div>
+                              <div className="font-medium text-blue-600">
+                                {formatTime(attendance.checkOutAt)}
+                              </div>
+                              {attendance.checkOutDistance !== null && attendance.checkOutDistance !== undefined && (
+                                <div className="text-xs text-slate-500">
+                                  {Math.round(attendance.checkOutDistance)}m de distância
                                 </div>
                               )}
                             </div>
