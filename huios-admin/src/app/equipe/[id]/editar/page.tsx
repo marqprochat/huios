@@ -3,6 +3,7 @@ import { MaskedInput } from '../../../components/MaskedInput';
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
+import { requirePageAccess } from '@/lib/permissions/page-guard';
 
 interface EditarMembroProps {
     params: Promise<{ id: string }>;
@@ -10,6 +11,7 @@ interface EditarMembroProps {
 
 export default async function EditarMembroPage({ params }: EditarMembroProps) {
     const { id } = await params;
+    await requirePageAccess('equipe.editar');
     
     // Fetch member
     const [member, roles, courseClasses] = await Promise.all([

@@ -1,7 +1,9 @@
 import prisma from '@/lib/prisma';
 import DisciplinasClient from './DisciplinasClient';
+import { requirePageAccess } from '@/lib/permissions/page-guard';
 
 export default async function DisciplinasPage() {
+    await requirePageAccess('disciplinas.visualizar');
     const disciplinas = await prisma.discipline.findMany({
         include: { 
             courseClasses: { include: { course: true } }, 

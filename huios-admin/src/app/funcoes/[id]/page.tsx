@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { PERMISSIONS } from '@/lib/permissions/catalog'
+import { requirePageAccess } from '@/lib/permissions/page-guard'
+import { canAccess } from '@/lib/permissions/server'
 import { getRole, replaceRolePermissions } from '../actions'
 import { PermissionMatrix } from './PermissionMatrix'
 
@@ -13,8 +15,10 @@ export default async function RolePermissionsPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const context = await requirePageAccess('funcoes.visualizar')
   const role = await getRole(id)
   if (!role) notFound()
+  const canEdit = canAccess(context, 'funcoes.editar')
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 lg:p-8">
@@ -56,6 +60,7 @@ export default async function RolePermissionsPage({
       <PermissionMatrix
         roleId={role.id}
         protectedRole={role.protected}
+        editable={canEdit}
         permissions={PERMISSIONS}
         initialKeys={role.permissions.map(({ permission }) => permission.key)}
         replaceRolePermissionsAction={replaceRolePermissions}

@@ -15,6 +15,7 @@ type PermissionItem = {
 type Props = {
   roleId: string
   protectedRole: boolean
+  editable: boolean
   permissions: PermissionItem[]
   initialKeys: string[]
   replaceRolePermissionsAction(
@@ -24,7 +25,7 @@ type Props = {
 }
 
 const labelOverrides: Record<string, string> = {
-  lancar: 'Lançar',
+  lancar: 'Lancar',
   gerenciar: 'Gerenciar',
   notificar: 'Notificar',
   conciliar: 'Conciliar',
@@ -46,6 +47,7 @@ function actionLabel(action: string): string {
 export function PermissionMatrix({
   roleId,
   protectedRole,
+  editable,
   permissions,
   initialKeys,
   replaceRolePermissionsAction,
@@ -65,7 +67,7 @@ export function PermissionMatrix({
   }, [permissions])
 
   function setPermission(key: string, checked: boolean) {
-    if (protectedRole) return
+    if (protectedRole || !editable) return
     setSelected((current) => {
       const next = new Set(current)
       if (checked) next.add(key)
@@ -75,7 +77,7 @@ export function PermissionMatrix({
   }
 
   function setModule(modulePermissions: PermissionItem[], checked: boolean) {
-    if (protectedRole) return
+    if (protectedRole || !editable) return
     setSelected((current) => {
       const next = new Set(current)
       for (const permission of modulePermissions) {
@@ -87,7 +89,7 @@ export function PermissionMatrix({
   }
 
   function save() {
-    if (protectedRole) return
+    if (protectedRole || !editable) return
     startTransition(async () => {
       const result = await replaceRolePermissionsAction(
         roleId,
@@ -96,20 +98,20 @@ export function PermissionMatrix({
       if (!result.success) {
         toast(
           'error',
-          'Não foi possível salvar',
+          'Nao foi possivel salvar',
           result.error ?? 'Tente novamente.',
         )
         return
       }
 
-      toast('success', 'Permissões salvas com sucesso.')
+      toast('success', 'Permissoes salvas com sucesso.')
       router.refresh()
     })
   }
 
   return (
     <div className="space-y-5">
-      {protectedRole && (
+      {(protectedRole || !editable) && (
         <div
           role="status"
           className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
@@ -118,8 +120,9 @@ export function PermissionMatrix({
             info
           </span>
           <p className="text-sm">
-            O Super Admin tem acesso automático a todos os módulos. Sua matriz
-            não pode ser alterada.
+            {protectedRole
+              ? 'O Super Admin tem acesso automatico a todos os modulos. Sua matriz nao pode ser alterada.'
+              : 'Voce pode visualizar esta funcao, mas nao tem permissao para editar a matriz.'}
           </p>
         </div>
       )}
@@ -150,20 +153,20 @@ export function PermissionMatrix({
                 <button
                   type="button"
                   onClick={() => setModule(modulePermissions, true)}
-                  disabled={protectedRole || isPending}
-                  aria-label={`Marcar todas as permissões do módulo ${title(moduleName)}`}
+                  disabled={protectedRole || !editable || isPending}
+                  aria-label={`Marcar todas as permissoes do modulo ${title(moduleName)}`}
                   className="rounded-lg px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Marcar módulo
+                  Marcar modulo
                 </button>
                 <button
                   type="button"
                   onClick={() => setModule(modulePermissions, false)}
-                  disabled={protectedRole || isPending}
-                  aria-label={`Limpar todas as permissões do módulo ${title(moduleName)}`}
+                  disabled={protectedRole || !editable || isPending}
+                  aria-label={`Limpar todas as permissoes do modulo ${title(moduleName)}`}
                   className="rounded-lg px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-200/70 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-700"
                 >
-                  Limpar módulo
+                  Limpar modulo
                 </button>
               </div>
             </header>
@@ -173,7 +176,7 @@ export function PermissionMatrix({
                 <label
                   key={permission.key}
                   className={`flex items-start gap-3 bg-white px-5 py-4 dark:bg-slate-900 ${
-                    protectedRole
+                    protectedRole || !editable
                       ? 'cursor-not-allowed opacity-65'
                       : 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60'
                   }`}
@@ -181,9 +184,9 @@ export function PermissionMatrix({
                   <input
                     type="checkbox"
                     checked={
-                      protectedRole ? true : selected.has(permission.key)
+                      protectedRole || !editable ? true : selected.has(permission.key)
                     }
-                    disabled={protectedRole || isPending}
+                    disabled={protectedRole || !editable || isPending}
                     onChange={(event) => {
                       setPermission(permission.key, event.target.checked)
                     }}
@@ -205,7 +208,7 @@ export function PermissionMatrix({
         ))}
       </div>
 
-      {!protectedRole && (
+      {!protectedRole && editable && (
         <div className="sticky bottom-4 flex justify-end rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
           <button
             type="button"
@@ -221,7 +224,7 @@ export function PermissionMatrix({
             >
               {isPending ? 'progress_activity' : 'save'}
             </span>
-            {isPending ? 'Salvando...' : 'Salvar permissões'}
+            {isPending ? 'Salvando...' : 'Salvar permissoes'}
           </button>
         </div>
       )}

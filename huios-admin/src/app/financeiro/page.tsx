@@ -1,7 +1,9 @@
 import prisma from '@/lib/prisma';
 import { FinanceiroDashboardClient } from './FinanceiroDashboardClient';
+import { requirePageAccess } from '@/lib/permissions/page-guard';
 
 export default async function FinanceiroPage() {
+  await requirePageAccess('financeiro.visualizar');
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);

@@ -4,22 +4,13 @@ import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Sidebar } from "./Sidebar"
 import { Header } from "./Header"
+import { AccessProvider, type AccessUser } from "./AccessContext"
 import { resolvePathRequirement } from "@/lib/permissions/path-access"
-
-interface UserData {
-    userId: string
-    name: string
-    email: string
-    role: { id: string; key: string; name: string } | null
-    permissions: string[]
-    isStudent: boolean
-    isSuperAdmin: boolean
-}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
     const router = useRouter()
-    const [user, setUser] = useState<UserData | null>(null)
+    const [user, setUser] = useState<AccessUser | null>(null)
     const [loading, setLoading] = useState(true)
 
     const isLoginPage = pathname === "/login"
@@ -38,7 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 const res = await fetch("/api/auth/me")
                 if (res.ok) {
                     const data = await res.json()
-                    const nextUser = data.user as UserData
+                    const nextUser = data.user as AccessUser
                     setUser(nextUser)
 
                     const requirement = resolvePathRequirement(pathname)
@@ -93,13 +84,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     return (
         <div className="flex h-screen overflow-hidden">
-            <Sidebar user={user} onLogout={handleLogout} />
-            <div className="flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark overflow-hidden">
-                <Header user={user} onLogout={handleLogout} />
-                <main className="flex-1 overflow-y-auto w-full">
-                    {children}
-                </main>
-            </div>
+            <AccessProvider user={user}>
+                <Sidebar user={user} onLogout={handleLogout} />
+                <div className="flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark overflow-hidden">
+                    <Header user={user} onLogout={handleLogout} />
+                    <main className="flex-1 overflow-y-auto w-full">
+                        {children}
+                    </main>
+                </div>
+            </AccessProvider>
         </div>
     )
 }

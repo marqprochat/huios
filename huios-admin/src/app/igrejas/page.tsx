@@ -1,9 +1,11 @@
 import prisma from '@/lib/prisma';
 import { IgrejasClient } from './IgrejasClient';
+import { requirePageAccess } from '@/lib/permissions/page-guard';
 
 export const dynamic = 'force-dynamic';
 
 export default async function IgrejasPage() {
+  await requirePageAccess('igrejas.visualizar');
   const churches = await (prisma as any).church.findMany({
     orderBy: [{ type: 'asc' }, { name: 'asc' }],
   });

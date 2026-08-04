@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+import { Can } from '@/app/components/AccessContext'
 import { useToast } from '@/app/components/Toast/useToast'
 import type {
   RoleActionResult,
@@ -43,7 +44,7 @@ export function RoleList({
     if (!result.success) {
       toast(
         'error',
-        'Não foi possível concluir',
+        'Nao foi possivel concluir',
         result.error ?? 'Tente novamente.',
       )
       return
@@ -66,7 +67,7 @@ export function RoleList({
       if (dialog.kind === 'create') {
         finish(
           await createRoleAction({ name, description }),
-          'Função criada com sucesso.',
+          'Funcao criada com sucesso.',
         )
         return
       }
@@ -74,14 +75,14 @@ export function RoleList({
       if (dialog.kind === 'edit') {
         finish(
           await updateRoleAction(dialog.role.id, { name, description }),
-          'Função atualizada com sucesso.',
+          'Funcao atualizada com sucesso.',
         )
         return
       }
 
       finish(
         await duplicateRoleAction(dialog.role.id, name),
-        'Função duplicada com sucesso.',
+        'Funcao duplicada com sucesso.',
       )
     })
   }
@@ -91,12 +92,12 @@ export function RoleList({
 
     const nextActive = !role.active
     const verb = nextActive ? 'ativar' : 'desativar'
-    if (!window.confirm(`Deseja ${verb} a função “${role.name}”?`)) return
+    if (!window.confirm(`Deseja ${verb} a funcao "${role.name}"?`)) return
 
     startTransition(async () => {
       finish(
         await setRoleActiveAction(role.id, nextActive),
-        `Função ${nextActive ? 'ativada' : 'desativada'} com sucesso.`,
+        `Funcao ${nextActive ? 'ativada' : 'desativada'} com sucesso.`,
       )
     })
   }
@@ -112,26 +113,28 @@ export function RoleList({
             Acesso administrativo
           </div>
           <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-            Funções e permissões
+            Funcoes e permissoes
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Defina o acesso da equipe por função.
+            Defina o acesso da equipe por funcao.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setDialog({ kind: 'create' })}
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
-        >
-          <span className="material-symbols-outlined text-lg" aria-hidden>
-            add
-          </span>
-          Nova função
-        </button>
+        <Can permission="funcoes.criar">
+          <button
+            type="button"
+            onClick={() => setDialog({ kind: 'create' })}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
+          >
+            <span className="material-symbols-outlined text-lg" aria-hidden>
+              add
+            </span>
+            Nova funcao
+          </button>
+        </Can>
       </header>
 
       <section
-        aria-label="Funções administrativas"
+        aria-label="Funcoes administrativas"
         className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
       >
         {roles.length === 0 ? (
@@ -142,7 +145,7 @@ export function RoleList({
             >
               badge
             </span>
-            <p className="font-semibold">Nenhuma função cadastrada.</p>
+            <p className="font-semibold">Nenhuma funcao cadastrada.</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -178,99 +181,97 @@ export function RoleList({
                     )}
                   </div>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    {role.description || 'Sem descrição.'}
+                    {role.description || 'Sem descricao.'}
                   </p>
                   <p className="mt-2 text-xs font-semibold text-slate-400">
                     {role._count.users}{' '}
                     {role._count.users === 1
-                      ? 'usuário atribuído'
-                      : 'usuários atribuídos'}
+                      ? 'usuario atribuido'
+                      : 'usuarios atribuidos'}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-1">
-                  <Link
-                    href={`/funcoes/${role.id}`}
-                    aria-label={
-                      role.protected
-                        ? `Ver permissões de ${role.name}`
-                        : `Editar permissões de ${role.name}`
-                    }
-                    title={
-                      role.protected
-                        ? 'Ver permissões'
-                        : 'Editar permissões'
-                    }
-                    className={iconButton}
-                  >
-                    <span
-                      className="material-symbols-outlined text-xl"
-                      aria-hidden
+                  <Can permission="funcoes.visualizar">
+                    <Link
+                      href={`/funcoes/${role.id}`}
+                      aria-label={
+                        role.protected
+                          ? `Ver permissoes de ${role.name}`
+                          : `Editar permissoes de ${role.name}`
+                      }
+                      title={
+                        role.protected
+                          ? 'Ver permissoes'
+                          : 'Editar permissoes'
+                      }
+                      className={iconButton}
                     >
-                      checklist
-                    </span>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => setDialog({ kind: 'edit', role })}
-                    disabled={role.protected || isPending}
-                    aria-label={`Editar função ${role.name}`}
-                    title={
-                      role.protected
-                        ? 'Função protegida'
-                        : 'Editar função'
-                    }
-                    className={iconButton}
-                  >
-                    <span
-                      className="material-symbols-outlined text-xl"
-                      aria-hidden
+                      <span
+                        className="material-symbols-outlined text-xl"
+                        aria-hidden
+                      >
+                        checklist
+                      </span>
+                    </Link>
+                  </Can>
+                  <Can permission="funcoes.editar">
+                    <button
+                      type="button"
+                      onClick={() => setDialog({ kind: 'edit', role })}
+                      disabled={role.protected || isPending}
+                      aria-label={`Editar funcao ${role.name}`}
+                      title={role.protected ? 'Funcao protegida' : 'Editar funcao'}
+                      className={iconButton}
                     >
-                      edit
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDialog({ kind: 'duplicate', role })}
-                    disabled={role.protected || isPending}
-                    aria-label={`Duplicar função ${role.name}`}
-                    title={
-                      role.protected
-                        ? 'Função protegida'
-                        : 'Duplicar função'
-                    }
-                    className={iconButton}
-                  >
-                    <span
-                      className="material-symbols-outlined text-xl"
-                      aria-hidden
+                      <span
+                        className="material-symbols-outlined text-xl"
+                        aria-hidden
+                      >
+                        edit
+                      </span>
+                    </button>
+                  </Can>
+                  <Can permission="funcoes.criar">
+                    <button
+                      type="button"
+                      onClick={() => setDialog({ kind: 'duplicate', role })}
+                      disabled={role.protected || isPending}
+                      aria-label={`Duplicar funcao ${role.name}`}
+                      title={role.protected ? 'Funcao protegida' : 'Duplicar funcao'}
+                      className={iconButton}
                     >
-                      content_copy
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggleRole(role)}
-                    disabled={role.protected || isPending}
-                    aria-label={`${
-                      role.active ? 'Desativar' : 'Ativar'
-                    } função ${role.name}`}
-                    title={
-                      role.protected
-                        ? 'Função protegida'
-                        : role.active
-                          ? 'Desativar função'
-                          : 'Ativar função'
-                    }
-                    className={iconButton}
-                  >
-                    <span
-                      className="material-symbols-outlined text-xl"
-                      aria-hidden
+                      <span
+                        className="material-symbols-outlined text-xl"
+                        aria-hidden
+                      >
+                        content_copy
+                      </span>
+                    </button>
+                  </Can>
+                  <Can permission="funcoes.excluir">
+                    <button
+                      type="button"
+                      onClick={() => toggleRole(role)}
+                      disabled={role.protected || isPending}
+                      aria-label={`${role.active ? 'Desativar' : 'Ativar'} funcao ${role.name}`}
+                      title={
+                        role.protected
+                          ? 'Funcao protegida'
+                          : role.active
+                            ? 'Desativar funcao'
+                            : 'Ativar funcao'
+                      }
+                      className={iconButton}
                     >
-                      {role.active ? 'toggle_on' : 'toggle_off'}
-                    </span>
-                  </button>
+                      <span
+                        className="material-symbols-outlined text-xl"
+                        aria-hidden
+                      >
+                        {role.active ? 'toggle_on' : 'toggle_off'}
+                      </span>
+                    </button>
+                  </Can>
                 </div>
               </article>
             ))}
@@ -301,15 +302,15 @@ export function RoleList({
                   className="text-lg font-black text-slate-900 dark:text-white"
                 >
                   {dialog.kind === 'create'
-                    ? 'Nova função'
+                    ? 'Nova funcao'
                     : dialog.kind === 'edit'
-                      ? 'Editar função'
-                      : 'Duplicar função'}
+                      ? 'Editar funcao'
+                      : 'Duplicar funcao'}
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
                   {dialog.kind === 'duplicate'
-                    ? `Crie uma cópia das permissões de ${dialog.role.name}.`
-                    : 'Informe o nome e a descrição exibidos para a equipe.'}
+                    ? `Crie uma copia das permissoes de ${dialog.role.name}.`
+                    : 'Informe o nome e a descricao exibidos para a equipe.'}
                 </p>
               </div>
               <button
@@ -344,7 +345,7 @@ export function RoleList({
                       ? ''
                       : dialog.kind === 'edit'
                         ? dialog.role.name
-                        : `${dialog.role.name} - Cópia`
+                        : `${dialog.role.name} - Copia`
                   }
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
@@ -355,7 +356,7 @@ export function RoleList({
                     htmlFor="role-description"
                     className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300"
                   >
-                    Descrição
+                    Descricao
                   </label>
                   <textarea
                     id="role-description"

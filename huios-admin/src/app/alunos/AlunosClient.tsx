@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { DeleteButton } from "./DeleteButton";
 import { SearchFilter } from "@/app/components/SearchFilter";
+import { Can } from "@/app/components/AccessContext";
 
 interface Aluno {
   id: string;
@@ -47,13 +48,15 @@ export function AlunosClient({ alunos }: AlunosClientProps) {
             placeholder="Buscar aluno..."
             onSearch={setSearchQuery}
           />
-          <Link
-            href="/alunos/novo"
-            className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20 whitespace-nowrap"
-          >
-            <span className="material-symbols-outlined text-sm">person_add</span>
-            Novo Aluno
-          </Link>
+          <Can permission="alunos.criar">
+            <Link
+              href="/alunos/novo"
+              className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20 whitespace-nowrap"
+            >
+              <span className="material-symbols-outlined text-sm">person_add</span>
+              Novo Aluno
+            </Link>
+          </Can>
         </div>
       </div>
 
@@ -117,16 +120,20 @@ export function AlunosClient({ alunos }: AlunosClientProps) {
                           visibility
                         </span>
                       </Link>
-                      <Link
-                        href={`/alunos/${aluno.id}/editar`}
-                        className="text-slate-400 hover:text-primary transition-colors"
-                        title="Editar Aluno"
-                      >
-                        <span className="material-symbols-outlined text-xl">
-                          edit
-                        </span>
-                      </Link>
-                      <DeleteButton id={aluno.id} />
+                      <Can permission="alunos.editar">
+                        <Link
+                          href={`/alunos/${aluno.id}/editar`}
+                          className="text-slate-400 hover:text-primary transition-colors"
+                          title="Editar Aluno"
+                        >
+                          <span className="material-symbols-outlined text-xl">
+                            edit
+                          </span>
+                        </Link>
+                      </Can>
+                      <Can permission="alunos.excluir">
+                        <DeleteButton id={aluno.id} />
+                      </Can>
                     </div>
                   </td>
                 </tr>

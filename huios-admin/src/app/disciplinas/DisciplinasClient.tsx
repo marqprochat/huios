@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { DeleteButton } from './DeleteButton';
+import { Can } from '@/app/components/AccessContext';
 
 interface DisciplinaData {
     id: string;
@@ -53,10 +54,12 @@ export default function DisciplinasClient({ disciplinas, availableYears }: { dis
                             ))}
                         </select>
                     </div>
-                    <Link href="/disciplinas/novo" className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
-                        <span className="material-symbols-outlined text-sm">add</span>
-                        Nova Disciplina
-                    </Link>
+                    <Can permission="disciplinas.criar">
+                        <Link href="/disciplinas/novo" className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
+                            <span className="material-symbols-outlined text-sm">add</span>
+                            Nova Disciplina
+                        </Link>
+                    </Can>
                 </div>
             </div>
 
@@ -116,10 +119,14 @@ export default function DisciplinasClient({ disciplinas, availableYears }: { dis
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
-                                            <Link href={`/disciplinas/${disciplina.id}/editar`} className="text-slate-400 hover:text-primary transition-colors" title="Editar Disciplina">
-                                                <span className="material-symbols-outlined text-xl">edit</span>
-                                            </Link>
-                                            <DeleteButton id={disciplina.id} />
+                                            <Can permission="disciplinas.editar">
+                                                <Link href={`/disciplinas/${disciplina.id}/editar`} className="text-slate-400 hover:text-primary transition-colors" title="Editar Disciplina">
+                                                    <span className="material-symbols-outlined text-xl">edit</span>
+                                                </Link>
+                                            </Can>
+                                            <Can permission="disciplinas.excluir">
+                                                <DeleteButton id={disciplina.id} />
+                                            </Can>
                                         </div>
                                     </td>
                                 </tr>

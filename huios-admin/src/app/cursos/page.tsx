@@ -1,11 +1,17 @@
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
 import { DeleteButton } from './DeleteButton';
+import { requirePageAccess } from '@/lib/permissions/page-guard';
+import { canAccess } from '@/lib/permissions/server';
 
 export default async function CursosPage() {
+    const context = await requirePageAccess('cursos.visualizar');
     const cursos = await prisma.course.findMany({
         orderBy: { name: 'asc' }
     });
+    const canCreate = canAccess(context, 'cursos.criar');
+    const canEdit = canAccess(context, 'cursos.editar');
+    const canDelete = canAccess(context, 'cursos.excluir');
 
     return (
         <div className="max-w-[1600px] mx-auto p-4 lg:p-8 space-y-6">
@@ -14,10 +20,12 @@ export default async function CursosPage() {
                     <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Cursos</h2>
                     <p className="text-slate-500 dark:text-slate-400">Gerencie os cursos do seminário</p>
                 </div>
-                <Link href="/cursos/novo" className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
-                    <span className="material-symbols-outlined text-sm">add</span>
-                    Novo Curso
-                </Link>
+                {canCreate && (
+                    <Link href="/cursos/novo" className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
+                        <span className="material-symbols-outlined text-sm">add</span>
+                        Novo Curso
+                    </Link>
+                )}
             </div>
 
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -63,10 +71,12 @@ export default async function CursosPage() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
-                                            <Link href={`/cursos/${curso.id}/editar`} className="text-slate-400 hover:text-primary transition-colors" title="Editar Curso">
-                                                <span className="material-symbols-outlined text-xl">edit</span>
-                                            </Link>
-                                            <DeleteButton id={curso.id} />
+                                            {canEdit && (
+                                                <Link href={`/cursos/${curso.id}/editar`} className="text-slate-400 hover:text-primary transition-colors" title="Editar Curso">
+                                                    <span className="material-symbols-outlined text-xl">edit</span>
+                                                </Link>
+                                            )}
+                                            {canDelete && <DeleteButton id={curso.id} />}
                                         </div>
                                     </td>
                                 </tr>

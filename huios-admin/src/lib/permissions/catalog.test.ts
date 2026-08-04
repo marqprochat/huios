@@ -37,3 +37,11 @@ test('default configurable roles cannot manage team members or roles', () => {
     assert.ok(!permissions.some((permission) => permission.startsWith('funcoes.')))
   }
 })
+
+test('team and role modules expose explicit CRUD actions only', () => {
+  const teamActions = PERMISSIONS.filter(({ module }) => module === 'equipe').map(({ action }) => action)
+  const roleActions = PERMISSIONS.filter(({ module }) => module === 'funcoes').map(({ action }) => action)
+
+  assert.deepEqual(teamActions, ['visualizar', 'criar', 'editar', 'excluir'])
+  assert.deepEqual(roleActions, ['visualizar', 'criar', 'editar', 'excluir'])
+})

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { createCoupon, updateCoupon, toggleCoupon, deleteCoupon } from './actions';
+import { Can } from '@/app/components/AccessContext';
 
 interface Coupon {
   id: string;
@@ -105,13 +106,15 @@ export function CuponsClient({ coupons, courses, classes }: Props) {
             <p className="text-slate-500 dark:text-slate-400 text-sm">Isenção de taxa de matrícula e/ou desconto nas mensalidades</p>
           </div>
         </div>
-        <button
-          onClick={() => { setCreating(true); setMsg(null); }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all"
-        >
-          <span className="material-symbols-outlined text-sm">add</span>
-          Novo Cupom
-        </button>
+        <Can permission="financeiro.criar">
+          <button
+            onClick={() => { setCreating(true); setMsg(null); }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all"
+          >
+            <span className="material-symbols-outlined text-sm">add</span>
+            Novo Cupom
+          </button>
+        </Can>
       </div>
 
       {creating && (
@@ -174,15 +177,21 @@ export function CuponsClient({ coupons, courses, classes }: Props) {
                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  <button onClick={() => handleToggle(c)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-primary transition-colors" title={c.isActive ? 'Desativar' : 'Ativar'}>
-                    <span className="material-symbols-outlined text-sm">{c.isActive ? 'toggle_on' : 'toggle_off'}</span>
-                  </button>
-                  <button onClick={() => { setEditing(c.id); setMsg(null); }} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-primary transition-colors" title="Editar">
-                    <span className="material-symbols-outlined text-sm">edit</span>
-                  </button>
-                  <button onClick={() => handleDelete(c)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Remover">
-                    <span className="material-symbols-outlined text-sm">delete</span>
-                  </button>
+                  <Can permission="financeiro.editar">
+                    <button onClick={() => handleToggle(c)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-primary transition-colors" title={c.isActive ? 'Desativar' : 'Ativar'}>
+                      <span className="material-symbols-outlined text-sm">{c.isActive ? 'toggle_on' : 'toggle_off'}</span>
+                    </button>
+                  </Can>
+                  <Can permission="financeiro.editar">
+                    <button onClick={() => { setEditing(c.id); setMsg(null); }} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-primary transition-colors" title="Editar">
+                      <span className="material-symbols-outlined text-sm">edit</span>
+                    </button>
+                  </Can>
+                  <Can permission="financeiro.excluir">
+                    <button onClick={() => handleDelete(c)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Remover">
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  </Can>
                 </div>
               </div>
             )}

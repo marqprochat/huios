@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { createChurch, updateChurch, deleteChurch, regenerateChurchLink } from './actions';
+import { Can } from '@/app/components/AccessContext';
 
 interface Church {
   id: string;
@@ -82,11 +83,13 @@ export function IgrejasClient({ churches }: { churches: Church[] }) {
             <p className="text-slate-500 dark:text-slate-400 text-sm">Sede, parceiras e externas. Parceiras geram link exclusivo de matrícula.</p>
           </div>
         </div>
-        <button onClick={() => { setCreating(!creating); setEditing(null); }}
-          className="bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
-          <span className="material-symbols-outlined text-sm">{creating ? 'close' : 'add'}</span>
-          {creating ? 'Cancelar' : 'Nova Igreja'}
-        </button>
+        <Can permission="igrejas.criar">
+          <button onClick={() => { setCreating(!creating); setEditing(null); }}
+            className="bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
+            <span className="material-symbols-outlined text-sm">{creating ? 'close' : 'add'}</span>
+            {creating ? 'Cancelar' : 'Nova Igreja'}
+          </button>
+        </Can>
       </div>
 
       {creating && (
@@ -149,12 +152,16 @@ export function IgrejasClient({ churches }: { churches: Church[] }) {
                   {msg?.id === ch.id && <p className={`text-xs font-bold mt-1 ${msg.ok ? 'text-emerald-600' : 'text-red-600'}`}>{msg.text}</p>}
                 </div>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => { setEditing(isOpen ? null : ch.id); setCreating(false); }} className="text-slate-400 hover:text-primary transition-colors" title="Editar">
-                    <span className="material-symbols-outlined text-xl">{isOpen ? 'close' : 'edit'}</span>
-                  </button>
-                  <button onClick={() => onDelete(ch.id)} className="text-slate-400 hover:text-red-500 transition-colors" title="Excluir">
-                    <span className="material-symbols-outlined text-xl">delete</span>
-                  </button>
+                  <Can permission="igrejas.editar">
+                    <button onClick={() => { setEditing(isOpen ? null : ch.id); setCreating(false); }} className="text-slate-400 hover:text-primary transition-colors" title="Editar">
+                      <span className="material-symbols-outlined text-xl">{isOpen ? 'close' : 'edit'}</span>
+                    </button>
+                  </Can>
+                  <Can permission="igrejas.excluir">
+                    <button onClick={() => onDelete(ch.id)} className="text-slate-400 hover:text-red-500 transition-colors" title="Excluir">
+                      <span className="material-symbols-outlined text-xl">delete</span>
+                    </button>
+                  </Can>
                 </div>
               </div>
 

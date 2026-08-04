@@ -20,6 +20,15 @@ interface Lesson {
   };
 }
 
+function resolveAttendanceErrorCode(error: unknown): string | null {
+  if (!(error instanceof Error)) return null;
+  const code = (error as Error & { code?: string }).code;
+  if (code) return code;
+  return /check-in|check-out|prazo|hor[aá]rio|aula ainda|tempo de check/i.test(error.message)
+    ? 'ATTENDANCE_WINDOW'
+    : null;
+}
+
 export default function CheckInPage() {
   const params = useParams();
   const router = useRouter();
@@ -30,6 +39,7 @@ export default function CheckInPage() {
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
   const [locationError, setLocationError] = useState('');
+  const [attendanceErrorCode, setAttendanceErrorCode] = useState<string | null>(null);
   const [checkInResult, setCheckInResult] = useState<any>(null);
   const [locationPermission, setLocationPermission] = useState<'unknown' | 'granted' | 'prompt' | 'denied'>('unknown');
   const [requestingPermission, setRequestingPermission] = useState(false);
@@ -137,6 +147,7 @@ export default function CheckInPage() {
     if (!lesson) return;
     setCheckingIn(true);
     setLocationError('');
+    setAttendanceErrorCode(null);
 
     if (!navigator.geolocation) {
       setLocationError('Geolocalização não é suportada por este navegador.');
@@ -159,6 +170,7 @@ export default function CheckInPage() {
           setCheckInResult(data);
         } catch (error) {
           console.error(error);
+          setAttendanceErrorCode(resolveAttendanceErrorCode(error));
           setLocationError(error instanceof Error ? error.message : 'Erro ao conectar com o servidor');
         } finally {
           setCheckingIn(false);
@@ -183,6 +195,7 @@ export default function CheckInPage() {
     if (!lesson) return;
     setCheckingOut(true);
     setLocationError('');
+    setAttendanceErrorCode(null);
 
     if (!navigator.geolocation) {
       setLocationError('Geolocalização não é suportada por este navegador.');
@@ -205,6 +218,7 @@ export default function CheckInPage() {
           setCheckInResult(data);
         } catch (error) {
           console.error(error);
+          setAttendanceErrorCode(resolveAttendanceErrorCode(error));
           setLocationError(error instanceof Error ? error.message : 'Erro ao conectar com o servidor');
         } finally {
           setCheckingOut(false);
@@ -433,11 +447,14 @@ export default function CheckInPage() {
 
       {/* Error */}
       {locationError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-          <span className="material-symbols-outlined text-red-500 flex-shrink-0">error</span>
+        <div className={`${attendanceErrorCode === 'ATTENDANCE_WINDOW' ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'} border rounded-xl p-4 flex items-start gap-3`}>
+          <span className={`material-symbols-outlined ${attendanceErrorCode === 'ATTENDANCE_WINDOW' ? 'text-amber-500' : 'text-red-500'} flex-shrink-0`}>{attendanceErrorCode === 'ATTENDANCE_WINDOW' ? 'schedule' : 'error'}</span>
           <div>
-            <p className="text-sm text-red-700">{locationError}</p>
-            {locationPermission === 'denied' && (
+            <p className={`text-sm font-semibold ${attendanceErrorCode === 'ATTENDANCE_WINDOW' ? 'text-amber-800' : 'text-red-700'}`}>
+              {attendanceErrorCode === 'ATTENDANCE_WINDOW' ? 'Registro fora do horario permitido' : 'Nao foi possivel registrar a presenca'}
+            </p>
+            <p className={`text-sm mt-1 ${attendanceErrorCode === 'ATTENDANCE_WINDOW' ? 'text-amber-700' : 'text-red-700'}`}>{locationError}</p>
+            {locationPermission === 'denied' && !attendanceErrorCode && (
               <p className="text-xs text-red-500 mt-1">
                 Vá em Configurações do navegador &gt; Permissões do site &gt; Localização e ative para este site.
               </p>

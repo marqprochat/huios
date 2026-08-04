@@ -3,12 +3,19 @@ import prisma from '@/lib/prisma';
 import { DeleteButton } from './DeleteButton';
 import { EnrollmentToggle } from './EnrollmentToggle';
 import { PublicEnrollLink } from './PublicEnrollLink';
+import { requirePageAccess } from '@/lib/permissions/page-guard';
+import { canAccess } from '@/lib/permissions/server';
 
 export default async function TurmasPage() {
+    const context = await requirePageAccess('turmas.visualizar');
     const turmas = await prisma.courseClass.findMany({
         include: { course: true },
         orderBy: { name: 'asc' }
     });
+    const canCreate = canAccess(context, 'turmas.criar');
+    const canEdit = canAccess(context, 'turmas.editar');
+    const canDelete = canAccess(context, 'turmas.excluir');
+    const canToggle = canAccess(context, 'turmas.editar');
 
     return (
         <div className="max-w-[1600px] mx-auto p-4 lg:p-8 space-y-6">
@@ -19,10 +26,12 @@ export default async function TurmasPage() {
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                     <PublicEnrollLink />
-                    <Link href="/turmas/novo" className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
-                        <span className="material-symbols-outlined text-sm">add</span>
-                        Nova Turma
-                    </Link>
+                    {canCreate && (
+                        <Link href="/turmas/novo" className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20">
+                            <span className="material-symbols-outlined text-sm">add</span>
+                            Nova Turma
+                        </Link>
+                    )}
                 </div>
             </div>
 
@@ -55,14 +64,20 @@ export default async function TurmasPage() {
                                         {turma.endDate ? ` até ${new Date(turma.endDate).toLocaleDateString('pt-BR')}` : ''}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <EnrollmentToggle id={turma.id} status={(turma as any).enrollmentStatus ?? 'FECHADA'} />
+                                        {canToggle ? (
+                                            <EnrollmentToggle id={turma.id} status={(turma as any).enrollmentStatus ?? 'FECHADA'} />
+                                        ) : (
+                                            <span className="text-xs text-slate-400">Sem acesso</span>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
-                                            <Link href={`/turmas/${turma.id}/editar`} className="text-slate-400 hover:text-primary transition-colors" title="Editar Turma">
-                                                <span className="material-symbols-outlined text-xl">edit</span>
-                                            </Link>
-                                            <DeleteButton id={turma.id} />
+                                            {canEdit && (
+                                                <Link href={`/turmas/${turma.id}/editar`} className="text-slate-400 hover:text-primary transition-colors" title="Editar Turma">
+                                                    <span className="material-symbols-outlined text-xl">edit</span>
+                                                </Link>
+                                            )}
+                                            {canDelete && <DeleteButton id={turma.id} />}
                                         </div>
                                     </td>
                                 </tr>

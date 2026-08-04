@@ -1,5 +1,7 @@
 'use server'
 
+import type { PermissionKey } from '@/lib/permissions/catalog'
+
 export type RoleActionResult = {
   success: boolean
   error?: string
@@ -64,16 +66,17 @@ export interface RoleActionsPrisma extends RoleMutationClient {
 }
 
 export interface RoleActionDependencies {
-  requireSuperAdmin(): Promise<{ userId: string }>
+  requirePermission?(permission: PermissionKey): Promise<{ userId: string }>
+  requireSuperAdmin?(): Promise<{ userId: string }>
   getPrisma(): Promise<RoleActionsPrisma>
   getPermissionKeys(): Promise<readonly string[]>
   revalidatePath(path: string): void | Promise<void>
 }
 
 const defaultDependencies: RoleActionDependencies = {
-  async requireSuperAdmin() {
+  async requirePermission(permission: PermissionKey) {
     const authorization = await import('@/lib/permissions/server')
-    return authorization.requireSuperAdmin()
+    return authorization.requirePermission(permission)
   },
   async getPrisma() {
     const { default: prisma } = await import('@/lib/prisma')
@@ -87,6 +90,19 @@ const defaultDependencies: RoleActionDependencies = {
     const cache = await import('next/cache')
     cache.revalidatePath(path)
   },
+}
+
+async function requireRolePermission(
+  dependencies: RoleActionDependencies,
+  permission: PermissionKey,
+): Promise<{ userId: string }> {
+  if (dependencies.requirePermission) {
+    return dependencies.requirePermission(permission)
+  }
+  if (dependencies.requireSuperAdmin) {
+    return dependencies.requireSuperAdmin()
+  }
+  throw new Error('Missing role permission guard.')
 }
 
 const PROTECTED_ROLE_ERROR =
@@ -160,7 +176,7 @@ export async function listRoles(
 ): Promise<RoleListItem[]> {
   'use server'
 
-  await dependencies.requireSuperAdmin()
+  await requireRolePermission(dependencies, 'funcoes.visualizar')
   const prisma = await dependencies.getPrisma()
 
   return prisma.role.findMany({
@@ -183,7 +199,7 @@ export async function getRole(
 ): Promise<RoleDetails | null> {
   'use server'
 
-  await dependencies.requireSuperAdmin()
+  await requireRolePermission(dependencies, 'funcoes.visualizar')
   const prisma = await dependencies.getPrisma()
 
   return prisma.role.findUnique({
@@ -210,7 +226,7 @@ export async function createRole(
 ): Promise<RoleActionResult> {
   'use server'
 
-  const actor = await dependencies.requireSuperAdmin()
+  const actor = await requireRolePermission(dependencies, 'funcoes.criar')
   const validation = validateRoleInput(input)
   if (validation.error || !validation.name) {
     return { success: false, error: validation.error }
@@ -286,7 +302,7 @@ export async function updateRole(
 ): Promise<RoleActionResult> {
   'use server'
 
-  const actor = await dependencies.requireSuperAdmin()
+  const actor = await requireRolePermission(dependencies, 'funcoes.editar')
   const validation = validateRoleInput(input)
   if (validation.error || !validation.name) {
     return { success: false, error: validation.error }
@@ -368,7 +384,7 @@ export async function duplicateRole(
 ): Promise<RoleActionResult> {
   'use server'
 
-  const actor = await dependencies.requireSuperAdmin()
+  const actor = await requireRolePermission(dependencies, 'funcoes.criar')
   const validation = validateRoleInput({ name })
   if (validation.error || !validation.name) {
     return { success: false, error: validation.error }
@@ -471,7 +487,7 @@ export async function setRoleActive(
 ): Promise<RoleActionResult> {
   'use server'
 
-  const actor = await dependencies.requireSuperAdmin()
+  const actor = await requireRolePermission(dependencies, 'funcoes.excluir')
   const prisma = await dependencies.getPrisma()
 
   try {
@@ -529,7 +545,7 @@ export async function replaceRolePermissions(
 ): Promise<RoleActionResult> {
   'use server'
 
-  const actor = await dependencies.requireSuperAdmin()
+  const actor = await requireRolePermission(dependencies, 'funcoes.editar')
   const permissionKeys = new Set(await dependencies.getPermissionKeys())
   if (
     !Array.isArray(keys) ||

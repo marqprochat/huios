@@ -62,17 +62,26 @@ test('academic special paths use their exact mutation permission', () => {
   })
 })
 
-test('team and role management are Super Admin-only for all child paths', () => {
+test('team and role management follow explicit action permissions', () => {
   for (const path of [
     '/equipe',
     '/equipe/novo',
     `/equipe/${UUID}/editar`,
     '/funcoes',
-    '/funcoes/nova',
     `/funcoes/${UUID}`,
-    `/funcoes/${UUID}/editar`,
   ]) {
-    assert.deepEqual(resolvePathRequirement(path), { kind: 'super-admin' })
+    const expected =
+      path.startsWith('/equipe')
+        ? path === '/equipe'
+          ? { kind: 'permission', permission: 'equipe.visualizar' }
+          : path === '/equipe/novo'
+            ? { kind: 'permission', permission: 'equipe.criar' }
+            : { kind: 'permission', permission: 'equipe.editar' }
+        : path === '/funcoes'
+          ? { kind: 'permission', permission: 'funcoes.visualizar' }
+          : { kind: 'permission', permission: 'funcoes.visualizar' }
+
+    assert.deepEqual(resolvePathRequirement(path), expected)
   }
 })
 

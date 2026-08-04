@@ -19,7 +19,9 @@ export async function submitStudentAttendance(
   const data = await response.json()
 
   if (!response.ok) {
-    throw new Error(data.error || `Erro ao realizar ${action === 'checkin' ? 'check-in' : 'check-out'}`)
+    const error = new Error(data.error || `Erro ao realizar ${action === 'checkin' ? 'check-in' : 'check-out'}`)
+    ;(error as Error & { code?: string }).code = data.code
+    throw error
   }
 
   return data

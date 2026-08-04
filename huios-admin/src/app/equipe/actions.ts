@@ -2,7 +2,7 @@
 
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
-import { requireSuperAdmin } from '@/lib/permissions/server'
+import { requirePermission } from '@/lib/permissions/server'
 import { revalidatePath } from 'next/cache'
 
 type Result = { success: true } | { success: false; error: string }
@@ -35,7 +35,7 @@ async function audit(
 }
 
 export async function fetchTeamMembers() {
-  await requireSuperAdmin()
+  await requirePermission('equipe.visualizar')
   return prisma.teamMember.findMany({
     orderBy: { name: 'asc' },
     include: {
@@ -47,7 +47,7 @@ export async function fetchTeamMembers() {
 }
 
 export async function fetchStudentsForTeam() {
-  await requireSuperAdmin()
+  await requirePermission('equipe.criar')
   return prisma.student.findMany({
     orderBy: { name: 'asc' },
     select: { id: true, userId: true, name: true, email: true, phone: true, cpf: true, birthDate: true, maritalStatus: true, address: true },
@@ -55,7 +55,7 @@ export async function fetchStudentsForTeam() {
 }
 
 export async function fetchTeachersForTeam() {
-  await requireSuperAdmin()
+  await requirePermission('equipe.criar')
   return prisma.teacher.findMany({
     orderBy: { name: 'asc' },
     select: { id: true, name: true, email: true, phone: true, cpf: true },
@@ -63,17 +63,17 @@ export async function fetchTeachersForTeam() {
 }
 
 export async function fetchAssignableRoles() {
-  await requireSuperAdmin()
+  await requirePermission('equipe.criar')
   return prisma.role.findMany({ where: { active: true, protected: false }, orderBy: { name: 'asc' }, select: { id: true, name: true, key: true } })
 }
 
 export async function fetchCourseClassesForTeam() {
-  await requireSuperAdmin()
+  await requirePermission('equipe.criar')
   return prisma.courseClass.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, course: { select: { name: true } } } })
 }
 
 export async function createTeamMember(formData: FormData): Promise<Result> {
-  const actor = await requireSuperAdmin()
+  const actor = await requirePermission('equipe.criar')
   const name = clean(formData.get('name'))
   const email = clean(formData.get('email')).toLowerCase()
   const roleId = clean(formData.get('roleId'))
@@ -110,7 +110,7 @@ export async function createTeamMember(formData: FormData): Promise<Result> {
 }
 
 export async function updateTeamMember(id: string, formData: FormData): Promise<Result> {
-  const actor = await requireSuperAdmin()
+  const actor = await requirePermission('equipe.editar')
   const name = clean(formData.get('name')); const email = clean(formData.get('email')).toLowerCase(); const roleId = clean(formData.get('roleId'))
   if (!name || !email || !roleId) return { success: false, error: 'Informe nome, e-mail e função.' }
   try {
@@ -137,7 +137,7 @@ export async function updateTeamMember(id: string, formData: FormData): Promise<
 }
 
 export async function resetTeamMemberPassword(id: string, temporaryPassword: string): Promise<Result> {
-  const actor = await requireSuperAdmin()
+  const actor = await requirePermission('equipe.editar')
   if (temporaryPassword.length < 8) return { success: false, error: 'A senha temporária deve ter ao menos 8 caracteres.' }
   const member = await prisma.teamMember.findUnique({ where: { id }, select: { userId: true } })
   if (!member?.userId) return { success: false, error: 'Membro sem conta de acesso.' }
@@ -146,7 +146,7 @@ export async function resetTeamMemberPassword(id: string, temporaryPassword: str
 }
 
 export async function deleteTeamMember(id: string): Promise<Result> {
-  const actor = await requireSuperAdmin()
+  const actor = await requirePermission('equipe.excluir')
   const member = await prisma.teamMember.findUnique({ where: { id }, include: { user: { include: { adminRole: true } } } })
   if (!member?.userId) return { success: false, error: 'Membro não encontrado.' }
   if (member.userId === actor.userId) return { success: false, error: 'Você não pode desativar a própria conta.' }

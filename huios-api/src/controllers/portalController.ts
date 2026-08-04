@@ -51,7 +51,7 @@ async function checkWindow(lesson: { startTime: Date | null; endTime: Date | nul
     if (now < lesson.startTime.getTime() - bufferMs) return 'Check-in ainda não permitido';
     if (now > lesson.startTime.getTime() + bufferMs) return 'Prazo de check-in encerrado';
   } else {
-    if (now < lesson.endTime.getTime()) return 'A aula ainda não terminou';
+    if (now < lesson.endTime.getTime() - bufferMs) return 'Check-out ainda não permitido';
     if (now > lesson.endTime.getTime() + bufferMs) return 'Prazo de check-out encerrado';
   }
   return null;

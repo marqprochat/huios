@@ -4,8 +4,8 @@ export const MODULE_ACTIONS = {
   dashboard: ['visualizar'],
   alunos: ['visualizar', 'criar', 'editar', 'excluir'],
   professores: ['visualizar', 'criar', 'editar', 'excluir'],
-  equipe: ['visualizar', 'gerenciar'],
-  funcoes: ['visualizar', 'gerenciar'],
+  equipe: ['visualizar', 'criar', 'editar', 'excluir'],
+  funcoes: ['visualizar', 'criar', 'editar', 'excluir'],
   igrejas: ['visualizar', 'criar', 'editar', 'excluir'],
   cursos: ['visualizar', 'criar', 'editar', 'excluir'],
   turmas: ['visualizar', 'criar', 'editar', 'excluir'],
@@ -150,6 +150,21 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> 
   ],
 }
 
+const LEGACY_PERMISSION_MIGRATIONS: Record<string, readonly PermissionKey[]> = {
+  'equipe.gerenciar': [
+    'equipe.visualizar',
+    'equipe.criar',
+    'equipe.editar',
+    'equipe.excluir',
+  ],
+  'funcoes.gerenciar': [
+    'funcoes.visualizar',
+    'funcoes.criar',
+    'funcoes.editar',
+    'funcoes.excluir',
+  ],
+}
+
 const INITIAL_ROLES = [
   { key: 'SUPER_ADMIN', name: 'Super Administrador', description: 'Acesso irrestrito ao sistema.', protected: true },
   { key: 'COORDENADOR', name: 'Coordenador', description: 'Gestão acadêmica e operacional.', protected: false },
@@ -162,6 +177,7 @@ const INITIAL_ROLES = [
 type AuthorizationPrisma = {
   permission: {
     upsert(args: unknown): Promise<{ id: string; key: string }>
+    findMany(args: unknown): Promise<Array<{ id: string; key: string }>>
   }
   role: {
     upsert(args: unknown): Promise<{ id: string; key: string }>
@@ -169,10 +185,51 @@ type AuthorizationPrisma = {
   rolePermission: {
     deleteMany(args: unknown): Promise<unknown>
     createMany(args: unknown): Promise<unknown>
+    findMany(args: unknown): Promise<Array<{ roleId: string; permissionId: string }>>
   }
   user: {
     findUnique(args: unknown): Promise<{ id: string } | null>
     upsert(args: unknown): Promise<unknown>
+  }
+}
+
+async function migrateLegacyPermissions(
+  prisma: AuthorizationPrisma,
+  permissionIds: Map<PermissionKey, string>,
+): Promise<void> {
+  for (const [legacyKey, replacements] of Object.entries(LEGACY_PERMISSION_MIGRATIONS)) {
+    const legacyPermission = await prisma.permission.findMany({
+      where: { key: legacyKey },
+      select: { id: true, key: true },
+    })
+
+    for (const permission of legacyPermission) {
+      const grants = await prisma.rolePermission.findMany({
+        where: { permissionId: permission.id },
+        select: { roleId: true, permissionId: true },
+      })
+
+      if (grants.length === 0) continue
+
+      for (const grant of grants) {
+        await prisma.rolePermission.createMany({
+          data: replacements.map((replacement) => {
+            const replacementId = permissionIds.get(replacement)
+            if (!replacementId) throw new Error(`Missing seeded permission: ${replacement}`)
+
+            return {
+              roleId: grant.roleId,
+              permissionId: replacementId,
+            }
+          }),
+          skipDuplicates: true,
+        })
+      }
+
+      await prisma.rolePermission.deleteMany({
+        where: { permissionId: permission.id },
+      })
+    }
   }
 }
 
@@ -187,6 +244,8 @@ export async function syncAuthorizationSeed(prisma: AuthorizationPrisma): Promis
     return [record.key as PermissionKey, record.id] as const
   }))
   const permissionIds = new Map<PermissionKey, string>(permissions)
+
+  await migrateLegacyPermissions(prisma, permissionIds)
 
   const roles = await Promise.all(INITIAL_ROLES.map(async (role) => {
     const record = await prisma.role.upsert({

@@ -1,7 +1,9 @@
 import prisma from '@/lib/prisma';
 import CalendarContainer from './CalendarContainer';
+import { requirePageAccess } from '@/lib/permissions/page-guard';
 
 export default async function AulasPage() {
+  await requirePageAccess('aulas.visualizar');
   const [aulas, eventos, settings] = await Promise.all([
     prisma.lesson.findMany({
       include: {

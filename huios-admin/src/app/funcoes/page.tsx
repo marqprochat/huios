@@ -1,3 +1,4 @@
+import { requirePageAccess } from '@/lib/permissions/page-guard'
 import {
   createRole,
   duplicateRole,
@@ -10,6 +11,7 @@ import { RoleList } from './RoleList'
 export const dynamic = 'force-dynamic'
 
 export default async function FuncoesPage() {
+  await requirePageAccess('funcoes.visualizar')
   const roles = await listRoles()
 
   return (
