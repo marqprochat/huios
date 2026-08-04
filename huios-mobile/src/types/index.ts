@@ -72,6 +72,13 @@ export interface ExamSubmission {
   submittedAt?: string;
 }
 
+export interface ExamTeacherEvaluation {
+  available: boolean;
+  disciplineId: string;
+  disciplineName: string;
+  teacherName: string;
+}
+
 export interface Question {
   id: string;
   text: string;

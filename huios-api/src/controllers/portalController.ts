@@ -365,6 +365,47 @@ export const listStudentExams: PortalHandler = async (req, res) => {
   }));
 };
 
+function lessonsHaveEnded(lessons: Array<{ date: Date; endTime: Date | null }>, now: Date) {
+  return lessons.length > 0 && lessons.every(lesson => {
+    const end = lesson.endTime ? new Date(lesson.endTime) : new Date(lesson.date);
+    if (!lesson.endTime) end.setHours(23, 59, 59, 999);
+    return now > end;
+  });
+}
+
+export const getStudentExamTeacherEvaluation: PortalHandler = async (req, res) => {
+  const { studentId, disciplineIds } = await context(req);
+  const exam = await prisma.exam.findFirst({
+    where: { id: req.params.id, disciplineId: { in: disciplineIds }, isPublished: true },
+    select: { disciplineId: true, discipline: { select: { name: true, teacher: { select: { name: true } }, lessons: { select: { date: true, endTime: true } } } } }
+  });
+  if (!exam) return res.status(404).json({ message: 'Prova não encontrada' });
+  const submitted = await prisma.teacherEvaluationSubmission.findUnique({ where: { studentId_disciplineId: { studentId, disciplineId: exam.disciplineId } } });
+  return res.json({ available: !submitted && lessonsHaveEnded(exam.discipline.lessons, new Date()), disciplineId: exam.disciplineId, disciplineName: exam.discipline.name, teacherName: exam.discipline.teacher?.name ?? 'Professor não definido' });
+};
+
+export const submitStudentExamTeacherEvaluation: PortalHandler = async (req, res) => {
+  const { studentId, disciplineIds } = await context(req);
+  const exam = await prisma.exam.findFirst({
+    where: { id: req.params.id, disciplineId: { in: disciplineIds }, isPublished: true },
+    select: { disciplineId: true, discipline: { select: { lessons: { select: { date: true, endTime: true } } } } }
+  });
+  if (!exam) return res.status(404).json({ message: 'Prova não encontrada' });
+  const { clarity, engagement, mastery, observations } = req.body ?? {};
+  if (![clarity, engagement, mastery].every(value => typeof value === 'string' && value.length > 0)) return res.status(400).json({ message: 'Avalie todos os critérios obrigatórios' });
+  if (!lessonsHaveEnded(exam.discipline.lessons, new Date())) return res.status(404).json({ message: 'Avaliação do professor não disponível' });
+  try {
+    await prisma.$transaction([
+      prisma.teacherEvaluation.create({ data: { disciplineId: exam.disciplineId, clarity, engagement, mastery, observations } }),
+      prisma.teacherEvaluationSubmission.create({ data: { studentId, disciplineId: exam.disciplineId } })
+    ]);
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') return res.status(409).json({ message: 'Você já avaliou este professor para esta disciplina' });
+    throw error;
+  }
+  return res.json({ success: true });
+};
+
 export const listStudentExamQuestions: PortalHandler = async (req, res) => {
   const { studentId, disciplineIds } = await context(req);
   const now = new Date();

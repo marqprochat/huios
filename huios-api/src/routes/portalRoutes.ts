@@ -1,8 +1,8 @@
 import { NextFunction, Request, RequestHandler, Response, Router } from 'express';
 import {
   checkInStudentLesson, checkOutStudentLesson, getStudentAttendanceSummary, getStudentLesson,
-  getStudentReportCard, listStudentExamQuestions, listStudentExams, listStudentLessons,
-  submitStudentExam, submitStudentJustification
+  getStudentReportCard, getStudentExamTeacherEvaluation, listStudentExamQuestions, listStudentExams, listStudentLessons,
+  submitStudentExam, submitStudentExamTeacherEvaluation, submitStudentJustification
 } from '../controllers/portalController';
 import { authenticateToken } from '../middlewares/auth';
 import { StudentNotFoundError } from '../services/studentContext';
@@ -46,6 +46,8 @@ router.post('/aulas/:id/checkout', asyncHandler(checkOutStudentLesson));
 router.get('/boletim', asyncHandler(getStudentReportCard));
 router.get('/presenca/pendencias', asyncHandler(getStudentAttendanceSummary));
 router.get('/provas', asyncHandler(listStudentExams));
+router.get('/provas/:id/avaliacao-professor', asyncHandler(getStudentExamTeacherEvaluation));
+router.post('/provas/:id/avaliacao-professor', asyncHandler(submitStudentExamTeacherEvaluation));
 router.get('/provas/:id/questoes', asyncHandler(listStudentExamQuestions));
 router.post('/provas/:id/submit', asyncHandler(submitStudentExam));
 router.post('/presenca/justificativa', justificationUpload.single('file'), asyncHandler(submitStudentJustification));

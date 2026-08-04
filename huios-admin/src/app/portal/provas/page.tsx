@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface Exam {
   id: string;
   title: string;
+  disciplineId: string;
   description: string | null;
   startDate: string;
   endDate: string;
@@ -24,9 +25,13 @@ interface Exam {
 }
 
 export default function ProvasPage() {
+  const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'done' | 'expired'>('all');
+  const [evaluation, setEvaluation] = useState<{ examId: string; disciplineId: string; disciplineName: string; teacherName: string } | null>(null);
+  const [ratings, setRatings] = useState({ clarity: '', engagement: '', mastery: '', observations: '' });
+  const [submittingEvaluation, setSubmittingEvaluation] = useState(false);
 
   useEffect(() => {
     fetchExams();
@@ -44,6 +49,41 @@ export default function ProvasPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const startExam = async (exam: Exam) => {
+    try {
+      const res = await fetch('/api/portal/avaliacoes');
+      if (!res.ok) throw new Error('Não foi possível verificar a avaliação do professor.');
+      const evaluations = await res.json();
+      const pending = evaluations.find((item: { id: string; name: string; teacher: string }) => item.id === exam.disciplineId);
+      if (pending) {
+        setRatings({ clarity: '', engagement: '', mastery: '', observations: '' });
+        setEvaluation({ examId: exam.id, disciplineId: pending.id, disciplineName: pending.name, teacherName: pending.teacher });
+        return;
+      }
+      router.push(`/portal/provas/${exam.id}`);
+    } catch (error) {
+      console.error(error);
+      alert(error instanceof Error ? error.message : 'Não foi possível iniciar a prova.');
+    }
+  };
+
+  const submitEvaluation = async () => {
+    if (!evaluation || !ratings.clarity || !ratings.engagement || !ratings.mastery) return;
+    setSubmittingEvaluation(true);
+    try {
+      const res = await fetch(`/api/portal/avaliacoes/${evaluation.disciplineId}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ratings)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Não foi possível enviar a avaliação.');
+      const examId = evaluation.examId;
+      setEvaluation(null);
+      router.push(`/portal/provas/${examId}`);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível enviar a avaliação.');
+    } finally { setSubmittingEvaluation(false); }
   };
 
   const now = new Date();
@@ -176,13 +216,13 @@ export default function ProvasPage() {
                             {daysLeft <= 0 ? 'Último dia!' : `${daysLeft} dia(s)`}
                           </span>
                         )}
-                        <Link
-                          href={`/portal/provas/${exam.id}`}
+                        <button
+                          onClick={() => startExam(exam)}
                           className="bg-[#135bec] text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-[#0d47a1] transition-all flex items-center gap-1"
                         >
                           <span className="material-symbols-outlined text-sm">edit_note</span>
                           Responder
-                        </Link>
+                        </button>
                       </>
                     )}
 
@@ -210,6 +250,28 @@ export default function ProvasPage() {
         <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
           <span className="material-symbols-outlined text-4xl text-slate-300 mb-3">quiz</span>
           <p className="text-slate-500">Nenhuma prova encontrada</p>
+        </div>
+      )}
+
+      {evaluation && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-4 sm:items-center">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-slate-900">Avalie seu professor</h3>
+            <p className="mt-2 text-sm text-slate-600">Antes de iniciar a prova de {evaluation.disciplineName}, avalie {evaluation.teacherName}.</p>
+            {(['clarity', 'engagement', 'mastery'] as const).map((key, index) => (
+              <div key={key} className="mt-4">
+                <p className="mb-2 text-sm font-semibold text-slate-700">{['Clareza da explicação', 'Engajamento e metodologia', 'Domínio do conteúdo'][index]}</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {['EXCELENTE', 'BOA', 'REGULAR', 'RUIM'].map(value => (
+                    <button key={value} onClick={() => setRatings(prev => ({ ...prev, [key]: value }))} className={`rounded-lg border px-2 py-2 text-xs ${ratings[key] === value ? 'border-[#135bec] bg-[#135bec] text-white' : 'border-slate-200 text-slate-600'}`}>{value}</button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <textarea value={ratings.observations} onChange={event => setRatings(prev => ({ ...prev, observations: event.target.value }))} placeholder="Observações (opcional)" className="mt-4 min-h-20 w-full rounded-xl border border-slate-200 p-3 text-sm" />
+            <button disabled={submittingEvaluation || !ratings.clarity || !ratings.engagement || !ratings.mastery} onClick={submitEvaluation} className={`mt-4 w-full rounded-xl px-4 py-3 text-sm font-bold text-white ${ratings.clarity && ratings.engagement && ratings.mastery ? 'bg-[#135bec] hover:bg-[#0d47a1]' : 'bg-slate-300'}`}>{submittingEvaluation ? 'Enviando...' : 'Enviar e iniciar prova'}</button>
+            <button disabled={submittingEvaluation} onClick={() => setEvaluation(null)} className="mt-3 w-full py-2 text-sm font-semibold text-slate-500">Cancelar</button>
+          </div>
         </div>
       )}
     </div>
