@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
+import { resolveAttendanceLocation } from './[id]/checkin/attendance-location'
 
 export async function GET() {
     try {
@@ -61,13 +62,23 @@ export async function GET() {
             orderBy: { date: 'asc' }
         });
 
+        const institutionLocation = await prisma.systemSettings.findFirst({
+            select: {
+                locationName: true,
+                latitude: true,
+                longitude: true,
+                radiusMeters: true
+            }
+        });
+
         // Map lessons to include the specific discipline for this student
         const flattenedLessons = lessons.map(lesson => {
             const { disciplines, ...rest } = lesson;
             // Find the discipline that belongs to one of the student's classes
             const studentDiscipline = disciplines.find(d => disciplineIds.includes(d.id)) || disciplines[0];
+            const lessonWithLocation = resolveAttendanceLocation(rest, institutionLocation) ?? rest;
             return {
-                ...rest,
+                ...lessonWithLocation,
                 discipline: studentDiscipline
             };
         });

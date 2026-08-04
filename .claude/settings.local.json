@@ -138,7 +138,9 @@
       "PowerShell(Get-ChildItem -Path \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\src\\\\app\" -Recurse -Directory | Where-Object { $_.Name -match 'equipe|usuario|user' } | Select-Object -ExpandProperty FullName)",
       "PowerShell(Get-ChildItem -Path \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\src\\\\app\\\\equipe\" -Recurse -File | Select-Object -ExpandProperty FullName; Write-Output \"--- API ---\"; Get-ChildItem -Path \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\src\\\\app\\\\api\" -Recurse -Directory | Where-Object { $_.Name -match 'equipe|usuario|user|senha|password' } | Select-Object -ExpandProperty FullName)",
       "PowerShell(npx tsc --noEmit -p \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\tsconfig.json\" 2>&1)",
-      "PowerShell(& \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\node_modules\\\\.bin\\\\tsc.cmd\" --noEmit -p \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\tsconfig.json\" 2>&1)"
+      "PowerShell(& \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\node_modules\\\\.bin\\\\tsc.cmd\" --noEmit -p \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\tsconfig.json\" 2>&1)",
+      "PowerShell(Get-ChildItem -Path \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\src\" -Recurse -File | Where-Object { $_.FullName -match 'change-password|trocar|senha|password' } | Select-Object -ExpandProperty FullName)",
+      "PowerShell(Get-ChildItem -Path \"p:\\\\APPS\\\\huios\\\\huios\\\\huios-admin\\\\src\\\\app\" -Recurse -File -Filter \"page.tsx\" | Where-Object { $_.FullName -match 'login' } | Select-Object -ExpandProperty FullName)"
     ],
     "additionalDirectories": [
       "P:\\APPS\\huios\\huios\\huios-admin\\src\\app\\api\\avaliacoes\\[disciplineId]"

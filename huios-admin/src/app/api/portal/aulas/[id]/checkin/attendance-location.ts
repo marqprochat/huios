@@ -2,19 +2,25 @@ interface AttendanceLocation {
   latitude: number | null
   longitude: number | null
   radiusMeters: number
+  locationName?: string | null
 }
 
-export function resolveAttendanceLocation(
-  lesson: AttendanceLocation,
+export function resolveAttendanceLocation<T extends AttendanceLocation>(
+  lesson: T,
   institution: AttendanceLocation | null,
-): AttendanceLocation | null {
-  if (lesson.latitude != null && lesson.longitude != null) {
-    return lesson
-  }
-
+): T | null {
   if (institution?.latitude != null && institution.longitude != null) {
-    return institution
+    const locationName = institution.locationName ?? lesson.locationName
+
+    return {
+      ...lesson,
+      latitude: institution.latitude,
+      longitude: institution.longitude,
+      radiusMeters: institution.radiusMeters,
+      ...(locationName !== undefined ? { locationName } : {}),
+    }
   }
 
+  // Lesson coordinates are not authoritative; all check-ins use the institution location.
   return null
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function ChangePasswordPage() {
     const [currentPassword, setCurrentPassword] = useState('');
@@ -9,7 +8,6 @@ export default function ChangePasswordPage() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const router = useRouter();
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -51,14 +49,17 @@ export default function ChangePasswordPage() {
 
             if (!response.ok) {
                 setError(data.error || 'Não foi possível alterar a senha.');
+                setLoading(false);
                 return;
             }
 
-            router.replace(data.isAdmin ? '/' : '/portal');
-            router.refresh();
+            // Navegacao dura: o Router Cache do App Router guardou o redirect
+            // do middleware para /trocar-senha, entao router.replace serviria a
+            // entrada em cache e a tela nao mudaria. Recarregar o documento
+            // refaz a requisicao com o cookie novo e limpa o cache do cliente.
+            window.location.replace(data.isAdmin ? '/' : '/portal');
         } catch {
             setError('Erro de conexão. Tente novamente.');
-        } finally {
             setLoading(false);
         }
     }

@@ -105,27 +105,6 @@ export default function CheckInPage() {
         }
 
         if (found) {
-          // If lesson has no coordinates, use system settings as fallback
-          if (found.latitude === null || found.latitude === undefined || found.longitude === null || found.longitude === undefined) {
-            try {
-              const sRes = await fetch('/api/settings');
-              if (sRes.ok) {
-                const sData = await sRes.json();
-                if (sData.latitude !== null && sData.latitude !== undefined && sData.longitude !== null && sData.longitude !== undefined) {
-                  // Update found object with fallback values
-                  found = {
-                    ...found,
-                    latitude: sData.latitude,
-                    longitude: sData.longitude,
-                    radiusMeters: sData.radiusMeters || found.radiusMeters,
-                    locationName: found.locationName || sData.locationName
-                  };
-                }
-              }
-            } catch (err) {
-              console.error('Error fetching default settings:', err);
-            }
-          }
           setLesson(found);
           // Check existing attendance
           if (found.attendances?.length > 0) {
