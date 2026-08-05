@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { resolveAttendanceLocation } from './attendance-location'
 import { getAttendanceWindow } from './attendance-window.mjs'
+import { formatInstantTimeBR } from '@/lib/date-utils'
 
 export async function POST(
     request: Request,
@@ -83,13 +84,13 @@ export async function POST(
 
                 if (now < checkInStart) {
                     return NextResponse.json({ 
-                        error: `Check-in não permitido ainda. Horário de check-in inicia às ${checkInStart.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}.` 
+                        error: `Check-in não permitido ainda. Horário de check-in inicia às ${formatInstantTimeBR(checkInStart)}.`
                     }, { status: 400 });
                 }
 
                 if (now > checkInEnd) {
                      return NextResponse.json({ 
-                        error: `Passou do horário de check-in. O prazo era até as ${checkInEnd.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}.` 
+                        error: `Passou do horário de check-in. O prazo era até as ${formatInstantTimeBR(checkInEnd)}.`
                     }, { status: 400 });
                 }
             } else if (action === 'checkout') {
@@ -100,13 +101,13 @@ export async function POST(
 
                 if (now < checkOutStart) {
                      return NextResponse.json({ 
-                        error: `A aula ainda não terminou. O check-out só é permitido após as ${checkOutStart.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}.` 
+                        error: `A aula ainda não terminou. O check-out só é permitido após as ${formatInstantTimeBR(checkOutStart)}.`
                     }, { status: 400 });
                 }
 
                 if (now > checkOutEnd) {
                      return NextResponse.json({ 
-                        error: `Tempo de check-out esgotado. Era apenas até as ${checkOutEnd.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}.` 
+                        error: `Tempo de check-out esgotado. Era apenas até as ${formatInstantTimeBR(checkOutEnd)}.`
                     }, { status: 400 });
                 }
             }

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import { updateLesson, deleteLesson } from '../../actions';
+import { toBRDateInput, toBRTimeInput } from '@/lib/date-utils';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -37,21 +38,6 @@ export default async function EditarAulaPage({ params }: Props) {
   if (!lesson) {
     notFound();
   }
-
-  // Format date for input
-  const formatDateForInput = (date: Date) => {
-    const d = new Date(date);
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().split('T')[0];
-  };
-
-  // Format time for input (HH:MM)
-  const formatTimeForInput = (date: Date | null) => {
-    if (!date) return '';
-    const d = new Date(date);
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().split('T')[1].slice(0, 5);
-  };
 
   return (
     <div className="max-w-4xl mx-auto p-4 lg:p-8 space-y-6">
@@ -111,7 +97,7 @@ export default async function EditarAulaPage({ params }: Props) {
                   id="date"
                   name="date"
                   required
-                  defaultValue={formatDateForInput(lesson.date)}
+                  defaultValue={toBRDateInput(lesson.date)}
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 />
               </div>
@@ -123,7 +109,7 @@ export default async function EditarAulaPage({ params }: Props) {
                   type="time"
                   id="startTime"
                   name="startTime"
-                  defaultValue={formatTimeForInput(lesson.startTime)}
+                  defaultValue={toBRTimeInput(lesson.startTime)}
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 />
               </div>
@@ -135,7 +121,7 @@ export default async function EditarAulaPage({ params }: Props) {
                   type="time"
                   id="endTime"
                   name="endTime"
-                  defaultValue={formatTimeForInput(lesson.endTime)}
+                  defaultValue={toBRTimeInput(lesson.endTime)}
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 />
               </div>

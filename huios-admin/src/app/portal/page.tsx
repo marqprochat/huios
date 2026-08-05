@@ -357,10 +357,10 @@ export default function PortalDashboard() {
                   >
                     <div className="text-center min-w-[60px]">
                       <p className="text-xs font-bold text-[#135bec]">
-                        {lesson.startTime ? new Date(lesson.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                        {lesson.startTime ? new Date(lesson.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '--:--'}
                       </p>
                       <p className="text-[10px] text-slate-400">
-                        {lesson.endTime ? new Date(lesson.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                        {lesson.endTime ? new Date(lesson.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '--:--'}
                       </p>
                     </div>
                     <div className="w-px h-10 bg-[#135bec]/20"></div>

@@ -163,7 +163,8 @@ export default function CheckInPage() {
     if (!dateStr) return '--:--';
     return new Date(dateStr).toLocaleTimeString('pt-BR', {
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'America/Sao_Paulo'
     });
   };
 

@@ -135,6 +135,7 @@ export default function CheckinScreen() {
               <Text className="text-sm text-slate-800 font-medium">
                 {new Date(lesson.attendance.checkInAt).toLocaleTimeString('pt-BR', {
                   hour: '2-digit', minute: '2-digit',
+                  timeZone: 'America/Sao_Paulo',
                 })}
               </Text>
             </View>
@@ -145,6 +146,7 @@ export default function CheckinScreen() {
               <Text className="text-sm text-slate-800 font-medium">
                 {new Date(lesson.attendance.checkOutAt).toLocaleTimeString('pt-BR', {
                   hour: '2-digit', minute: '2-digit',
+                  timeZone: 'America/Sao_Paulo',
                 })}
               </Text>
             </View>

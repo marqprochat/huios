@@ -209,8 +209,8 @@ export default function AulasPage() {
                 <div>
                   <p className="text-xs text-slate-400">Horário</p>
                   <p className="font-medium text-slate-800">
-                    {selectedLesson.startTime ? new Date(selectedLesson.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-                    {selectedLesson.endTime && ` às ${new Date(selectedLesson.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+                    {selectedLesson.startTime ? new Date(selectedLesson.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '--:--'}
+                    {selectedLesson.endTime && ` às ${new Date(selectedLesson.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}`}
                   </p>
                 </div>
               </div>

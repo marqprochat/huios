@@ -259,9 +259,9 @@ export default function RelatorioPresencaPage() {
                           <td className="px-5 py-3.5 font-medium">{new Date(l.date).toLocaleDateString('pt-BR')}</td>
                           <td className="px-5 py-3.5 text-sm text-slate-500">{l.disciplineName || '—'}</td>
                           <td className="px-5 py-3.5 text-sm text-slate-500">
-                            {l.startTime ? new Date(l.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--'}
+                            {l.startTime ? new Date(l.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '--'}
                             {' – '}
-                            {l.endTime ? new Date(l.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--'}
+                            {l.endTime ? new Date(l.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '--'}
                           </td>
                           <td className="px-5 py-3.5">
                             <span className="font-bold text-emerald-600">{present}</span>

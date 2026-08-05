@@ -4,17 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import { requirePermission } from '@/lib/permissions/server';
-
-// Aplica o fuso horário do Brasil (America/Sao_Paulo, UTC-3 fixo) a uma string
-// de data/hora "solta" vinda do formulário (sem timezone), igual ao padrão
-// já usado em src/app/aulas/actions.ts para aulas.
-function parseLocalToUTC(localStr: string): Date {
-  if (!localStr) return new Date();
-  if (localStr.includes('Z') || localStr.includes('+') || (localStr.includes('-') && localStr.length > 10 && localStr.lastIndexOf('-') > 10)) {
-    return new Date(localStr);
-  }
-  return new Date(localStr + (localStr.includes('T') ? ':00.000-03:00' : 'T12:00:00.000-03:00'));
-}
+import { parseBRLocal, parseBRDateAndTime } from '@/lib/date-utils';
 
 export async function createEvent(formData: FormData) {
   await requirePermission('aulas.criar');
@@ -37,9 +27,9 @@ export async function createEvent(formData: FormData) {
         title,
         type,
         description,
-        date: parseLocalToUTC(date),
-        startTime: startTime ? parseLocalToUTC(`${date}T${startTime}`) : null,
-        endTime: endTime ? parseLocalToUTC(`${date}T${endTime}`) : null,
+        date: parseBRLocal(date) ?? new Date(),
+        startTime: parseBRDateAndTime(date, startTime),
+        endTime: parseBRDateAndTime(date, endTime),
         courseClasses: courseClassIds.length > 0 ? { connect: courseClassIds.map(id => ({ id })) } : undefined,
         requiresCheckIn,
         locationName: requiresCheckIn ? locationName : null,

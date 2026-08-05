@@ -99,7 +99,7 @@ export async function GET() {
       id: l.id,
       title: l.disciplines[0]?.name || 'Aula',
       date: l.date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
-      time: l.startTime ? new Date(l.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--',
+      time: l.startTime ? new Date(l.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '--:--',
       location: l.locationName || 'Auditório'
     }));
 

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import { requirePermission } from '@/lib/permissions/server';
+import { parseBRLocal, parseBRDateAndTime } from '@/lib/date-utils';
 
 export async function createLesson(formData: FormData) {
   await requirePermission('aulas.criar');
@@ -18,23 +19,15 @@ export async function createLesson(formData: FormData) {
     const radiusMeters = formData.get('radiusMeters') as string;
     const description = formData.get('description') as string;
 
-    const parseLocalToUTC = (localStr: string) => {
-      if (!localStr) return new Date();
-      if (localStr.includes('Z') || localStr.includes('+') || (localStr.includes('-') && localStr.length > 10 && localStr.lastIndexOf('-') > 10)) {
-        return new Date(localStr);
-      }
-      return new Date(localStr + (localStr.includes('T') ? ':00.000-03:00' : 'T12:00:00.000-03:00'));
-    };
-
     // Create lesson
     const lesson = await prisma.lesson.create({
       data: {
         disciplines: {
           connect: disciplineIds.map(id => ({ id }))
         },
-        date: parseLocalToUTC(date),
-        startTime: startTime ? parseLocalToUTC(`${date}T${startTime}`) : null,
-        endTime: endTime ? parseLocalToUTC(`${date}T${endTime}`) : null,
+        date: parseBRLocal(date) ?? new Date(),
+        startTime: parseBRDateAndTime(date, startTime),
+        endTime: parseBRDateAndTime(date, endTime),
         locationName,
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
@@ -106,14 +99,6 @@ export async function createBulkLessons(data: {
       description 
     } = data;
 
-    const parseLocalToUTC = (localStr: string) => {
-      if (!localStr) return new Date();
-      if (localStr.includes('Z') || localStr.includes('+') || (localStr.includes('-') && localStr.length > 10 && localStr.lastIndexOf('-') > 10)) {
-        return new Date(localStr);
-      }
-      return new Date(localStr + (localStr.includes('T') ? ':00.000-03:00' : 'T12:00:00.000-03:00'));
-    };
-
     // Use a transaction to ensure all or nothing
     await prisma.$transaction(async (tx) => {
       for (const dateStr of dates) {
@@ -122,9 +107,9 @@ export async function createBulkLessons(data: {
             disciplines: {
               connect: disciplineIds.map(id => ({ id }))
             },
-            date: parseLocalToUTC(dateStr),
-            startTime: startTime ? parseLocalToUTC(`${dateStr}T${startTime}`) : null,
-            endTime: endTime ? parseLocalToUTC(`${dateStr}T${endTime}`) : null,
+            date: parseBRLocal(dateStr) ?? new Date(),
+            startTime: parseBRDateAndTime(dateStr, startTime),
+            endTime: parseBRDateAndTime(dateStr, endTime),
             locationName,
             latitude,
             longitude,
@@ -180,23 +165,15 @@ export async function updateLesson(id: string, formData: FormData) {
     const radiusMeters = formData.get('radiusMeters') as string;
     const description = formData.get('description') as string;
 
-    const parseLocalToUTC = (localStr: string) => {
-      if (!localStr) return new Date();
-      if (localStr.includes('Z') || localStr.includes('+') || (localStr.includes('-') && localStr.length > 10 && localStr.lastIndexOf('-') > 10)) {
-        return new Date(localStr);
-      }
-      return new Date(localStr + (localStr.includes('T') ? ':00.000-03:00' : 'T12:00:00.000-03:00'));
-    };
-
     await prisma.lesson.update({
       where: { id },
       data: {
         disciplines: {
           set: disciplineIds.map(id => ({ id }))
         },
-        date: parseLocalToUTC(date),
-        startTime: startTime ? parseLocalToUTC(`${date}T${startTime}`) : null,
-        endTime: endTime ? parseLocalToUTC(`${date}T${endTime}`) : null,
+        date: parseBRLocal(date) ?? new Date(),
+        startTime: parseBRDateAndTime(date, startTime),
+        endTime: parseBRDateAndTime(date, endTime),
         locationName,
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,

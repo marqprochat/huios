@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import { updateExam, publishExam, unpublishExam, duplicateExam, deleteExam } from '../../actions';
+import { toBRDateTimeInput } from '@/lib/date-utils';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -37,14 +38,7 @@ export default async function EditarProvaPage({ params }: Props) {
     orderBy: { name: 'asc' }
   });
 
-  const formatDateForInput = (date: Date) => {
-    // sv locale gives ISO-like "YYYY-MM-DD HH:mm" — just swap the space for T
-    return new Intl.DateTimeFormat('sv', {
-      timeZone: 'America/Sao_Paulo',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit',
-    }).format(new Date(date)).replace(' ', 'T');
-  };
+  const formatDateForInput = toBRDateTimeInput;
 
   return (
     <div className="max-w-4xl mx-auto p-4 lg:p-8 space-y-6">

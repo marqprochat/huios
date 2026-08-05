@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import { duplicateExam } from '../../actions';
+import { toBRDateTimeInput } from '@/lib/date-utils';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -25,11 +26,7 @@ export default async function DuplicarProvaPage({ params }: Props) {
     notFound();
   }
 
-  const formatDateForInput = (date: Date) => {
-    const d = new Date(date);
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().slice(0, 16);
-  };
+  const formatDateForInput = toBRDateTimeInput;
 
   async function handleDuplicate(formData: FormData) {
     'use server';

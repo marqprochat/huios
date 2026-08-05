@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
+import { brToday } from '@/lib/date-utils';
 
 interface Lesson {
   id: string;
@@ -29,8 +30,8 @@ export default function CheckInHomePage() {
 
   const fetchTodayLessons = async () => {
     try {
-      // Get today's date
-      const today = new Date().toISOString().split('T')[0];
+      // Dia de hoje em Brasília (o dia UTC já virou às 21h locais)
+      const today = brToday();
       
        const response = await fetch(`${API_URL}/api/lessons?date=${today}`);
       if (response.ok) {
@@ -59,7 +60,8 @@ export default function CheckInHomePage() {
     if (!dateStr) return '--:--';
     return new Date(dateStr).toLocaleTimeString('pt-BR', {
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'America/Sao_Paulo'
     });
   };
 

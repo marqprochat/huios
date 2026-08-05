@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { brToday, endOfBRDay } from '@/lib/date-utils';
 
 export async function GET() {
   try {
@@ -19,9 +20,9 @@ export async function GET() {
     }
 
     const studentId = user.student.id;
-    // Usa início do dia SEGUINTE em UTC para incluir todas as aulas de hoje independente do horário de armazenamento
-    const today = new Date();
-    const endOfToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 1));
+    // Início do dia SEGUINTE em Brasília: inclui todas as aulas de hoje sem
+    // arrastar as de amanhã entre 21h e meia-noite, quando o dia UTC já virou.
+    const endOfToday = endOfBRDay(brToday());
 
     // Busca faltas do aluno apenas em aulas já ocorridas (data <= hoje)
     const absences = await prisma.attendance.findMany({

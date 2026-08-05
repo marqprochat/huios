@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { parseBRLocal, parseBRDateAndTime } from '../utils/date';
 
 const prisma = new PrismaClient();
 
@@ -136,9 +137,9 @@ export const createLesson = async (req: Request, res: Response) => {
         disciplines: {
           connect: ids.map(id => ({ id }))
         },
-        date: new Date(date),
-        startTime: startTime ? new Date(startTime) : null,
-        endTime: endTime ? new Date(endTime) : null,
+        date: parseBRLocal(date) ?? new Date(),
+        startTime: parseBRDateAndTime(date, startTime),
+        endTime: parseBRDateAndTime(date, endTime),
         locationName,
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
@@ -204,9 +205,16 @@ export const updateLesson = async (req: Request, res: Response) => {
     const lesson = await prisma.lesson.update({
       where: { id },
       data: {
-        date: date ? new Date(date) : undefined,
-        startTime: startTime !== undefined ? (startTime ? new Date(startTime) : null) : undefined,
-        endTime: endTime !== undefined ? (endTime ? new Date(endTime) : null) : undefined,
+        // Update parcial: undefined = campo não enviado, não mexer.
+        // A hora é combinada com a data quando ela vem junto; se vier sozinha,
+        // já deve ser uma data/hora completa.
+        date: date ? (parseBRLocal(date) ?? undefined) : undefined,
+        startTime: startTime !== undefined
+          ? (startTime ? (date ? parseBRDateAndTime(date, startTime) : parseBRLocal(startTime)) : null)
+          : undefined,
+        endTime: endTime !== undefined
+          ? (endTime ? (date ? parseBRDateAndTime(date, endTime) : parseBRLocal(endTime)) : null)
+          : undefined,
         locationName,
         latitude: latitude !== undefined ? (latitude ? parseFloat(latitude) : null) : undefined,
         longitude: longitude !== undefined ? (longitude ? parseFloat(longitude) : null) : undefined,

@@ -275,8 +275,8 @@ export default function CheckInPage() {
           </div>
           <div className="flex items-center gap-2 text-slate-500">
             <span className="material-symbols-outlined text-sm text-slate-400">schedule</span>
-            {lesson.startTime ? new Date(lesson.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-            {lesson.endTime && ` - ${new Date(lesson.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+            {lesson.startTime ? new Date(lesson.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '--:--'}
+            {lesson.endTime && ` - ${new Date(lesson.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}`}
           </div>
           {lesson.locationName && (
             <div className="flex items-center gap-2 text-slate-500">

@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma';
+import { brToday } from '@/lib/date-utils';
 
 const fmtCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fmtDate = (d: Date) => d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
@@ -8,12 +9,12 @@ const fmtDate = (d: Date) => d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
  * também precisam ser calculados em UTC para não sofrer deslocamento de fuso horário.
  */
 function todayBoundsUTC(now: Date) {
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const d = now.getDate();
+  // "Hoje" é o dia civil de Brasília — não o do processo Node (UTC em produção),
+  // que já virou às 21h locais e antecipava o vencimento em algumas horas.
+  const [y, m, d] = brToday(now).split('-').map(Number);
   return {
-    startOfToday: new Date(Date.UTC(y, m, d)),
-    startOfTomorrow: new Date(Date.UTC(y, m, d + 1)),
+    startOfToday: new Date(Date.UTC(y, m - 1, d)),
+    startOfTomorrow: new Date(Date.UTC(y, m - 1, d + 1)),
   };
 }
 

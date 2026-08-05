@@ -78,7 +78,12 @@ export default function LoteAulasPage() {
     let current = new Date(start);
     while (current <= end) {
       if (formData.weekDays.includes(current.getDay())) {
-        dates.push(current.toISOString().split('T')[0]);
+        // current é meia-noite local: formata pelas partes locais, nunca por
+        // toISOString(), que converteria para UTC e poderia trocar o dia.
+        const y = current.getFullYear();
+        const m = String(current.getMonth() + 1).padStart(2, '0');
+        const d = String(current.getDate()).padStart(2, '0');
+        dates.push(`${y}-${m}-${d}`);
       }
       current.setDate(current.getDate() + 1);
     }
