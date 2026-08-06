@@ -5,32 +5,60 @@ import { redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import { requirePermission } from '@/lib/permissions/server';
 import { parseBRLocal } from '@/lib/date-utils';
+import {
+  assertParticipantSelection,
+  assertRemovableParticipants,
+  parseParticipantIds,
+} from '@/lib/exam-participants';
+import {
+  assertExamCanBePublished,
+  buildCreateExamData,
+  buildDuplicateExamData,
+  type ExamWriteInput,
+} from './exam-participant-operations';
+
+function readExamInput(formData: FormData): ExamWriteInput {
+  const duration = String(formData.get('duration') ?? '');
+  return {
+    title: String(formData.get('title') ?? ''),
+    description: String(formData.get('description') ?? '') || null,
+    disciplineId: String(formData.get('disciplineId') ?? ''),
+    startDate: parseBRLocal(String(formData.get('startDate') ?? '')) ?? new Date(),
+    endDate: parseBRLocal(String(formData.get('endDate') ?? '')) ?? new Date(),
+    duration: duration ? Number.parseInt(duration, 10) : null,
+  };
+}
+
+type ExamTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+async function eligibleStudentIds(
+  tx: ExamTransaction,
+  disciplineId: string,
+  studentIds: string[],
+): Promise<string[]> {
+  const enrollments = await tx.enrollment.findMany({
+    where: {
+      studentId: { in: studentIds },
+      status: 'CURSANDO',
+      class: { disciplines: { some: { id: disciplineId } } },
+    },
+    select: { studentId: true },
+    distinct: ['studentId'],
+  });
+  return enrollments.map(enrollment => enrollment.studentId);
+}
 
 export async function createExam(formData: FormData) {
   await requirePermission('provas.criar');
-  const title = formData.get('title') as string;
-  const description = formData.get('description') as string;
-  const disciplineId = formData.get('disciplineId') as string;
-  const startDate = formData.get('startDate') as string;
-  const endDate = formData.get('endDate') as string;
-  const duration = formData.get('duration') as string;
+  const input = readExamInput(formData);
+  const studentIds = parseParticipantIds(formData);
 
-  try {
-    await prisma.exam.create({
-      data: {
-        title,
-        description,
-        disciplineId,
-        startDate: parseBRLocal(startDate) ?? new Date(),
-        endDate: parseBRLocal(endDate) ?? new Date(),
-        duration: duration ? parseInt(duration) : null,
-        isPublished: false
-      }
+  await prisma.$transaction(async tx => {
+    assertParticipantSelection(studentIds, await eligibleStudentIds(tx, input.disciplineId, studentIds));
+    await tx.exam.create({
+      data: buildCreateExamData(input, studentIds),
     });
-  } catch (error) {
-    console.error('Error creating exam:', error);
-    throw new Error('Failed to create exam');
-  }
+  });
 
   revalidatePath('/provas');
   redirect('/provas');
@@ -38,29 +66,30 @@ export async function createExam(formData: FormData) {
 
 export async function updateExam(id: string, formData: FormData) {
   await requirePermission('provas.editar');
-  const title = formData.get('title') as string;
-  const description = formData.get('description') as string;
-  const disciplineId = formData.get('disciplineId') as string;
-  const startDate = formData.get('startDate') as string;
-  const endDate = formData.get('endDate') as string;
-  const duration = formData.get('duration') as string;
+  const input = readExamInput(formData);
+  const studentIds = parseParticipantIds(formData);
 
-  try {
-    await prisma.exam.update({
-      where: { id },
-      data: {
-        title,
-        description,
-        disciplineId,
-        startDate: parseBRLocal(startDate) ?? new Date(),
-        endDate: parseBRLocal(endDate) ?? new Date(),
-        duration: duration ? parseInt(duration) : null
-      }
+  await prisma.$transaction(async tx => {
+    assertParticipantSelection(studentIds, await eligibleStudentIds(tx, input.disciplineId, studentIds));
+    const current = await tx.examParticipant.findMany({ where: { examId: id }, select: { studentId: true } });
+    const currentIds = current.map(participant => participant.studentId);
+    const next = new Set(studentIds);
+    const removedIds = currentIds.filter(studentId => !next.has(studentId));
+    const submissions = removedIds.length > 0
+      ? await tx.examSubmission.findMany({
+          where: { examId: id, studentId: { in: removedIds } },
+          select: { studentId: true },
+        })
+      : [];
+    assertRemovableParticipants(currentIds, studentIds, submissions.map(submission => submission.studentId));
+
+    await tx.exam.update({ where: { id }, data: input });
+    await tx.examParticipant.deleteMany({ where: { examId: id, studentId: { notIn: studentIds } } });
+    await tx.examParticipant.createMany({
+      data: studentIds.map(studentId => ({ examId: id, studentId })),
+      skipDuplicates: true,
     });
-  } catch (error) {
-    console.error('Error updating exam:', error);
-    throw new Error('Failed to update exam');
-  }
+  });
 
   revalidatePath('/provas');
   redirect('/provas');
@@ -68,17 +97,11 @@ export async function updateExam(id: string, formData: FormData) {
 
 export async function publishExam(id: string): Promise<void> {
   await requirePermission('provas.aplicar');
-  try {
-    await prisma.exam.update({
-      where: { id },
-      data: { isPublished: true }
-    });
-
-    revalidatePath('/provas');
-  } catch (error) {
-    console.error('Error publishing exam:', error);
-    throw new Error('Failed to publish exam');
-  }
+  await prisma.$transaction(async tx => {
+    assertExamCanBePublished(await tx.examParticipant.count({ where: { examId: id } }));
+    await tx.exam.update({ where: { id }, data: { isPublished: true } });
+  });
+  revalidatePath('/provas');
 }
 
 export async function unpublishExam(id: string): Promise<void> {
@@ -102,6 +125,7 @@ export async function duplicateExam(id: string, newStartDate: string, newEndDate
     const original = await prisma.exam.findUnique({
       where: { id },
       include: {
+        participants: { select: { studentId: true } },
         questions: {
           include: {
             alternatives: true
@@ -113,31 +137,11 @@ export async function duplicateExam(id: string, newStartDate: string, newEndDate
     if (!original) throw new Error('Exam not found');
 
     await prisma.exam.create({
-      data: {
+      data: buildDuplicateExamData(original, {
         title: newTitle || `${original.title} (Cópia)`,
-        description: original.description,
-        disciplineId: original.disciplineId,
         startDate: parseBRLocal(newStartDate) ?? new Date(),
         endDate: parseBRLocal(newEndDate) ?? new Date(),
-        duration: original.duration,
-        maxAttempts: original.maxAttempts,
-        isPublished: false,
-        questions: {
-          create: original.questions.map(q => ({
-            statement: q.statement,
-            type: q.type,
-            order: q.order,
-            weight: q.weight,
-            alternatives: {
-              create: q.alternatives.map(a => ({
-                letter: a.letter,
-                text: a.text,
-                isCorrect: a.isCorrect
-              }))
-            }
-          }))
-        }
-      }
+      }),
     });
 
     revalidatePath('/provas');
@@ -169,7 +173,7 @@ export async function createQuestion(examId: string, formData: FormData) {
     const statement = formData.get('statement') as string;
     const weight = formData.get('weight') as string;
     const alternativesData = formData.get('alternatives') as string;
-    const alternatives = JSON.parse(alternativesData);
+    const alternatives = JSON.parse(alternativesData) as Array<{ letter: string; text: string; isCorrect: boolean }>;
 
     const lastQuestion = await prisma.question.findFirst({
       where: { examId },
@@ -202,7 +206,7 @@ export async function updateQuestion(id: string, formData: FormData) {
     const statement = formData.get('statement') as string;
     const weight = formData.get('weight') as string;
     const alternativesData = formData.get('alternatives') as string;
-    const alternatives = JSON.parse(alternativesData);
+    const alternatives = JSON.parse(alternativesData) as Array<{ letter: string; text: string; isCorrect: boolean }>;
 
     await prisma.$transaction([
       prisma.question.update({
@@ -216,7 +220,7 @@ export async function updateQuestion(id: string, formData: FormData) {
         where: { questionId: id }
       }),
       prisma.alternative.createMany({
-        data: alternatives.map((alt: any) => ({
+        data: alternatives.map(alt => ({
           questionId: id,
           letter: alt.letter,
           text: alt.text,

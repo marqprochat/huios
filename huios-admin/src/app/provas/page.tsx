@@ -13,7 +13,8 @@ export default async function ProvasPage() {
       _count: {
         select: {
           questions: true,
-          submissions: true
+          submissions: true,
+          participants: true
         }
       }
     },
@@ -34,7 +35,7 @@ export default async function ProvasPage() {
     });
   };
 
-  const getStatusBadge = (prova: any) => {
+  const getStatusBadge = (prova: { startDate: Date; endDate: Date; isPublished: boolean }) => {
     const now = new Date();
     const start = new Date(prova.startDate);
     const end = new Date(prova.endDate);
@@ -108,7 +109,8 @@ export default async function ProvasPage() {
                   </td>
                   <td className="px-6 py-4">{getStatusBadge(prova)}</td>
                   <td className="px-6 py-4 text-sm">
-                    <span className="font-bold">{prova._count.questions}</span> questões
+                    <div><span className="font-bold">{prova._count.questions}</span> questões</div>
+                    <div className="text-xs text-slate-500"><span className="font-bold">{prova._count.participants}</span> alunos</div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">

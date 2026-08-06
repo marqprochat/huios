@@ -89,7 +89,7 @@ export default async function DuplicarProvaPage({ params }: Props) {
 
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
               <p className="text-sm text-blue-700 dark:text-blue-400">
-                A nova prova será criada como <strong>Rascunho</strong> e incluirá todas as questões e alternativas da prova original.
+                A nova prova será criada como <strong>Rascunho</strong> e incluirá as questões, alternativas e os alunos selecionados na prova original.
               </p>
             </div>
           </div>
