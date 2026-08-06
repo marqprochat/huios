@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
+import { studentExamWhere } from '../../exam-access'
 
 export async function POST(
     request: Request,
@@ -40,8 +41,8 @@ export async function POST(
         const { answers } = body; // Array of { questionId, alternativeId }
 
         // Get exam with questions to calculate score
-        const exam = await prisma.exam.findUnique({
-            where: { id: examId },
+        const exam = await prisma.exam.findFirst({
+            where: studentExamWhere(studentId, { id: examId }),
             include: {
                 questions: {
                     include: {
@@ -52,7 +53,7 @@ export async function POST(
         });
 
         if (!exam) {
-            return NextResponse.json({ error: 'Prova não encontrada' }, { status: 404 });
+            return NextResponse.json({ error: 'Prova não disponível para este aluno' }, { status: 404 });
         }
 
         // Check if exam is still open
