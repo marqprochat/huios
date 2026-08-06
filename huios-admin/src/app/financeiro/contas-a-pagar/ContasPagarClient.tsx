@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useEffect, Fragment } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { markAsPaid, deleteTransaction } from '../actions';
 import { TransactionForm } from '../TransactionForm';
@@ -49,7 +50,10 @@ const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', curren
 const fmtDate = (d: string) => formatDateBR(d);
 
 export function ContasPagarClient({ transactions: initial, categories, teachers, paymentForms = [], accounts = [], initialStatus = '' }: Props) {
+  const router = useRouter();
   const [transactions, setTransactions] = useState(initial);
+  // Re-sincroniza com os dados do servidor após router.refresh() (ex.: pós-edição).
+  useEffect(() => { setTransactions(initial); }, [initial]);
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [monthFilter, setMonthFilter] = useState('');
   const [search, setSearch] = useState('');
@@ -110,7 +114,9 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
   const onSaved = () => {
     setShowForm(false);
     setEditingTx(null);
-    window.location.reload();
+    // Atualiza os dados do servidor SEM recarregar a página inteira,
+    // preservando a posição de scroll do usuário na lista.
+    router.refresh();
   };
 
   return (
@@ -174,17 +180,18 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
         </div>
       </div>
 
-      {(showForm || editingTx) && (
+      {/* Form de NOVA despesa (edição é inline, abaixo da linha) */}
+      {showForm && !editingTx && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-primary/30 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-slate-800 dark:text-white">{editingTx ? 'Editar Despesa' : 'Nova Despesa'}</h3>
-            <button onClick={() => { setShowForm(false); setEditingTx(null); }} className="text-slate-400 hover:text-slate-600">
+            <h3 className="font-bold text-slate-800 dark:text-white">Nova Despesa</h3>
+            <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600">
               <span className="material-symbols-outlined">close</span>
             </button>
           </div>
           <TransactionForm
             type="DESPESA"
-            transaction={editingTx as any}
+            transaction={null}
             categories={categories}
             teachers={teachers}
             paymentForms={paymentForms}
@@ -218,8 +225,10 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
                   const effectiveStatus = getEffectiveStatus(t);
                   const st = STATUS_CONFIG[effectiveStatus] ?? STATUS_CONFIG.PENDENTE;
                   const isOverdue = effectiveStatus === 'VENCIDO';
+                  const isEditing = editingTx?.id === t.id;
                   return (
-                    <tr key={t.id} className={`${isOverdue ? 'bg-red-50/50 dark:bg-red-950/20' : ''} hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors`}>
+                    <Fragment key={t.id}>
+                    <tr className={`${isEditing ? 'bg-primary/5' : isOverdue ? 'bg-red-50/50 dark:bg-red-950/20' : ''} hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors`}>
                       <td className="px-5 py-3.5 text-sm font-medium text-slate-700 dark:text-slate-300">{t.description}</td>
                       <td className="px-5 py-3.5">
                         {t.category ? (
@@ -251,9 +260,9 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
                             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-primary transition-colors">
                             <span className="material-symbols-outlined text-sm">attach_file</span>
                           </button>
-                          <button onClick={() => { setEditingTx(t); setShowForm(false); }} title="Editar"
-                            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-primary transition-colors">
-                            <span className="material-symbols-outlined text-sm">edit</span>
+                          <button onClick={() => { setEditingTx(isEditing ? null : t); setShowForm(false); }} title={isEditing ? 'Fechar edição' : 'Editar'}
+                            className={`p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${isEditing ? 'text-primary bg-primary/10' : 'text-slate-400 hover:text-primary'}`}>
+                            <span className="material-symbols-outlined text-sm">{isEditing ? 'close' : 'edit'}</span>
                           </button>
                           <button onClick={() => handleDelete(t.id)} title="Excluir"
                             className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
@@ -262,6 +271,30 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
                         </div>
                       </td>
                     </tr>
+                    {isEditing && (
+                      <tr className="bg-slate-50 dark:bg-slate-800/40">
+                        <td colSpan={7} className="p-0">
+                          <div className="border-l-4 border-primary p-5">
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="font-bold text-slate-800 dark:text-white">Editar Despesa</h3>
+                              <button onClick={() => setEditingTx(null)} className="text-slate-400 hover:text-slate-600">
+                                <span className="material-symbols-outlined">close</span>
+                              </button>
+                            </div>
+                            <TransactionForm
+                              type="DESPESA"
+                              transaction={editingTx as any}
+                              categories={categories}
+                              teachers={teachers}
+                              paymentForms={paymentForms}
+                              accounts={accounts}
+                              onSaved={onSaved}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>
