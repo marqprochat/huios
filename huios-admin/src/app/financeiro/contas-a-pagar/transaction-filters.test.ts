@@ -5,8 +5,6 @@ import {
   getEffectiveStatus,
   matchesMonth,
   matchesStatus,
-// Node executes this TypeScript test directly and requires its runtime extension.
-// @ts-expect-error TS5097: the project intentionally does not enable TS extension imports.
 } from './transaction-filters.ts';
 
 const today = new Date(2026, 6, 30, 12);
