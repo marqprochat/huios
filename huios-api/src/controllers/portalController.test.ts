@@ -335,12 +335,16 @@ describe('portal routes', () => {
     }));
   });
 
-  it('lists only published exams from the authenticated student disciplines', async () => {
+  it('lists only published exams assigned to the authenticated student', async () => {
     const findMany = vi.spyOn(prisma.exam, 'findMany').mockResolvedValue([]);
     const response = await request(app).get('/api/portal/provas').set('Authorization', `Bearer ${token}`);
     expect(response.status).toBe(200);
     expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { disciplineId: { in: ['discipline-1'] }, isPublished: true }
+      where: {
+        disciplineId: { in: ['discipline-1'] },
+        isPublished: true,
+        participants: { some: { studentId: 'student-1' } }
+      }
     }));
   });
 
@@ -379,13 +383,39 @@ describe('portal routes', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual([{ id: 'question-1', text: 'Question?', alternatives: [{ id: 'alt-1', text: 'Answer' }] }]);
     expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ id: 'exam-1', disciplineId: { in: ['discipline-1'] }, isPublished: true })
+      where: expect.objectContaining({
+        id: 'exam-1',
+        disciplineId: { in: ['discipline-1'] },
+        isPublished: true,
+        participants: { some: { studentId: 'student-1' } }
+      })
+    }));
+  });
+
+  it('requires exam assignment before exposing the teacher evaluation', async () => {
+    const findFirst = vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue(null);
+    const response = await request(app).get('/api/portal/provas/exam-1/avaliacao-professor')
+      .set('Authorization', `Bearer ${token}`);
+    expect(response.status).toBe(404);
+    expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ participants: { some: { studentId: 'student-1' } } })
+    }));
+  });
+
+  it('requires exam assignment before accepting the teacher evaluation', async () => {
+    const findFirst = vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue(null);
+    const response = await request(app).post('/api/portal/provas/exam-1/avaliacao-professor')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ clarity: 'OTIMO', engagement: 'OTIMO', mastery: 'OTIMO' });
+    expect(response.status).toBe(404);
+    expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ participants: { some: { studentId: 'student-1' } } })
     }));
   });
 
   it('resumes an unfinished attempt without replacing its startedAt', async () => {
     const startedAt = new Date(Date.now() - 5 * 60_000);
-    vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({
+    const findFirst = vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({
       id: 'exam-1', endDate: new Date(Date.now() + 60 * 60_000), duration: 30,
       submissions: [{ id: 's', startedAt, submittedAt: null }], questions: []
     } as never);
@@ -393,6 +423,9 @@ describe('portal routes', () => {
     vi.spyOn(prisma.examSubmission, 'findUnique').mockResolvedValue({ id: 's', startedAt, submittedAt: null } as never);
     const response = await request(app).get('/api/portal/provas/exam-1/questoes').set('Authorization', `Bearer ${token}`);
     expect(response.status).toBe(200);
+    expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ participants: { some: { studentId: 'student-1' } } })
+    }));
     expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ update: {} }));
     const createdAt = upsert.mock.calls[0]?.[0].create.startedAt;
     expect(new Date(createdAt!).getTime()).toBeGreaterThan(startedAt.getTime());
@@ -458,7 +491,7 @@ describe('portal routes', () => {
   });
 
   it('submits an authorized exam using the JWT-derived student id', async () => {
-    vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({
+    const findFirst = vi.spyOn(prisma.exam, 'findFirst').mockResolvedValue({
       id: 'exam-1', title: 'Exam', disciplineId: 'discipline-1',
       startDate: new Date(Date.now() - 1000), endDate: new Date(Date.now() + 1000),
       questions: [{ id: 'question-1', weight: 2, statement: 'Q', alternatives: [
@@ -483,6 +516,9 @@ describe('portal routes', () => {
       .send({ studentId: 'attacker-student', answers: { 'question-1': 'alt-1' } });
 
     expect(response.status).toBe(200);
+    expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ participants: { some: { studentId: 'student-1' } } })
+    }));
     expect(transaction).toHaveBeenCalledTimes(1);
     expect(tx.examSubmission.findUnique).toHaveBeenCalledWith({ where: { examId_studentId: { examId: 'exam-1', studentId: 'student-1' } } });
     expect(tx.grade.upsert).toHaveBeenCalledTimes(1);

@@ -336,7 +336,11 @@ export const listStudentExams: PortalHandler = async (req, res) => {
   const { studentId, disciplineIds } = await context(req);
   const now = new Date();
   const exams = await prisma.exam.findMany({
-    where: { disciplineId: { in: disciplineIds }, isPublished: true },
+    where: {
+      disciplineId: { in: disciplineIds },
+      isPublished: true,
+      participants: { some: { studentId } }
+    },
     include: { discipline: true, submissions: { where: { studentId } } },
     orderBy: { startDate: 'desc' }
   });
@@ -376,7 +380,12 @@ function lessonsHaveEnded(lessons: Array<{ date: Date; endTime: Date | null }>, 
 export const getStudentExamTeacherEvaluation: PortalHandler = async (req, res) => {
   const { studentId, disciplineIds } = await context(req);
   const exam = await prisma.exam.findFirst({
-    where: { id: req.params.id, disciplineId: { in: disciplineIds }, isPublished: true },
+    where: {
+      id: req.params.id,
+      disciplineId: { in: disciplineIds },
+      isPublished: true,
+      participants: { some: { studentId } }
+    },
     select: { disciplineId: true, discipline: { select: { name: true, teacher: { select: { name: true } }, lessons: { select: { date: true, endTime: true } } } } }
   });
   if (!exam) return res.status(404).json({ message: 'Prova não encontrada' });
@@ -387,7 +396,12 @@ export const getStudentExamTeacherEvaluation: PortalHandler = async (req, res) =
 export const submitStudentExamTeacherEvaluation: PortalHandler = async (req, res) => {
   const { studentId, disciplineIds } = await context(req);
   const exam = await prisma.exam.findFirst({
-    where: { id: req.params.id, disciplineId: { in: disciplineIds }, isPublished: true },
+    where: {
+      id: req.params.id,
+      disciplineId: { in: disciplineIds },
+      isPublished: true,
+      participants: { some: { studentId } }
+    },
     select: { disciplineId: true, discipline: { select: { lessons: { select: { date: true, endTime: true } } } } }
   });
   if (!exam) return res.status(404).json({ message: 'Prova não encontrada' });
@@ -410,7 +424,14 @@ export const listStudentExamQuestions: PortalHandler = async (req, res) => {
   const { studentId, disciplineIds } = await context(req);
   const now = new Date();
   const exam = await prisma.exam.findFirst({
-    where: { id: req.params.id, disciplineId: { in: disciplineIds }, isPublished: true, startDate: { lte: now }, endDate: { gte: now } },
+    where: {
+      id: req.params.id,
+      disciplineId: { in: disciplineIds },
+      isPublished: true,
+      participants: { some: { studentId } },
+      startDate: { lte: now },
+      endDate: { gte: now }
+    },
     select: {
       id: true,
       endDate: true,
@@ -447,7 +468,12 @@ export const submitStudentExam: PortalHandler = async (req, res) => {
   const { studentId, disciplineIds } = await context(req);
   const examId = req.params.id;
   const exam = await prisma.exam.findFirst({
-    where: { id: examId, disciplineId: { in: disciplineIds }, isPublished: true },
+    where: {
+      id: examId,
+      disciplineId: { in: disciplineIds },
+      isPublished: true,
+      participants: { some: { studentId } }
+    },
     include: { questions: { include: { alternatives: true } } }
   });
   if (!exam) return res.status(404).json({ message: 'Prova não encontrada' });
