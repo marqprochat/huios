@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { deleteLesson } from '../actions';
 import LessonMaterials from './LessonMaterials';
+import { teacherNames } from '../lesson-teachers';
 
 interface Lesson {
   id: string;
@@ -13,6 +14,7 @@ interface Lesson {
   description: string | null;
   disciplines: {
     name: string;
+    teacher?: { name: string } | null;
     courseClasses: {
       name: string;
     }[]
@@ -40,6 +42,7 @@ export default function LessonDetailsModal({ lesson, onClose, onDelete, defaultL
   };
 
   const disciplineColor = getDisciplineColor(lesson.disciplines[0]?.name || '');
+  const teachers = teacherNames(lesson.disciplines);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -84,6 +87,18 @@ export default function LessonDetailsModal({ lesson, onClose, onDelete, defaultL
                        <div className="text-slate-900 dark:text-white font-bold">
                          {lesson.disciplines.flatMap(d => d.courseClasses.map(cc => cc.name)).join(', ')}
                        </div>
+                    </div>
+                 </div>
+
+                 <div className="flex items-start gap-4">
+                    <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+                       <span className="material-symbols-outlined text-primary">person</span>
+                    </div>
+                    <div>
+                       <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                         {lesson.disciplines.length > 1 ? 'Professores' : 'Professor'}
+                       </div>
+                       <div className="text-slate-900 dark:text-white font-bold">{teachers || 'Não definido'}</div>
                     </div>
                  </div>
 

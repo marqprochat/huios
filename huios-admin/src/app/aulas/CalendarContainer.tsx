@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { toLocalDate } from '@/lib/date-utils';
 import LessonDetailsModal from './components/LessonDetailsModal';
+import { teacherNames } from './lesson-teachers';
 import EventDetailsModal from './components/EventDetailsModal';
 
 interface Lesson {
@@ -13,7 +14,7 @@ interface Lesson {
   endTime: Date | null;
   locationName: string | null;
   description: string | null;
-  disciplines: { name: string; courseClasses: { name: string }[] }[];
+  disciplines: { name: string; teacher?: { name: string } | null; courseClasses: { name: string }[] }[];
 }
 
 interface EventItem {
@@ -143,7 +144,8 @@ function CalendarLink({ children, href, icon, tone }: { children: React.ReactNod
 }
 
 function LessonCard({ lesson, color, onSelect }: { lesson: Lesson; color: string; onSelect: () => void }) {
-  return <button onClick={onSelect} className={`w-full overflow-hidden rounded-lg border border-transparent p-1.5 text-left transition-all hover:scale-[1.02] hover:border-current active:scale-[0.98] ${color}/10`}><div className={`truncate text-[10px] font-black uppercase tracking-tighter ${color.replace('bg-', 'text-')}`}>{lesson.disciplines[0]?.name}{lesson.disciplines.length > 1 && ` (+${lesson.disciplines.length - 1})`}</div><div className="truncate text-[9px] font-medium text-slate-500">{lesson.startTime ? lesson.startTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '--:--'}</div></button>;
+  const teachers = teacherNames(lesson.disciplines);
+  return <button onClick={onSelect} className={`w-full overflow-hidden rounded-lg border border-transparent p-1.5 text-left transition-all hover:scale-[1.02] hover:border-current active:scale-[0.98] ${color}/10`}><div className={`truncate text-[10px] font-black uppercase tracking-tighter ${color.replace('bg-', 'text-')}`}>{lesson.disciplines[0]?.name}{lesson.disciplines.length > 1 && ` (+${lesson.disciplines.length - 1})`}</div><div className="truncate text-[9px] font-medium text-slate-500" title={teachers || 'Professor não definido'}>{teachers || 'Professor não definido'}</div><div className="truncate text-[9px] font-medium text-slate-500">{lesson.startTime ? lesson.startTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '--:--'}</div></button>;
 }
 
 function EventCard({ event, onSelect }: { event: EventItem; onSelect: () => void }) {

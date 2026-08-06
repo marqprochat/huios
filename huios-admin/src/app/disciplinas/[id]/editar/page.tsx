@@ -17,7 +17,8 @@ export default async function EditarDisciplinaPage({ params }: { params: Promise
                 include: {
                     disciplines: {
                         include: {
-                            courseClasses: true
+                            courseClasses: true,
+                            teacher: { select: { name: true } }
                         }
                     }
                 }

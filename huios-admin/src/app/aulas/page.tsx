@@ -7,7 +7,7 @@ export default async function AulasPage() {
   const [aulas, eventos, settings] = await Promise.all([
     prisma.lesson.findMany({
       include: {
-        disciplines: { include: { courseClasses: true } },
+        disciplines: { include: { courseClasses: true, teacher: { select: { name: true } } } },
         _count: { select: { attendances: true } }
       }
     }),
@@ -27,6 +27,7 @@ export default async function AulasPage() {
     description: aula.description,
     disciplines: aula.disciplines.map((discipline) => ({
       name: discipline.name,
+      teacher: discipline.teacher ? { name: discipline.teacher.name } : null,
       courseClasses: discipline.courseClasses.map((courseClass) => ({ name: courseClass.name }))
     }))
   }));
