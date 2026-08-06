@@ -44,6 +44,7 @@ model Student {
 
   // Relações novas
   submissions ExamSubmission[]
+  examParticipations ExamParticipant[]
   attendances Attendance[]
   grades Grade[]
   absenceJustifications AbsenceJustification[]
@@ -312,10 +313,23 @@ model Exam {
   // Relações
   questions Question[]
   submissions ExamSubmission[]
+  participants ExamParticipant[]
   grades Grade[] // Para vincular notas automáticas
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model ExamParticipant {
+  examId    String
+  studentId String
+  createdAt DateTime @default(now())
+
+  exam    Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([examId, studentId])
+  @@index([studentId])
 }
 
 model Question {
