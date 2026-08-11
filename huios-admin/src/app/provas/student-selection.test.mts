@@ -5,6 +5,7 @@ import {
   countSelectedClasses,
   filterClassGroups,
   selectClassStudents,
+  selectAllStudents,
   selectionAfterDisciplineChange,
   toggleStudentSelection,
 } from './student-selection.ts';
@@ -41,4 +42,8 @@ test('conta turmas selecionadas sem duplicar aluno e filtra por nome', () => {
   assert.equal(countSelectedClasses(groups, new Set(['a2'])), 2);
   assert.deepEqual(filterClassGroups(groups, 'carla').map(group => group.id), ['class-2']);
   assert.deepEqual(filterClassGroups(groups, 'turma a').map(group => group.id), ['class-1']);
+});
+
+test('seleciona todos os alunos elegíveis sem duplicar quem aparece em mais de uma turma', () => {
+  assert.deepEqual([...selectAllStudents(groups)], ['a1', 'a2', 'a3']);
 });

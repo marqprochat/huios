@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ExamClassGroup } from '@/lib/exam-participants';
 import StudentSelectionModal from './StudentSelectionModal';
-import { countSelectedClasses, selectionAfterDisciplineChange } from './student-selection';
+import { countSelectedClasses, selectAllStudents, selectionAfterDisciplineChange } from './student-selection';
 
 export interface ExamDisciplineOption {
   id: string;
@@ -43,12 +43,25 @@ export default function ExamForm({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(initialParticipantIds));
   const [modalOpen, setModalOpen] = useState(false);
   const [selectionError, setSelectionError] = useState('');
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   const discipline = useMemo(
     () => disciplines.find(item => item.id === disciplineId) ?? null,
     [disciplines, disciplineId],
   );
   const selectedClassCount = discipline ? countSelectedClasses(discipline.groups, selectedIds) : 0;
+  const eligibleStudentIds = useMemo(
+    () => (discipline ? selectAllStudents(discipline.groups) : new Set<string>()),
+    [discipline],
+  );
+  const allStudentsSelected = eligibleStudentIds.size > 0 && selectedIds.size === eligibleStudentIds.size;
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = selectedIds.size > 0 && !allStudentsSelected;
+    }
+  }, [allStudentsSelected, selectedIds.size]);
+
   const lockedIds = useMemo(() => new Set(lockedParticipantIds), [lockedParticipantIds]);
 
   const changeDiscipline = (nextDisciplineId: string) => {
@@ -102,6 +115,19 @@ export default function ExamForm({
                   </p>
                   <p className="mt-1 text-xs text-slate-500">Escolha quem poderá visualizar e responder esta prova.</p>
                 </div>
+                {!initialExam && (
+                  <label className="flex cursor-pointer items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200">
+                    <input
+                      ref={selectAllRef}
+                      type="checkbox"
+                      checked={allStudentsSelected}
+                      disabled={eligibleStudentIds.size === 0}
+                      onChange={() => setSelectedIds(allStudentsSelected ? new Set() : new Set(eligibleStudentIds))}
+                      className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                    />
+                    Selecionar todos
+                  </label>
+                )}
                 <button type="button" onClick={() => setModalOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:opacity-90">
                   <span className="material-symbols-outlined text-lg">group_add</span>
                   Selecionar alunos

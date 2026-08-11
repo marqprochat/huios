@@ -13,6 +13,10 @@ export function selectClassStudents(selected: Set<string>, studentIds: string[])
   return next;
 }
 
+export function selectAllStudents(groups: ExamClassGroup[]): Set<string> {
+  return new Set(groups.flatMap(group => group.students.map(student => student.id)));
+}
+
 export function clearClassStudents(
   selected: Set<string>,
   studentIds: string[],
