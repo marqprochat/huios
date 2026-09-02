@@ -70,9 +70,19 @@ export async function updateExam(id: string, formData: FormData) {
   const studentIds = parseParticipantIds(formData);
 
   await prisma.$transaction(async tx => {
-    assertParticipantSelection(studentIds, await eligibleStudentIds(tx, input.disciplineId, studentIds));
+    const exam = await tx.exam.findUnique({ where: { id }, select: { id: true } });
+    if (!exam) {
+      throw new Error('Esta prova não existe mais. Atualize a lista de provas e tente novamente.');
+    }
+
     const current = await tx.examParticipant.findMany({ where: { examId: id }, select: { studentId: true } });
     const currentIds = current.map(participant => participant.studentId);
+    // Participantes já vinculados seguem elegíveis mesmo sem matrícula ativa: sem isso a prova
+    // fica impossível de salvar quando um aluno tranca, conclui ou muda de turma.
+    assertParticipantSelection(studentIds, [
+      ...await eligibleStudentIds(tx, input.disciplineId, studentIds),
+      ...currentIds,
+    ]);
     const next = new Set(studentIds);
     const removedIds = currentIds.filter(studentId => !next.has(studentId));
     const submissions = removedIds.length > 0

@@ -39,6 +39,32 @@ export function groupDisciplineStudents(discipline: DisciplineStudentSource): Ex
     .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
 }
 
+export const INACTIVE_PARTICIPANTS_GROUP_ID = 'inactive-participants';
+
+/**
+ * Participantes já vinculados à prova podem ter perdido a matrícula ativa (trancamento,
+ * conclusão ou troca de turma). Sem este grupo eles ficariam invisíveis no modal e ainda
+ * assim seriam enviados no formulário, travando a edição da prova.
+ */
+export function appendInactiveParticipants(
+  groups: ExamClassGroup[],
+  participants: ExamClassStudent[],
+): ExamClassGroup[] {
+  const enrolled = new Set(groups.flatMap(group => group.students.map(student => student.id)));
+  const inactive = participants
+    .filter(participant => !enrolled.has(participant.id))
+    .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+
+  if (inactive.length === 0) return groups;
+
+  return [...groups, {
+    id: INACTIVE_PARTICIPANTS_GROUP_ID,
+    name: 'Sem matrícula ativa nesta disciplina',
+    courseName: 'Participantes já vinculados a esta prova',
+    students: inactive,
+  }];
+}
+
 export function parseParticipantIds(formData: FormData): string[] {
   return formData.getAll('studentIds')
     .filter((value): value is string => typeof value === 'string')

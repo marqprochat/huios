@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  appendInactiveParticipants,
   assertParticipantSelection,
   assertRemovableParticipants,
   groupDisciplineStudents,
@@ -67,4 +68,16 @@ test('impede remover participante que já iniciou a prova', () => {
     /já iniciou ou respondeu esta prova/,
   );
   assert.doesNotThrow(() => assertRemovableParticipants(['student-1'], [], []));
+});
+
+test('mantém participantes já vinculados que perderam a matrícula ativa', () => {
+  const groups = groupDisciplineStudents(discipline);
+  const withInactive = appendInactiveParticipants(groups, [
+    { id: 'student-1', name: 'Ana' },
+    { id: 'student-9', name: 'Zilda' },
+  ]);
+
+  assert.deepEqual(withInactive.slice(0, groups.length), groups);
+  assert.deepEqual(withInactive.at(-1)?.students, [{ id: 'student-9', name: 'Zilda' }]);
+  assert.equal(appendInactiveParticipants(groups, [{ id: 'student-1', name: 'Ana' }]), groups);
 });

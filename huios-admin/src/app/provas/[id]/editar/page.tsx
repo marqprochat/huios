@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
-import { groupDisciplineStudents } from '@/lib/exam-participants';
+import { appendInactiveParticipants, groupDisciplineStudents } from '@/lib/exam-participants';
 import { toBRDateTimeInput } from '@/lib/date-utils';
 import ExamForm from '../../ExamForm';
 import { deleteExam, publishExam, unpublishExam, updateExam } from '../../actions';
@@ -16,7 +16,7 @@ export default async function EditarProvaPage({ params }: Props) {
     prisma.exam.findUnique({
       where: { id },
       include: {
-        participants: { select: { studentId: true } },
+        participants: { select: { studentId: true, student: { select: { id: true, name: true } } } },
         submissions: { select: { studentId: true } },
         _count: { select: { questions: true } },
       },
@@ -39,11 +39,17 @@ export default async function EditarProvaPage({ params }: Props) {
 
   if (!exam) notFound();
 
-  const options = disciplines.map(discipline => ({
-    id: discipline.id,
-    name: discipline.name,
-    groups: groupDisciplineStudents(discipline),
-  }));
+  const examParticipants = exam.participants.map(participant => participant.student);
+  const options = disciplines.map(discipline => {
+    const groups = groupDisciplineStudents(discipline);
+    return {
+      id: discipline.id,
+      name: discipline.name,
+      groups: discipline.id === exam.disciplineId
+        ? appendInactiveParticipants(groups, examParticipants)
+        : groups,
+    };
+  });
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4 lg:p-8">
@@ -89,6 +95,7 @@ export default async function EditarProvaPage({ params }: Props) {
           <form action={async () => {
             'use server';
             await deleteExam(id);
+            redirect('/provas');
           }}>
             <button type="submit" className="px-4 py-2 text-sm font-bold text-red-500 transition-colors hover:text-red-600">Excluir Prova</button>
           </form>
