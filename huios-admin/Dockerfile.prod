@@ -32,9 +32,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # pg_dump/pg_restore e o tar GNU sustentam o backup e a restauracao feitos pela
-# tela de Configuracoes. O cliente do Alpine e igual ou mais novo que o servidor
-# Postgres 15 do compose, combinacao suportada oficialmente pelo pg_dump.
-RUN apk add --no-cache postgresql-client tar
+# tela de Configuracoes. O pacote "postgresql-client" generico do Alpine 3.23
+# resolve para o cliente 17, cujo pg_restore envia "SET transaction_timeout"
+# no preludio -- parametro que so existe a partir do Postgres 17 e quebra a
+# restauracao contra o Postgres 15 do docker-compose.yml com o erro
+# "unrecognized configuration parameter". O cliente 16 nao manda esse SET e
+# ainda assim e igual ou mais novo que o servidor, a combinacao suportada
+# oficialmente pelo pg_dump/pg_restore.
+RUN apk add --no-cache postgresql16-client tar
 
 # Diretorio dos pacotes de backup (volume backups_data no docker-compose).
 ENV BACKUP_DIR=/app/backups
