@@ -161,6 +161,7 @@ model User {
   student   Student?
   teamMember TeamMember?
   auditLogs AuditLog[] @relation("AuditActor")
+  backups   BackupRecord[]
 }
 
 model Role {
@@ -562,6 +563,13 @@ model SystemSettings {
   santanderPixKey            String?  // Chave PIX recebedora (e-mail, CPF/CNPJ, telefone ou aleatória)
   santanderWebhookConfigured Boolean? @default(false) // Webhook registrado na API do Santander
 
+  // Backup automatico (ver docs/superpowers/specs/2026-09-02-backup-restauracao-design.md)
+  backupEnabled        Boolean?  @default(true)
+  backupHour           Int?      @default(3)  // 0-23, horario de Brasilia
+  backupRetentionCount Int?      @default(14) // quantos backups AUTO manter
+  backupIncludeUploads Boolean?  @default(true)
+  lastBackupAt         DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -928,4 +936,23 @@ model EventAttendance {
   notes      String?
 
   @@unique([eventId, studentId])
+}
+
+// ============================================================
+// BACKUP E RESTAURACAO
+// ============================================================
+
+model BackupRecord {
+  id           String    @id @default(uuid())
+  fileName     String    @unique
+  sizeBytes    BigInt?
+  type         String    // AUTO | MANUAL | PRE_RESTORE
+  status       String    // RUNNING | SUCCESS | FAILED
+  errorMessage String?
+  createdAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  createdById  String?
+  createdBy    User?     @relation(fields: [createdById], references: [id])
+
+  @@index([createdAt])
 }

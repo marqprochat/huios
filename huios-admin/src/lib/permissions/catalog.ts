@@ -19,7 +19,7 @@ export const MODULE_ACTIONS = {
   avaliacoes: ['visualizar', 'gerenciar', 'notificar'],
   relatorios: ['visualizar', 'exportar'],
   financeiro: ['visualizar', 'criar', 'editar', 'excluir', 'conciliar', 'exportar'],
-  configuracoes: ['visualizar', 'editar'],
+  configuracoes: ['visualizar', 'editar', 'backup', 'restaurar'],
 } as const
 
 type ModuleKey = keyof typeof MODULE_ACTIONS

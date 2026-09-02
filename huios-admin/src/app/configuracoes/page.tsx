@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { ThemeToggle } from "../components/ThemeToggle"
+import { BackupTab } from "./BackupTab"
 import { useToast } from "../components/Toast/useToast"
 
 export default function ConfiguracoesPage() {
@@ -355,6 +356,17 @@ export default function ConfiguracoesPage() {
       >
         <span className="material-symbols-outlined">credit_card</span>
         Pagamentos
+      </button>
+      <button
+        onClick={() => setActiveTab("backup")}
+        className={`px-6 py-4 text-left text-sm font-bold flex items-center gap-3 transition-colors ${
+          activeTab === "backup"
+            ? "bg-primary/5 text-primary border-l-4 border-primary"
+            : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+        }`}
+      >
+        <span className="material-symbols-outlined">backup</span>
+        Backup
       </button>
             </nav>
           </div>
@@ -1183,6 +1195,8 @@ export default function ConfiguracoesPage() {
           )}
         </div>
       )}
+
+      {activeTab === "backup" && <BackupTab />}
           </div>
         </div>
       </div>

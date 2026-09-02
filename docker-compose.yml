@@ -77,7 +77,11 @@ services:
         condition: service_healthy
     volumes:
       - ./huios-admin/public/uploads:/app/public/uploads
+      # Pacotes de backup gerados pela tela de Configuracoes. Volume nomeado para
+      # sobreviver a rebuilds e recriacoes do container.
+      - backups_data:/app/backups
 
 volumes:
   postgres_data:
   uploads_data:
+  backups_data:

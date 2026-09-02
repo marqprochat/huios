@@ -31,6 +31,15 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# pg_dump/pg_restore e o tar GNU sustentam o backup e a restauracao feitos pela
+# tela de Configuracoes. O cliente do Alpine e igual ou mais novo que o servidor
+# Postgres 15 do compose, combinacao suportada oficialmente pelo pg_dump.
+RUN apk add --no-cache postgresql-client tar
+
+# Diretorio dos pacotes de backup (volume backups_data no docker-compose).
+ENV BACKUP_DIR=/app/backups
+RUN mkdir -p /app/backups
+
 # Environment variables for runtime
 ENV INTERNAL_API_URL=http://api:3001/api
 ENV NEXT_PUBLIC_API_URL=http://localhost:3001/api
