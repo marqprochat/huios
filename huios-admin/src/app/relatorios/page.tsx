@@ -29,6 +29,13 @@ const reports = [
     title: 'Alunos',
     description: 'Visão geral por turma: média, frequência e situação.',
   },
+  {
+    href: '/relatorios/avaliacoes',
+    icon: 'rate_review',
+    color: 'bg-indigo-50 text-indigo-600',
+    title: 'Avaliação do Professor',
+    description: 'Feedback dos alunos por professor ou por disciplina, com notas por critério.',
+  },
 ];
 
 export default function RelatoriosPage() {

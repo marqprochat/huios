@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { exportCSV } from '@/lib/exportCSV';
 import { exportAttendanceHTML, type AttendanceDay } from '@/lib/exportAttendanceHTML';
+import { exportReportPDF, REPORT_COLORS } from '@/lib/pdf/reportPDF';
 
 interface CourseClass { id: string; name: string; course: { name: string } }
 interface StudentStat {
@@ -34,6 +35,7 @@ export default function RelatorioPresencaPage() {
   const [studentStats, setStudentStats] = useState<StudentStat[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
   const [detailStudent, setDetailStudent] = useState<StudentStat | null>(null);
 
   useEffect(() => {
@@ -99,6 +101,106 @@ export default function RelatorioPresencaPage() {
     });
   };
 
+  const handleExportPDF = async () => {
+    setExportingPDF(true);
+    try {
+      await exportReportPDF({
+        title: 'Relatório de Presença',
+        subtitle: className,
+        fileName: `relatorio-presenca-${className}`,
+        filters: [
+          { label: 'Turma', value: className },
+          { label: 'Período', value: periodLabel ?? 'Todo o histórico' },
+          { label: 'Busca', value: search.trim() || 'Não informada' },
+        ],
+        metrics: [
+          { label: 'Alunos', value: filtered.length, color: REPORT_COLORS.slate },
+          { label: 'Aulas', value: lessons.length, color: REPORT_COLORS.blue },
+          { label: 'Faltas', value: filtered.reduce((a, s) => a + s.absent, 0), color: REPORT_COLORS.red },
+          { label: 'Frequência geral', value: `${overallPct}%`, color: overallPct >= 75 ? REPORT_COLORS.green : REPORT_COLORS.amber },
+        ],
+        sections: [
+          {
+            kind: 'table',
+            title: 'Frequência por aluno',
+            head: ['Aluno', 'Aulas', 'Presenças', 'Faltas', 'Justificadas', 'Frequência'],
+            body: filtered.map(s => [s.student.name, s.total, s.present, s.absent, s.excused, `${s.percentage}%`]),
+            columnStyles: {
+              1: { halign: 'center', cellWidth: 20 },
+              2: { halign: 'center', cellWidth: 24 },
+              3: { halign: 'center', cellWidth: 20 },
+              4: { halign: 'center', cellWidth: 26 },
+              5: { halign: 'center', cellWidth: 26, fontStyle: 'bold' },
+            },
+          },
+          {
+            kind: 'table',
+            title: 'Aulas do período',
+            head: ['Data', 'Disciplina', 'Local', 'Presentes', 'Faltas', 'Justificadas'],
+            body: lessons.map(l => [
+              new Date(l.date).toLocaleDateString('pt-BR'),
+              l.disciplineName || '—',
+              l.locationName ?? '—',
+              l.attendances.filter(a => a.status === 'PRESENT').length,
+              l.attendances.filter(a => a.status === 'ABSENT').length,
+              l.attendances.filter(a => a.status === 'EXCUSED').length,
+            ]),
+            columnStyles: {
+              0: { cellWidth: 26 },
+              3: { halign: 'center', cellWidth: 24 },
+              4: { halign: 'center', cellWidth: 20 },
+              5: { halign: 'center', cellWidth: 26 },
+            },
+          },
+        ],
+      });
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
+  const handleExportStudentPDF = async () => {
+    if (!detailStudent) return;
+    setExportingPDF(true);
+    try {
+      await exportReportPDF({
+        title: 'Relatório de Presença do Aluno',
+        subtitle: `${detailStudent.student.name} — ${className}`,
+        fileName: `presenca-${detailStudent.student.name}`,
+        orientation: 'portrait',
+        filters: [
+          { label: 'Aluno', value: detailStudent.student.name },
+          { label: 'Turma', value: className },
+          { label: 'Período', value: periodLabel ?? 'Todo o histórico' },
+        ],
+        metrics: [
+          { label: 'Aulas', value: detailStudent.total, color: REPORT_COLORS.slate },
+          { label: 'Presenças', value: detailStudent.present, color: REPORT_COLORS.green },
+          { label: 'Faltas', value: detailStudent.absent, color: REPORT_COLORS.red },
+          { label: 'Justificadas', value: detailStudent.excused, color: REPORT_COLORS.amber },
+          {
+            label: 'Frequência',
+            value: `${detailStudent.percentage}%`,
+            color: detailStudent.percentage >= 75 ? REPORT_COLORS.green : detailStudent.percentage >= 50 ? REPORT_COLORS.amber : REPORT_COLORS.red,
+          },
+        ],
+        sections: [{
+          kind: 'table',
+          title: 'Aula a aula',
+          head: ['Data', 'Disciplina', 'Situação'],
+          body: studentDays.map(d => [
+            new Date(d.date).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }),
+            d.disciplineName ?? '—',
+            STATUS_UI[d.status]?.label ?? d.status,
+          ]),
+          columnStyles: { 2: { halign: 'center', cellWidth: 34 } },
+        }],
+      });
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
   const freqColor = (pct: number) =>
     pct >= 75 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-red-600';
 
@@ -116,10 +218,16 @@ export default function RelatorioPresencaPage() {
           </div>
         </div>
         {studentStats.length > 0 && (
-          <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all">
-            <span className="material-symbols-outlined text-sm">download</span>
-            Exportar CSV
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+              <span className="material-symbols-outlined text-sm">download</span>
+              Exportar CSV
+            </button>
+            <button onClick={handleExportPDF} disabled={exportingPDF} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all disabled:cursor-not-allowed disabled:opacity-60">
+              <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+              {exportingPDF ? 'Gerando PDF...' : 'Exportar PDF'}
+            </button>
+          </div>
         )}
       </div>
 
@@ -341,11 +449,16 @@ export default function RelatorioPresencaPage() {
             </div>
 
             {/* Modal actions */}
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+              <button onClick={handleExportStudentPDF} disabled={exportingPDF}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all disabled:cursor-not-allowed disabled:opacity-60">
+                <span className="material-symbols-outlined text-base">picture_as_pdf</span>
+                {exportingPDF ? 'Gerando PDF...' : 'Exportar PDF'}
+              </button>
               <button onClick={handleExportStudent}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all">
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
                 <span className="material-symbols-outlined text-base">smartphone</span>
-                Exportar para celular (HTML / PDF)
+                Exportar para celular (HTML)
               </button>
             </div>
           </div>

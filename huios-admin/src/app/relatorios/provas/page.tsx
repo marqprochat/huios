@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { exportCSV } from '@/lib/exportCSV';
+import { exportReportPDF, REPORT_COLORS, type ReportSection } from '@/lib/pdf/reportPDF';
 
 interface StudentResult {
   studentId: string;
@@ -29,6 +30,7 @@ export default function RelatorioProvasPage() {
   const [exams, setExams] = useState<ExamRow[]>([]);
   const [disciplines, setDisciplines] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exportingPDF, setExportingPDF] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const [disciplineId, setDisciplineId] = useState('');
@@ -91,6 +93,87 @@ export default function RelatorioProvasPage() {
     exportCSV('provas', ['Prova', 'Disciplina', 'Turma', 'Status', 'Início', 'Fim', 'Aluno', 'Nota', 'Realizada em'], rows);
   };
 
+  const handleExportPDF = async () => {
+    setExportingPDF(true);
+    try {
+      const sections: ReportSection[] = [{
+        kind: 'table',
+        title: 'Resumo das provas',
+        head: ['Prova', 'Disciplina', 'Turma', 'Status', 'Início', 'Fim', 'Questões', 'Concluídas', 'Média'],
+        body: filtered.map(e => [
+          e.title,
+          e.discipline.name,
+          e.discipline.courseClasses.map(c => c.name).join(', ') || '—',
+          getStatus(e).label,
+          fmtDate(e.startDate),
+          fmtDate(e.endDate),
+          e.questionCount,
+          `${e.completedCount}/${e.submissionCount}`,
+          e.avgGrade !== null ? e.avgGrade.toFixed(1) : '—',
+        ]),
+        columnStyles: {
+          6: { halign: 'center' },
+          7: { halign: 'center' },
+          8: { halign: 'center', fontStyle: 'bold' },
+        },
+      }];
+
+      // Detalhamento individual de cada prova com os resultados por aluno.
+      filtered.forEach(e => {
+        sections.push({
+          kind: 'heading',
+          title: e.title,
+          subtitle: `${e.discipline.name} • ${e.discipline.courseClasses.map(c => c.name).join(', ') || 'sem turma'} • ${getStatus(e).label} • ${fmtDate(e.startDate)} a ${fmtDate(e.endDate)}`,
+        });
+        sections.push({
+          kind: 'metrics',
+          metrics: [
+            { label: 'Questões', value: e.questionCount, color: REPORT_COLORS.slate },
+            { label: 'Participantes', value: e.submissionCount, color: REPORT_COLORS.blue },
+            { label: 'Concluídas', value: e.completedCount, color: REPORT_COLORS.green },
+            { label: 'Média', value: e.avgGrade !== null ? e.avgGrade.toFixed(1) : '—', color: e.avgGrade !== null && e.avgGrade >= 7 ? REPORT_COLORS.green : REPORT_COLORS.amber },
+          ],
+        });
+        sections.push({
+          kind: 'table',
+          head: ['Aluno', 'Nota', 'Iniciada em', 'Realizada em'],
+          body: e.submissions.length
+            ? e.submissions.map(s => [
+              s.studentName,
+              s.score !== null ? s.score.toFixed(1) : '—',
+              fmtDateTime(s.startedAt),
+              s.submittedAt ? fmtDateTime(s.submittedAt) : 'Não entregue',
+            ])
+            : [['Nenhum aluno realizou esta prova', '—', '—', '—']],
+          columnStyles: {
+            1: { halign: 'center', cellWidth: 20 },
+            2: { halign: 'center', cellWidth: 38 },
+            3: { halign: 'center', cellWidth: 38 },
+          },
+        });
+      });
+
+      await exportReportPDF({
+        title: 'Relatório de Provas',
+        fileName: 'relatorio-provas',
+        filters: [
+          { label: 'Disciplina', value: disciplines.find(d => d.id === disciplineId)?.name ?? 'Todas' },
+          { label: 'Publicação', value: published === 'true' ? 'Publicadas' : published === 'false' ? 'Rascunhos' : 'Todas' },
+          { label: 'Busca', value: search.trim() || 'Não informada' },
+        ],
+        metrics: [
+          { label: 'Provas', value: filtered.length, color: REPORT_COLORS.slate },
+          { label: 'Participações', value: filtered.reduce((a, e) => a + e.submissionCount, 0), color: REPORT_COLORS.blue },
+          { label: 'Concluídas', value: filtered.reduce((a, e) => a + e.completedCount, 0), color: REPORT_COLORS.green },
+          { label: 'Média geral', value: avgAll ?? '—', color: avgAll && parseFloat(avgAll) >= 7 ? REPORT_COLORS.green : REPORT_COLORS.amber },
+        ],
+        sections,
+      });
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
   return (
     <div className="max-w-[1600px] mx-auto p-4 lg:p-8 space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -104,9 +187,14 @@ export default function RelatorioProvasPage() {
           </div>
         </div>
         {filtered.length > 0 && (
-          <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all">
-            <span className="material-symbols-outlined text-sm">download</span>Exportar CSV
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+              <span className="material-symbols-outlined text-sm">download</span>Exportar CSV
+            </button>
+            <button onClick={handleExportPDF} disabled={exportingPDF} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all disabled:cursor-not-allowed disabled:opacity-60">
+              <span className="material-symbols-outlined text-sm">picture_as_pdf</span>{exportingPDF ? 'Gerando PDF...' : 'Exportar PDF'}
+            </button>
+          </div>
         )}
       </div>
 

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { exportCSV } from '@/lib/exportCSV';
+import { exportReportPDF, REPORT_COLORS } from '@/lib/pdf/reportPDF';
 
 interface Grade {
   id: string; score: number; weight: number; type: string; title: string | null; createdAt: string;
@@ -22,6 +23,7 @@ export default function RelatorioNotasPage() {
   const [disciplines, setDisciplines] = useState<Option[]>([]);
   const [students, setStudents] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   const [classId, setClassId] = useState('');
   const [disciplineId, setDisciplineId] = useState('');
@@ -75,6 +77,49 @@ export default function RelatorioNotasPage() {
       ]));
   };
 
+  const handleExportPDF = async () => {
+    setExportingPDF(true);
+    try {
+      const selectedClass = classes.find(c => c.id === classId);
+      await exportReportPDF({
+        title: 'Relatório de Notas',
+        fileName: 'relatorio-notas',
+        filters: [
+          { label: 'Turma', value: selectedClass ? `${selectedClass.name} — ${selectedClass.course.name}` : 'Todas' },
+          { label: 'Disciplina', value: disciplines.find(d => d.id === disciplineId)?.name ?? 'Todas' },
+          { label: 'Aluno', value: students.find(s => s.id === studentId)?.name ?? 'Todos' },
+          { label: 'Tipo', value: type ? (TYPE_LABELS[type] ?? type) : 'Todos' },
+          { label: 'Busca', value: search.trim() || 'Não informada' },
+        ],
+        metrics: [
+          { label: 'Registros', value: filtered.length, color: REPORT_COLORS.slate },
+          { label: 'Média geral', value: avgGrade ?? '—', color: avgGrade && parseFloat(avgGrade) >= 7 ? REPORT_COLORS.green : REPORT_COLORS.amber },
+          { label: 'Aprovados', value: approvedPct != null ? `${approvedPct}%` : '—', color: REPORT_COLORS.green },
+          { label: 'Abaixo 7,0', value: filtered.filter(g => g.score < 7).length, color: REPORT_COLORS.red },
+        ],
+        sections: [{
+          kind: 'table',
+          head: ['Aluno', 'Disciplina', 'Turma', 'Tipo', 'Título', 'Nota', 'Data'],
+          body: filtered.map(g => [
+            g.student.name,
+            g.discipline.name,
+            g.discipline.courseClasses[0]?.name ?? '—',
+            TYPE_LABELS[g.type] ?? g.type,
+            g.title ?? g.exam?.title ?? '—',
+            g.score.toFixed(1),
+            new Date(g.createdAt).toLocaleDateString('pt-BR'),
+          ]),
+          columnStyles: {
+            5: { halign: 'center', cellWidth: 18 },
+            6: { halign: 'center', cellWidth: 24 },
+          },
+        }],
+      });
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
   return (
     <div className="max-w-[1600px] mx-auto p-4 lg:p-8 space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -88,9 +133,14 @@ export default function RelatorioNotasPage() {
           </div>
         </div>
         {filtered.length > 0 && (
-          <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all">
-            <span className="material-symbols-outlined text-sm">download</span>Exportar CSV
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+              <span className="material-symbols-outlined text-sm">download</span>Exportar CSV
+            </button>
+            <button onClick={handleExportPDF} disabled={exportingPDF} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all disabled:cursor-not-allowed disabled:opacity-60">
+              <span className="material-symbols-outlined text-sm">picture_as_pdf</span>{exportingPDF ? 'Gerando PDF...' : 'Exportar PDF'}
+            </button>
+          </div>
         )}
       </div>
 
