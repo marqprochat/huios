@@ -14,6 +14,7 @@ export default function PortalDashboard() {
   const [exams, setExams] = useState<any[]>([]);
   const [grades, setGrades] = useState<any[]>([]);
   const [openTurmasCount, setOpenTurmasCount] = useState(0);
+  const [openEvents, setOpenEvents] = useState<any[]>([]);
   const [loadingLessons, setLoadingLessons] = useState(true);
   const [loadingExams, setLoadingExams] = useState(true);
 
@@ -22,7 +23,20 @@ export default function PortalDashboard() {
     fetchExams();
     fetchGrades();
     fetchOpenTurmas();
+    fetchOpenEvents();
   }, []);
+
+  const fetchOpenEvents = async () => {
+    try {
+      const res = await fetch('/api/portal/eventos');
+      if (res.ok) {
+        const data = await res.json();
+        setOpenEvents(data.open || []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchOpenTurmas = async () => {
     try {
@@ -405,6 +419,28 @@ export default function PortalDashboard() {
               </div>
             )}
           </div>
+
+          {openEvents.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#135bec]">confirmation_number</span>
+                  <h3 className="font-semibold text-slate-900">Próximos Eventos</h3>
+                </div>
+                <Link href="/portal/eventos" className="text-[#135bec] text-xs font-semibold hover:underline">
+                  Ver Todos
+                </Link>
+              </div>
+              <div className="space-y-3">
+                {openEvents.slice(0, 3).map((evento: any) => (
+                  <Link key={evento.id} href="/portal/eventos" className="flex items-center justify-between rounded-xl border border-slate-100 p-3 hover:bg-slate-50 transition-colors">
+                    <span className="text-sm font-bold text-slate-800">{evento.title}</span>
+                    <span className="text-xs text-slate-400">{toLocalDate(evento.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Column */}
