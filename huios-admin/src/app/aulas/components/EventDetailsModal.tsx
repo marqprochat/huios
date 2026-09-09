@@ -13,6 +13,8 @@ interface EventItem {
   requiresCheckIn: boolean;
   locationName: string | null;
   courseClasses: { name: string }[];
+  registrationEnabled: boolean;
+  registrationCount: number;
 }
 
 interface EventDetailsModalProps {
@@ -59,6 +61,13 @@ export default function EventDetailsModal({ event, onClose, onDelete }: EventDet
           {event.requiresCheckIn && (
             <EventDetail icon="map" title="Localização (check-in)">
               <p className="font-bold text-slate-900 dark:text-white">{event.locationName || 'Não definido'}</p>
+            </EventDetail>
+          )}
+
+          {event.registrationEnabled && (
+            <EventDetail icon="confirmation_number" title="Inscrição">
+              <p className="font-bold text-slate-900 dark:text-white">{event.registrationCount} inscrito(s)</p>
+              <a href={`/eventos/${event.id}/inscritos`} className="text-sm text-primary hover:underline">Ver inscritos</a>
             </EventDetail>
           )}
 

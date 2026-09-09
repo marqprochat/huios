@@ -28,6 +28,8 @@ interface EventItem {
   requiresCheckIn: boolean;
   locationName: string | null;
   courseClasses: { name: string }[];
+  registrationEnabled: boolean;
+  registrationCount: number;
 }
 
 interface CalendarProps {
@@ -149,5 +151,5 @@ function LessonCard({ lesson, color, onSelect }: { lesson: Lesson; color: string
 }
 
 function EventCard({ event, onSelect }: { event: EventItem; onSelect: () => void }) {
-  return <button onClick={onSelect} className="flex w-full items-center gap-1 overflow-hidden rounded-lg border border-amber-500/30 bg-amber-500/10 p-1.5 text-left transition-all hover:scale-[1.02] active:scale-[0.98]"><span className="material-symbols-outlined text-[12px] leading-none text-amber-600">celebration</span><div className="min-w-0"><div className="truncate text-[10px] font-black uppercase tracking-tighter text-amber-600">{event.title}</div><div className="truncate text-[9px] font-medium text-slate-500">{event.startTime ? event.startTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '--:--'}</div></div></button>;
+  return <button onClick={onSelect} className="flex w-full items-center gap-1 overflow-hidden rounded-lg border border-amber-500/30 bg-amber-500/10 p-1.5 text-left transition-all hover:scale-[1.02] active:scale-[0.98]"><span className="material-symbols-outlined text-[12px] leading-none text-amber-600">celebration</span><div className="min-w-0"><div className="truncate text-[10px] font-black uppercase tracking-tighter text-amber-600">{event.title}{event.registrationEnabled ? ` · ${event.registrationCount} insc.` : ''}</div><div className="truncate text-[9px] font-medium text-slate-500">{event.startTime ? event.startTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '--:--'}</div></div></button>;
 }

@@ -11,8 +11,11 @@ export default async function AulasPage() {
         _count: { select: { attendances: true } }
       }
     }),
-    prisma.event.findMany({
-      include: { courseClasses: { select: { name: true } } },
+    (prisma as any).event.findMany({
+      include: {
+        courseClasses: { select: { name: true } },
+        _count: { select: { registrations: { where: { status: { in: ['PENDENTE', 'CONFIRMADA'] } } } } },
+      },
       orderBy: { date: 'asc' }
     }),
     prisma.systemSettings.findFirst()
@@ -32,7 +35,7 @@ export default async function AulasPage() {
     }))
   }));
 
-  const initialEvents = eventos.map((evento) => ({
+  const initialEvents = eventos.map((evento: any) => ({
     id: evento.id,
     title: evento.title,
     type: evento.type,
@@ -42,7 +45,9 @@ export default async function AulasPage() {
     endTime: evento.endTime,
     requiresCheckIn: evento.requiresCheckIn,
     locationName: evento.locationName,
-    courseClasses: evento.courseClasses
+    courseClasses: evento.courseClasses,
+    registrationEnabled: evento.registrationEnabled,
+    registrationCount: evento._count.registrations,
   }));
 
   return (
