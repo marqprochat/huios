@@ -16,6 +16,18 @@ export async function register() {
     }
   }, { timezone: 'America/Sao_Paulo' });
 
+  // Todo dia às 07:00 de Brasília: expira inscrições de evento cuja reserva de
+  // vaga venceu sem pagamento, liberando a vaga e cancelando a cobrança.
+  cron.schedule('0 7 * * *', async () => {
+    try {
+      const { expireEventReservations } = await import('./src/lib/jobs/eventReservations');
+      const result = await expireEventReservations();
+      console.log('[eventReservations] executado:', result);
+    } catch (error) {
+      console.error('[eventReservations] falhou:', error);
+    }
+  }, { timezone: 'America/Sao_Paulo' });
+
   // Backup automático. O cron dispara de hora em hora e a própria tarefa decide
   // se aquela é a hora configurada — assim, mudar o horário na tela de
   // Configurações passa a valer sem reiniciar o container.

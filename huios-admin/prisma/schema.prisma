@@ -51,6 +51,7 @@ model Student {
   financialTransactions FinancialTransaction[]
   studentNotifications StudentNotification[]
   eventAttendances EventAttendance[]
+  eventRegistrations EventRegistration[]
 
   // Vínculos de matrícula
   familyId String?
@@ -755,6 +756,7 @@ model FinancialTransaction {
 
   payments      Payment[]
   attachments   TransactionAttachment[]
+  eventRegistration EventRegistration?
 
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
@@ -906,10 +908,113 @@ model Event {
   longitude       Float?
   radiusMeters    Int     @default(100)
 
+  // Inscrição (excursões, eventos extras — pagos ou gratuitos)
+  registrationEnabled  Boolean   @default(false)
+  isPublished          Boolean   @default(false)
+  publicSlug           String?   @unique
+  registrationOpensAt  DateTime?
+  registrationClosesAt DateTime?
+  capacity             Int?
+  reservationHours     Int       @default(24)
+
+  // Apresentação e local (página pública)
+  bannerUrl       String?
+  locationAddress String?
+  mapUrl          String?
+
+  // Logística (excursões)
+  meetingPoint  String?
+  meetingTime   DateTime?
+  returnTime    DateTime?
+  transportInfo String?
+
+  // Informações ao inscrito
+  includedItems      String?
+  whatToBring        String?
+  extraNotes         String?
+  organizerName      String?
+  organizerPhone     String?
+  cancellationPolicy String?
+
+  tickets       EventTicket[]
+  customFields  EventCustomField[]
+  registrations EventRegistration[]
+
   attendances EventAttendance[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model EventTicket {
+  id           String   @id @default(cuid())
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  priceStudent Float    @default(0)
+  priceGeneral Float    @default(0)
+  quantity     Int?
+  salesStart   DateTime?
+  salesEnd     DateTime?
+  audience     String   @default("ALL") // ALL | STUDENT | EXTERNAL
+  isActive     Boolean  @default(true)
+  order        Int      @default(0)
+
+  registrations EventRegistration[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId])
+}
+
+model EventRegistration {
+  id       String @id @default(cuid())
+  eventId  String
+  event    Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticketId String
+  ticket   EventTicket @relation(fields: [ticketId], references: [id])
+
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id])
+  isStudent Boolean  @default(false)
+
+  name  String
+  email String
+  phone String?
+  cpf   String?
+
+  amount  Float
+  status  String @default("PENDENTE") // PENDENTE | CONFIRMADA | CANCELADA | EXPIRADA
+  answers Json?
+
+  transactionId String?               @unique
+  transaction   FinancialTransaction? @relation(fields: [transactionId], references: [id])
+
+  reservedUntil DateTime?
+  confirmedAt   DateTime?
+  canceledAt    DateTime?
+  notes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId, status])
+  @@index([studentId])
+}
+
+model EventCustomField {
+  id       String @id @default(cuid())
+  eventId  String
+  event    Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  label    String
+  type     String   @default("TEXT") // TEXT | SELECT | CHECKBOX
+  options  String[] @default([])
+  required Boolean  @default(false)
+  order    Int      @default(0)
+
+  @@index([eventId])
 }
 
 model EventAttendance {
