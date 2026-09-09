@@ -103,7 +103,7 @@ export default function CalendarContainer({ initialLessons, initialEvents = [], 
           </div>
           <CalendarLink href="/aulas/lote" icon="layers" tone="secondary">Cadastro em Lote</CalendarLink>
           <CalendarLink href="/aulas/novo" icon="add" tone="primary">Aula Única</CalendarLink>
-          <CalendarLink href="/aulas/eventos/novo" icon="celebration" tone="event">Novo Evento</CalendarLink>
+          <CalendarLink href="/eventos/novo" icon="celebration" tone="event">Novo Evento</CalendarLink>
         </div>
       </div>
 

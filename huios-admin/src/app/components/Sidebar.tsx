@@ -32,6 +32,7 @@ export function Sidebar({ user, onLogout }: { user: UserData | null; onLogout: (
   const academic = items([
     { permission: 'provas.visualizar', href: '/provas', icon: 'quiz', label: 'Provas' },
     { permission: 'aulas.visualizar', href: '/aulas', icon: 'calendar_today', label: 'Aulas' },
+    { permission: 'eventos.visualizar', href: '/eventos', icon: 'confirmation_number', label: 'Eventos' },
     { permission: 'boletins.visualizar', href: '/boletins', icon: 'grade', label: 'Boletins' },
     { permission: 'avaliacoes.visualizar', href: '/avaliacoes', icon: 'rate_review', label: 'Avaliações' },
   ])
