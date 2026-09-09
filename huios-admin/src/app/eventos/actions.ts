@@ -390,7 +390,7 @@ export async function cancelRegistration(registrationId: string) {
   if (registration.transactionId) {
     await (prisma as any).financialTransaction.updateMany({
       where: { id: registration.transactionId, status: 'PENDENTE' },
-      data: { status: 'CANCELADA' },
+      data: { status: 'CANCELADO' },
     });
   }
 

@@ -30,7 +30,7 @@ export async function expireEventReservations(now: Date = new Date()): Promise<E
   if (transactionIds.length > 0) {
     await (prisma as any).financialTransaction.updateMany({
       where: { id: { in: transactionIds }, status: 'PENDENTE' },
-      data: { status: 'CANCELADA' },
+      data: { status: 'CANCELADO' },
     });
   }
 
