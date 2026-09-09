@@ -40,17 +40,18 @@ export async function POST(request: Request) {
 
     const tx = await (prisma as any).financialTransaction.findUnique({
       where: { id: body.transactionId },
-      include: { student: true },
+      include: { student: true, eventRegistration: true },
     });
     if (!tx) return NextResponse.json({ error: 'Cobrança não encontrada.' }, { status: 404 });
     if (tx.status === 'PAGO') return NextResponse.json({ error: 'Esta cobrança já foi paga.' }, { status: 409 });
 
     const amountCents = Math.round((tx.amount as number) * 100);
+    const registration = tx.eventRegistration;
     const customer = {
-      name: tx.student?.name || 'Aluno',
-      email: tx.student?.email || 'sememail@huios.com.br',
-      taxId: tx.student?.cpf || null,
-      phone: tx.student?.phone || null,
+      name: tx.student?.name || registration?.name || 'Cliente',
+      email: tx.student?.email || registration?.email || 'sememail@huios.com.br',
+      taxId: tx.student?.cpf || registration?.cpf || null,
+      phone: tx.student?.phone || registration?.phone || null,
     };
 
     // O webhook precisa de uma URL pública em HTTPS. Em ambiente local o origin

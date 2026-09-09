@@ -21,7 +21,7 @@ export default async function PagamentoPage({
 
   const tx = await (prisma as any).financialTransaction.findUnique({
     where: { id: transactionId },
-    include: { student: { select: { name: true } } },
+    include: { student: { select: { name: true } }, eventRegistration: { select: { name: true } } },
   });
   if (!tx) notFound();
 
@@ -53,7 +53,7 @@ export default async function PagamentoPage({
             transactionId={tx.id}
             description={tx.description}
             amount={tx.amount}
-            studentName={tx.student?.name ?? ''}
+            studentName={tx.student?.name ?? tx.eventRegistration?.name ?? ''}
             alreadyPaid={tx.status === 'PAGO'}
             publicKey={publicKey}
             enabledMethods={enabledMethods}

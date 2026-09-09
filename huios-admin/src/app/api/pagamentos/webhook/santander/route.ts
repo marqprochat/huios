@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { confirmRegistrationForTransaction } from '@/lib/events';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
           reference: pix?.endToEndId || txid,
         },
       });
+      await confirmRegistrationForTransaction(payment.transactionId);
     }
 
     return NextResponse.json({ received: true });

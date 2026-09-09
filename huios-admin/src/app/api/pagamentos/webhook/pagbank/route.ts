@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
 import { mapStatus, getPagBankConfig } from '@/lib/pagbank';
+import { confirmRegistrationForTransaction } from '@/lib/events';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,6 +70,7 @@ export async function POST(request: Request) {
             reference: chargeId ?? payment.gatewayChargeId,
           },
         });
+        await confirmRegistrationForTransaction(payment.transactionId);
       }
     }
 
