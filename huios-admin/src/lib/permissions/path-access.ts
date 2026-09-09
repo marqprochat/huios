@@ -56,6 +56,10 @@ const pathPermissions: PathPermission[] = [
   { pattern: '/cursos/novo', requirement: { kind: 'permission', permission: 'cursos.criar' } },
   { pattern: '/turmas/novo', requirement: { kind: 'permission', permission: 'turmas.criar' } },
   { pattern: '/provas/novo', requirement: { kind: 'permission', permission: 'provas.criar' } },
+  { pattern: '/eventos/:id/inscritos', requirement: { kind: 'permission', permission: 'eventos.visualizar' } },
+  { pattern: '/eventos/:id/editar', requirement: { kind: 'permission', permission: 'eventos.editar' } },
+  { pattern: '/eventos/novo', requirement: { kind: 'permission', permission: 'eventos.criar' } },
+  { pattern: '/eventos', requirement: { kind: 'permission', permission: 'eventos.visualizar' } },
   { pattern: '/aulas/eventos/novo', requirement: { kind: 'permission', permission: 'aulas.criar' } },
   { pattern: '/aulas/lote', requirement: { kind: 'permission', permission: 'aulas.criar' } },
   { pattern: '/aulas/novo', requirement: { kind: 'permission', permission: 'aulas.criar' } },
@@ -132,7 +136,8 @@ export function resolvePathRequirement(pathname: string): PathRequirement {
   if (
     normalized === '/login' ||
     normalized === '/portal/login' ||
-    hasPathPrefix(normalized, '/matricula')
+    hasPathPrefix(normalized, '/matricula') ||
+    hasPathPrefix(normalized, '/evento')
   ) {
     return { kind: 'public' }
   }

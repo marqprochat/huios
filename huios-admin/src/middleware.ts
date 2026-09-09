@@ -21,6 +21,10 @@ function isPublicEnroll(pathname: string): boolean {
     return pathname === '/matricula' || pathname.startsWith('/matricula/');
 }
 
+function isPublicEvent(pathname: string): boolean {
+    return pathname === '/evento' || pathname.startsWith('/evento/');
+}
+
 function isStaticPath(pathname: string): boolean {
     return (
         pathname.startsWith('/_next') ||
@@ -38,7 +42,8 @@ export async function middleware(request: NextRequest) {
 
     const isPublicPath =
         PUBLIC_PATHS.some((path) => pathname.startsWith(path)) ||
-        isPublicEnroll(pathname);
+        isPublicEnroll(pathname) ||
+        isPublicEvent(pathname);
     const token = request.cookies.get(COOKIE_NAME)?.value;
 
     if (!token) {

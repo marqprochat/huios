@@ -156,6 +156,27 @@ test('does not confuse public enrollment with admin enrollments', () => {
   })
 })
 
+test('does not confuse public event pages with admin eventos', () => {
+  assert.deepEqual(resolvePathRequirement('/evento'), { kind: 'public' })
+  assert.deepEqual(resolvePathRequirement('/evento/excursao-israel-2026'), { kind: 'public' })
+  assert.deepEqual(resolvePathRequirement('/eventos'), {
+    kind: 'permission',
+    permission: 'eventos.visualizar',
+  })
+  assert.deepEqual(resolvePathRequirement('/eventos/novo'), {
+    kind: 'permission',
+    permission: 'eventos.criar',
+  })
+  assert.deepEqual(resolvePathRequirement(`/eventos/${UUID}/editar`), {
+    kind: 'permission',
+    permission: 'eventos.editar',
+  })
+  assert.deepEqual(resolvePathRequirement(`/eventos/${UUID}/inscritos`), {
+    kind: 'permission',
+    permission: 'eventos.visualizar',
+  })
+})
+
 test('unknown administrative paths deny by default', () => {
   for (const path of [
     '/administracao-futura',
