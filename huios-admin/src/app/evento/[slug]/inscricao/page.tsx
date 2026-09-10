@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
@@ -35,7 +36,11 @@ export default async function InscricaoPage({
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4">
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-lg mx-auto space-y-4">
+        <Link href={`/evento/${slug}`} className="inline-flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-primary transition-colors">
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          Voltar para o evento
+        </Link>
         <InscricaoForm
           eventId={evento.id}
           eventTitle={evento.title}

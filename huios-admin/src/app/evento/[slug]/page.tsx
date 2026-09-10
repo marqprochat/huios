@@ -34,6 +34,10 @@ export default async function EventoDetalhePage({ params }: { params: Promise<{ 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4">
       <div className="max-w-2xl mx-auto space-y-6">
+        <Link href="/evento" className="inline-flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-primary transition-colors">
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          Voltar para eventos
+        </Link>
         {evento.bannerUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={evento.bannerUrl} alt={evento.title} className="w-full h-56 object-cover rounded-2xl" />

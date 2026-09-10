@@ -16,7 +16,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const isLoginPage = pathname === "/login"
     const isPortalRoute = pathname.startsWith("/portal")
     const isPublicEnroll = pathname === "/matricula" || pathname.startsWith("/matricula/")
-    const isBare = isLoginPage || isPortalRoute || isPublicEnroll
+    const isPublicEvent = pathname === "/evento" || pathname.startsWith("/evento/")
+    const isBare = isLoginPage || isPortalRoute || isPublicEnroll || isPublicEvent
 
     useEffect(() => {
         if (isBare) {
