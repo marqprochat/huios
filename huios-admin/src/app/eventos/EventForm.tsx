@@ -8,6 +8,7 @@ import type { TicketInput, CustomFieldInput } from './actions';
 const inputCls = 'w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all dark:text-white';
 const labelCls = 'text-sm font-bold text-slate-700 dark:text-slate-300';
 const sectionTitleCls = 'text-base font-bold text-slate-800 dark:text-slate-200 mb-4';
+const fieldLabelCls = 'text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 block';
 
 export interface EventFormValues {
   id?: string;
@@ -275,21 +276,45 @@ export default function EventForm({ mode, initialValues, courseClasses, action }
             {tickets.map((t) => (
               <div key={t._key} className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <input placeholder="Nome do lote" value={t.name} onChange={(e) => updateTicket(t._key, { name: e.target.value })} className={inputCls} />
-                  <input type="number" placeholder="Preço aluno" value={t.priceStudent} onChange={(e) => updateTicket(t._key, { priceStudent: parseFloat(e.target.value) || 0 })} className={inputCls} />
-                  <input type="number" placeholder="Preço não-aluno" value={t.priceGeneral} onChange={(e) => updateTicket(t._key, { priceGeneral: parseFloat(e.target.value) || 0 })} className={inputCls} />
-                  <input type="number" placeholder="Vagas (vazio=ilimitado)" value={t.quantity ?? ''} onChange={(e) => updateTicket(t._key, { quantity: e.target.value ? parseInt(e.target.value, 10) : null })} className={inputCls} />
-                  <input type="date" placeholder="Início da venda" value={t.salesStart ?? ''} onChange={(e) => updateTicket(t._key, { salesStart: e.target.value || null })} className={inputCls} />
-                  <input type="date" placeholder="Fim da venda" value={t.salesEnd ?? ''} onChange={(e) => updateTicket(t._key, { salesEnd: e.target.value || null })} className={inputCls} />
-                  <select value={t.audience} onChange={(e) => updateTicket(t._key, { audience: e.target.value as any })} className={inputCls}>
-                    <option value="ALL">Todos</option>
-                    <option value="STUDENT">Só alunos</option>
-                    <option value="EXTERNAL">Só não-alunos</option>
-                  </select>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" checked={t.isActive} onChange={(e) => updateTicket(t._key, { isActive: e.target.checked })} className="h-4 w-4" />
-                    <span className="text-sm">Ativo</span>
-                  </label>
+                  <div>
+                    <label className={fieldLabelCls}>Nome do lote</label>
+                    <input placeholder="Ex: Lote único" value={t.name} onChange={(e) => updateTicket(t._key, { name: e.target.value })} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={fieldLabelCls}>Preço aluno (R$)</label>
+                    <input type="number" placeholder="0" value={t.priceStudent} onChange={(e) => updateTicket(t._key, { priceStudent: parseFloat(e.target.value) || 0 })} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={fieldLabelCls}>Preço não-aluno (R$)</label>
+                    <input type="number" placeholder="0" value={t.priceGeneral} onChange={(e) => updateTicket(t._key, { priceGeneral: parseFloat(e.target.value) || 0 })} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={fieldLabelCls}>Vagas (vazio = ilimitado)</label>
+                    <input type="number" placeholder="Ilimitado" value={t.quantity ?? ''} onChange={(e) => updateTicket(t._key, { quantity: e.target.value ? parseInt(e.target.value, 10) : null })} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={fieldLabelCls}>Início da venda</label>
+                    <input type="date" value={t.salesStart ?? ''} onChange={(e) => updateTicket(t._key, { salesStart: e.target.value || null })} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={fieldLabelCls}>Fim da venda</label>
+                    <input type="date" value={t.salesEnd ?? ''} onChange={(e) => updateTicket(t._key, { salesEnd: e.target.value || null })} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={fieldLabelCls}>Público-alvo</label>
+                    <select value={t.audience} onChange={(e) => updateTicket(t._key, { audience: e.target.value as any })} className={inputCls}>
+                      <option value="ALL">Todos</option>
+                      <option value="STUDENT">Só alunos</option>
+                      <option value="EXTERNAL">Só não-alunos</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col justify-end">
+                    <label className={fieldLabelCls}>Situação</label>
+                    <label className="flex items-center gap-2 h-[46px]">
+                      <input type="checkbox" checked={t.isActive} onChange={(e) => updateTicket(t._key, { isActive: e.target.checked })} className="h-4 w-4" />
+                      <span className="text-sm">Ativo</span>
+                    </label>
+                  </div>
                 </div>
                 <button type="button" onClick={() => removeTicket(t._key)} className="text-red-500 text-xs font-bold hover:underline">Remover lote</button>
               </div>
@@ -310,21 +335,33 @@ export default function EventForm({ mode, initialValues, courseClasses, action }
             {customFields.map((f) => (
               <div key={f._key} className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <input placeholder="Rótulo (ex: Tamanho da camiseta)" value={f.label} onChange={(e) => updateField(f._key, { label: e.target.value })} className={inputCls} />
-                  <select value={f.type} onChange={(e) => updateField(f._key, { type: e.target.value as any })} className={inputCls}>
-                    <option value="TEXT">Texto</option>
-                    <option value="SELECT">Opções (seleção)</option>
-                    <option value="CHECKBOX">Confirmação (sim/não)</option>
-                  </select>
+                  <div>
+                    <label className={fieldLabelCls}>Rótulo</label>
+                    <input placeholder="Ex: Tamanho da camiseta" value={f.label} onChange={(e) => updateField(f._key, { label: e.target.value })} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={fieldLabelCls}>Tipo de resposta</label>
+                    <select value={f.type} onChange={(e) => updateField(f._key, { type: e.target.value as any })} className={inputCls}>
+                      <option value="TEXT">Texto</option>
+                      <option value="SELECT">Opções (seleção)</option>
+                      <option value="CHECKBOX">Confirmação (sim/não)</option>
+                    </select>
+                  </div>
                   {f.type === 'SELECT' && (
-                    <input placeholder="Opções separadas por vírgula" value={f.options.join(', ')}
-                      onChange={(e) => updateField(f._key, { options: e.target.value.split(',').map((o) => o.trim()).filter(Boolean) })}
-                      className={inputCls} />
+                    <div>
+                      <label className={fieldLabelCls}>Opções (separadas por vírgula)</label>
+                      <input placeholder="Ex: P, M, G, GG" value={f.options.join(', ')}
+                        onChange={(e) => updateField(f._key, { options: e.target.value.split(',').map((o) => o.trim()).filter(Boolean) })}
+                        className={inputCls} />
+                    </div>
                   )}
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" checked={f.required} onChange={(e) => updateField(f._key, { required: e.target.checked })} className="h-4 w-4" />
-                    <span className="text-sm">Obrigatório</span>
-                  </label>
+                  <div className="flex flex-col justify-end">
+                    <label className={fieldLabelCls}>Situação</label>
+                    <label className="flex items-center gap-2 h-[46px]">
+                      <input type="checkbox" checked={f.required} onChange={(e) => updateField(f._key, { required: e.target.checked })} className="h-4 w-4" />
+                      <span className="text-sm">Obrigatório</span>
+                    </label>
+                  </div>
                 </div>
                 <button type="button" onClick={() => removeField(f._key)} className="text-red-500 text-xs font-bold hover:underline">Remover campo</button>
               </div>
