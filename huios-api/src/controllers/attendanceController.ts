@@ -253,6 +253,65 @@ export const bulkUpdateAttendances = async (req: Request, res: Response) => {
   }
 };
 
+// Solicita manualmente que o aluno envie um resumo da aula perdida (coordenação).
+// Independe da regra automática de 2 faltas: pode ser usado mesmo com 1 falta.
+export const requestAttendanceSummary = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user?.id || null;
+
+    const existing = await prisma.attendance.findUnique({
+      where: { id },
+      include: {
+        student: { select: { name: true, userId: true } },
+        lesson: { select: { disciplines: { select: { name: true } } } }
+      }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Presença não encontrada' });
+    }
+    if (existing.status !== 'ABSENT') {
+      return res.status(400).json({ error: 'Só é possível solicitar resumo para faltas' });
+    }
+
+    const attendance = await prisma.attendance.update({
+      where: { id },
+      data: { summaryRequestedAt: new Date(), summaryRequestedById: userId }
+    });
+
+    const disciplineName = existing.lesson.disciplines.map(d => d.name).join(' / ') || 'a disciplina';
+
+    if (existing.student.userId) {
+      await sendPushToUser(
+        existing.student.userId,
+        '📋 Resumo solicitado',
+        `A coordenação solicitou que você envie um resumo da aula perdida em "${disciplineName}".`,
+      );
+    }
+
+    res.json(attendance);
+  } catch (error) {
+    console.error('Error requesting attendance summary:', error);
+    res.status(500).json({ error: 'Failed to request attendance summary' });
+  }
+};
+
+// Cancela uma solicitação manual de resumo feita por engano
+export const cancelAttendanceSummaryRequest = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const attendance = await prisma.attendance.update({
+      where: { id },
+      data: { summaryRequestedAt: null, summaryRequestedById: null }
+    });
+    res.json(attendance);
+  } catch (error) {
+    console.error('Error cancelling attendance summary request:', error);
+    res.status(500).json({ error: 'Failed to cancel attendance summary request' });
+  }
+};
+
 // Get student attendance report
 export const getStudentAttendanceReport = async (req: Request, res: Response) => {
   try {

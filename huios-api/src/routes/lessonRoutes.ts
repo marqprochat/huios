@@ -11,7 +11,9 @@ import {
 import {
   getAttendancesByLesson,
   updateAttendance,
-  bulkUpdateAttendances
+  bulkUpdateAttendances,
+  requestAttendanceSummary,
+  cancelAttendanceSummaryRequest
 } from '../controllers/attendanceController';
 import {
   uploadMaterial,
@@ -66,6 +68,8 @@ router.post('/:lessonId/checkout', authenticateToken, requireApiPermission('pres
 // Attendance routes (nested under lesson)
 router.get('/:lessonId/attendances', authenticateToken, requireApiPermission('presenca.visualizar'), getAttendancesByLesson);
 router.put('/:lessonId/attendances/bulk', authenticateToken, requireApiPermission('presenca.registrar'), bulkUpdateAttendances);
+router.post('/:lessonId/attendances/:id/solicitar-resumo', authenticateToken, requireApiPermission('presenca.registrar'), requestAttendanceSummary);
+router.delete('/:lessonId/attendances/:id/solicitar-resumo', authenticateToken, requireApiPermission('presenca.registrar'), cancelAttendanceSummaryRequest);
 
 // Material routes (nested under lesson)
 router.post('/:lessonId/materials', authenticateToken, requireApiPermission('aulas.editar'), upload.single('file'), uploadMaterial);

@@ -461,6 +461,10 @@ model Attendance {
   markedAt DateTime?
   notes String? // Observações
 
+  // Solicitação manual de resumo pela coordenação (independe da regra automática de 2 faltas)
+  summaryRequestedAt   DateTime?
+  summaryRequestedById String?
+
   justification AbsenceJustification?
 
   @@unique([lessonId, studentId]) // Um aluno por aula

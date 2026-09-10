@@ -109,7 +109,8 @@ export async function GET() {
           id: a.id,
           lessonDate: a.lesson.date,
           status: a.status,
-          justification: a.justification
+          justification: a.justification,
+          summaryRequested: !!a.summaryRequestedAt
         }))
       };
     });

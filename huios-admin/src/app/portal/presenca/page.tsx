@@ -16,6 +16,7 @@ interface AbsenceRecord {
   lessonDate: string;
   status: string;
   justification: AbsenceJustification | null;
+  summaryRequested: boolean;
 }
 
 interface DisciplineAbsences {
@@ -240,7 +241,7 @@ export default function PresencaPortalPage() {
                     const justCfg = absence.justification
                       ? justificationStatusConfig[absence.justification.status]
                       : null;
-                    const canUpload = discipline.ruleStatus === 'NEEDS_JUSTIFICATION' &&
+                    const canUpload = (discipline.ruleStatus === 'NEEDS_JUSTIFICATION' || absence.summaryRequested) &&
                       (!absence.justification || absence.justification.status === 'REJECTED');
 
                     return (
@@ -259,6 +260,11 @@ export default function PresencaPortalPage() {
                               {absence.justification.fileName && (
                                 <span className="opacity-70 ml-1">• {absence.justification.fileName}</span>
                               )}
+                            </div>
+                          ) : absence.summaryRequested ? (
+                            <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700">
+                              <span className="material-symbols-outlined text-xs">forum</span>
+                              Resumo solicitado pela coordenação
                             </div>
                           ) : (
                             <p className="text-xs text-slate-400 mt-0.5">Sem justificativa</p>

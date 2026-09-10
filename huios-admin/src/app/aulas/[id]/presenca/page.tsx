@@ -26,6 +26,7 @@ interface Attendance {
   checkOutAt: string | null;
   checkOutDistance: number | null;
   markedAt: string | null;
+  summaryRequestedAt: string | null;
 }
 
 interface Lesson {
@@ -59,6 +60,7 @@ export default function PresencaPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [requestingSummary, setRequestingSummary] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLesson();
@@ -204,6 +206,27 @@ export default function PresencaPage() {
       toast('error', 'Erro ao salvar presenças', 'Verifique sua conexão e tente novamente');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRequestSummary = async (attendanceId: string) => {
+    setRequestingSummary(attendanceId);
+    try {
+      const response = await fetch(`${API_URL}/api/lessons/${lessonId}/attendances/${attendanceId}/solicitar-resumo`, {
+        method: 'POST'
+      });
+      if (response.ok) {
+        toast('success', 'Resumo solicitado ao aluno!');
+        fetchAttendances();
+      } else {
+        const data = await response.json();
+        toast('error', 'Erro ao solicitar resumo', data.error || 'Tente novamente mais tarde');
+      }
+    } catch (error) {
+      console.error('Error requesting summary:', error);
+      toast('error', 'Erro ao solicitar resumo', 'Verifique sua conexão e tente novamente');
+    } finally {
+      setRequestingSummary(null);
     }
   };
 
@@ -395,16 +418,38 @@ export default function PresencaPage() {
                         </td>
                         <td className="px-6 py-4">{getStatusBadge(attendance.status)}</td>
                         <td className="px-6 py-4">
-                          <select
-                            value={attendance.status}
-                            onChange={(e) => handleStatusChange(attendance.id, e.target.value)}
-                            className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                          >
-                            <option value="PENDING">Pendente</option>
-                            <option value="PRESENT">Presente</option>
-                            <option value="ABSENT">Ausente</option>
-                            <option value="EXCUSED">Justificado</option>
-                          </select>
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={attendance.status}
+                              onChange={(e) => handleStatusChange(attendance.id, e.target.value)}
+                              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                            >
+                              <option value="PENDING">Pendente</option>
+                              <option value="PRESENT">Presente</option>
+                              <option value="ABSENT">Ausente</option>
+                              <option value="EXCUSED">Justificado</option>
+                            </select>
+                            {attendance.status === 'ABSENT' && (
+                              attendance.summaryRequestedAt ? (
+                                <span className="flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                                  <span className="material-symbols-outlined text-sm">task_alt</span>
+                                  Resumo solicitado
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => handleRequestSummary(attendance.id)}
+                                  disabled={requestingSummary === attendance.id}
+                                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium px-3 py-2 rounded-lg border border-primary/20 hover:bg-primary/5 transition-all disabled:opacity-50 whitespace-nowrap"
+                                >
+                                  {requestingSummary === attendance.id
+                                    ? <span className="material-symbols-outlined text-sm animate-spin">refresh</span>
+                                    : <span className="material-symbols-outlined text-sm">forum</span>
+                                  }
+                                  Solicitar resumo
+                                </button>
+                              )
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
