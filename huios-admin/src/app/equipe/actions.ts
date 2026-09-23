@@ -111,29 +111,100 @@ export async function createTeamMember(formData: FormData): Promise<Result> {
 
 export async function updateTeamMember(id: string, formData: FormData): Promise<Result> {
   const actor = await requirePermission('equipe.editar')
-  const name = clean(formData.get('name')); const email = clean(formData.get('email')).toLowerCase(); const roleId = clean(formData.get('roleId'))
+  const name = clean(formData.get('name'))
+  const email = clean(formData.get('email')).toLowerCase()
+  const roleId = clean(formData.get('roleId'))
   if (!name || !email || !roleId) return { success: false, error: 'Informe nome, e-mail e função.' }
+
   try {
     await prisma.$transaction(async (tx) => {
       const member = await tx.teamMember.findUnique({ where: { id }, include: { user: true } })
-      if (!member?.user) throw new Error('Membro sem conta de acesso.')
-      if (member.userId === actor.userId && clean(formData.get('active')) === 'false') throw new Error('Você não pode desativar a própria conta.')
+      if (!member) throw new Error('Membro não encontrado.')
+
+      let user = member.user
+      if (!user) {
+        user = await tx.user.findUnique({ where: { email } })
+        if (user) {
+          await tx.teamMember.update({ where: { id }, data: { userId: user.id } })
+        } else {
+          const tempPassword = Math.random().toString(36).slice(-8) + 'A1!'
+          user = await tx.user.create({
+            data: {
+              name,
+              email,
+              password: await bcrypt.hash(tempPassword, 12),
+              role: 'MONITOR',
+              active: true,
+              mustChangePassword: true,
+            },
+          })
+          await tx.teamMember.update({ where: { id }, data: { userId: user.id } })
+        }
+      }
+
+      const isActive = clean(formData.get('active')) !== 'false'
+      if (user.id === actor.userId && !isActive) {
+        throw new Error('Você não pode desativar a própria conta.')
+      }
+
       const role = await tx.role.findFirst({ where: { id: roleId, active: true }, select: { id: true, protected: true, key: true } })
       if (!role) throw new Error('A função selecionada está inativa ou não existe.')
-      const becomingNonSuper = member.user.adminRoleId && member.user.adminRoleId !== role.id
-      if (becomingNonSuper && member.user.adminRoleId) {
+
+      const becomingNonSuper = user.adminRoleId && user.adminRoleId !== role.id
+      if (becomingNonSuper && user.adminRoleId) {
         const current = await tx.user.count({ where: { active: true, adminRole: { key: 'SUPER_ADMIN', protected: true } } })
-        const wasSuper = await tx.role.findUnique({ where: { id: member.user.adminRoleId }, select: { key: true, protected: true } })
-        if (wasSuper?.key === 'SUPER_ADMIN' && wasSuper.protected && current <= 1) throw new Error('Não é possível remover o último Super Admin ativo.')
+        const wasSuper = await tx.role.findUnique({ where: { id: user.adminRoleId }, select: { key: true, protected: true } })
+        if (wasSuper?.key === 'SUPER_ADMIN' && wasSuper.protected && current <= 1) {
+          throw new Error('Não é possível remover o último Super Admin ativo.')
+        }
       }
+
       await tx.teamMemberCourseClass.deleteMany({ where: { teamMemberId: id } })
-      await tx.teamMember.update({ where: { id }, data: { name, email, phone: clean(formData.get('phone')) || null, cpf: clean(formData.get('cpf')) || null, area: clean(formData.get('area')) || null, birthDate: clean(formData.get('birthDate')) ? new Date(clean(formData.get('birthDate'))) : null, maritalStatus: clean(formData.get('maritalStatus')) || null, address: clean(formData.get('address')) || null, active: clean(formData.get('active')) !== 'false', courseClassAssignments: { create: classIds(formData).map(courseClassId => ({ courseClassId })) } } })
-      await tx.user.update({ where: { id: member.user.id }, data: { name, email, adminRoleId: role.id, active: clean(formData.get('active')) !== 'false' } })
-      await audit(tx as typeof prisma, actor.userId, 'TEAM_MEMBER_UPDATED', id, { name, email, roleId, active: clean(formData.get('active')) !== 'false', courseClassIds: classIds(formData) })
+
+      const birthDateRaw = clean(formData.get('birthDate'))
+      const birthDate = birthDateRaw ? new Date(birthDateRaw) : null
+
+      await tx.teamMember.update({
+        where: { id },
+        data: {
+          name,
+          email,
+          phone: clean(formData.get('phone')) || null,
+          cpf: clean(formData.get('cpf')) || null,
+          area: clean(formData.get('area')) || null,
+          birthDate,
+          maritalStatus: clean(formData.get('maritalStatus')) || null,
+          address: clean(formData.get('address')) || null,
+          active: isActive,
+          courseClassAssignments: { create: classIds(formData).map(courseClassId => ({ courseClassId })) },
+        },
+      })
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          name,
+          email,
+          adminRoleId: role.id,
+          active: isActive,
+        },
+      })
+
+      await audit(tx as typeof prisma, actor.userId, 'TEAM_MEMBER_UPDATED', id, {
+        name,
+        email,
+        roleId,
+        active: isActive,
+        courseClassIds: classIds(formData),
+      })
     })
-    revalidatePath('/equipe'); revalidatePath(`/equipe/${id}/editar`)
+
+    revalidatePath('/equipe')
+    revalidatePath(`/equipe/${id}/editar`)
     return { success: true }
-  } catch (error) { return { success: false, error: error instanceof Error ? error.message : 'Não foi possível atualizar o membro.' } }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Não foi possível atualizar o membro.' }
+  }
 }
 
 export async function resetTeamMemberPassword(id: string, temporaryPassword: string): Promise<Result> {
