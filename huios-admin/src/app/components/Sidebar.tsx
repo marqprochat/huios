@@ -42,6 +42,7 @@ export function Sidebar({ user, onLogout }: { user: UserData | null; onLogout: (
     { permission: 'relatorios.visualizar', href: '/relatorios/provas', icon: 'quiz', label: 'Provas' },
     { permission: 'relatorios.visualizar', href: '/relatorios/alunos', icon: 'group', label: 'Alunos' },
     { permission: 'relatorios.visualizar', href: '/relatorios/avaliacoes', icon: 'rate_review', label: 'Avaliação do Professor' },
+    { permission: 'relatorios.visualizar', href: '/relatorios/eventos', icon: 'event_available', label: 'Eventos' },
   ])
   const financial = items([
     { permission: 'financeiro.visualizar', href: '/financeiro', icon: 'dashboard', label: 'Visão Geral' },
