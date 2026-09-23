@@ -51,6 +51,7 @@ const pathPermissions: PathPermission[] = [
   { pattern: '/relatorios/provas', requirement: { kind: 'permission', permission: 'relatorios.visualizar' } },
   { pattern: '/relatorios/alunos', requirement: { kind: 'permission', permission: 'relatorios.visualizar' } },
   { pattern: '/relatorios/notas', requirement: { kind: 'permission', permission: 'relatorios.visualizar' } },
+  { pattern: '/relatorios/eventos', requirement: { kind: 'permission', permission: 'relatorios.visualizar' } },
   { pattern: '/alunos/novo', requirement: { kind: 'permission', permission: 'alunos.criar' } },
   { pattern: '/igrejas/novo', requirement: { kind: 'permission', permission: 'igrejas.criar' } },
   { pattern: '/cursos/novo', requirement: { kind: 'permission', permission: 'cursos.criar' } },

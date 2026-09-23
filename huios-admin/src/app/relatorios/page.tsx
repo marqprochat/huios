@@ -36,6 +36,13 @@ const reports = [
     title: 'Avaliação do Professor',
     description: 'Feedback dos alunos por professor ou por disciplina, com notas por critério.',
   },
+  {
+    href: '/relatorios/eventos',
+    icon: 'event_available',
+    color: 'bg-rose-50 text-rose-600',
+    title: 'Inscritos em Eventos',
+    description: 'Participantes por evento com nome completo, CPF e data de nascimento.',
+  },
 ];
 
 export default function RelatoriosPage() {

@@ -15,7 +15,10 @@ export default async function InscritosPage({ params }: { params: Promise<{ id: 
     include: {
       customFields: { orderBy: { order: 'asc' } },
       registrations: {
-        include: { ticket: { select: { name: true } } },
+        include: {
+          ticket: { select: { name: true } },
+          student: { select: { cpf: true, birthDate: true } },
+        },
         orderBy: { createdAt: 'desc' },
       },
     },
@@ -42,6 +45,8 @@ export default async function InscritosPage({ params }: { params: Promise<{ id: 
           name: r.name,
           email: r.email,
           phone: r.phone,
+          cpf: r.cpf || r.student?.cpf || '',
+          birthDate: r.student?.birthDate ? r.student.birthDate.toISOString() : null,
           isStudent: r.isStudent,
           ticketName: r.ticket.name,
           amount: r.amount,
