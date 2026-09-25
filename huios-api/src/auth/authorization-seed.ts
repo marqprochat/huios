@@ -5,6 +5,7 @@ export const MODULE_ACTIONS = {
   alunos: ['visualizar', 'criar', 'editar', 'excluir'],
   professores: ['visualizar', 'criar', 'editar', 'excluir'],
   equipe: ['visualizar', 'criar', 'editar', 'excluir'],
+  eventos: ['visualizar', 'criar', 'editar', 'excluir'],
   funcoes: ['visualizar', 'criar', 'editar', 'excluir'],
   igrejas: ['visualizar', 'criar', 'editar', 'excluir'],
   cursos: ['visualizar', 'criar', 'editar', 'excluir'],
@@ -19,7 +20,7 @@ export const MODULE_ACTIONS = {
   avaliacoes: ['visualizar', 'gerenciar', 'notificar'],
   relatorios: ['visualizar', 'exportar'],
   financeiro: ['visualizar', 'criar', 'editar', 'excluir', 'conciliar', 'exportar'],
-  configuracoes: ['visualizar', 'editar'],
+  configuracoes: ['visualizar', 'editar', 'backup', 'restaurar'],
 } as const
 
 type ModuleKey = keyof typeof MODULE_ACTIONS
@@ -49,6 +50,7 @@ const academicCrud = [
   'disciplinas',
   'matriculas',
   'aulas',
+  'eventos',
 ] as const
 
 const crudPermissions = (modules: readonly ModuleKey[]): PermissionKey[] => (
@@ -100,6 +102,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> 
     'cursos.visualizar',
     'disciplinas.visualizar',
     'aulas.visualizar',
+    'eventos.visualizar',
+    'eventos.criar',
+    'eventos.editar',
     'presenca.visualizar',
     'provas.visualizar',
     'notas.visualizar',
