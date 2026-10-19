@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
-import { formatDateBR, formatTimeBR } from '@/lib/date-utils';
+import { formatDateBR, formatInstantTimeBR } from '@/lib/date-utils';
 import { getSession } from '@/lib/auth';
 import { isRegistrationOpen, isTicketAvailable, applicablePrice, countOccupiedSlots } from '@/lib/events';
 
@@ -47,7 +47,7 @@ export default async function EventoDetalhePage({ params }: { params: Promise<{ 
             <h1 className="text-2xl font-black text-slate-900">{evento.title}</h1>
             <p className="text-slate-500 text-sm mt-1">
               {formatDateBR(evento.date)}
-              {evento.startTime ? ` · ${formatTimeBR(evento.startTime)}` : ''}
+              {evento.startTime ? ` · ${formatInstantTimeBR(evento.startTime)}${evento.endTime ? ` às ${formatInstantTimeBR(evento.endTime)}` : ''}` : ''}
             </p>
             {evento.locationAddress && <p className="text-slate-500 text-sm">{evento.locationAddress}</p>}
             {evento.mapUrl && <a href={evento.mapUrl} target="_blank" className="text-primary text-sm hover:underline">Ver no mapa</a>}
@@ -59,8 +59,8 @@ export default async function EventoDetalhePage({ params }: { params: Promise<{ 
             <div className="border-t border-slate-100 pt-4 space-y-1">
               <h3 className="text-sm font-bold text-slate-800">Logística</h3>
               {evento.meetingPoint && <p className="text-sm text-slate-600">Ponto de encontro: {evento.meetingPoint}</p>}
-              {evento.meetingTime && <p className="text-sm text-slate-600">Horário de encontro: {formatTimeBR(evento.meetingTime)}</p>}
-              {evento.returnTime && <p className="text-sm text-slate-600">Previsão de retorno: {formatTimeBR(evento.returnTime)}</p>}
+              {evento.meetingTime && <p className="text-sm text-slate-600">Horário de encontro: {formatInstantTimeBR(evento.meetingTime)}</p>}
+              {evento.returnTime && <p className="text-sm text-slate-600">Previsão de retorno: {formatInstantTimeBR(evento.returnTime)}</p>}
               {evento.transportInfo && <p className="text-sm text-slate-600">{evento.transportInfo}</p>}
             </div>
           )}

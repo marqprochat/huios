@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
-import { formatDateBR } from '@/lib/date-utils';
+import { formatDateBR, formatInstantTimeBR } from '@/lib/date-utils';
 import { isRegistrationOpen, countOccupiedSlots } from '@/lib/events';
 
 export const dynamic = 'force-dynamic';
@@ -90,6 +90,7 @@ export default async function EventoVitrinePage() {
                         <span className="inline-flex items-center gap-1">
                           <span className="material-symbols-outlined text-[16px]">calendar_today</span>
                           {formatDateBR(evento.date)}
+                          {evento.startTime ? ` · ${formatInstantTimeBR(evento.startTime)}` : ''}
                         </span>
                         {evento.locationAddress && (
                           <span className="inline-flex items-center gap-1">

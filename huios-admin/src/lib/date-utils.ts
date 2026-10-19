@@ -201,15 +201,11 @@ export function formatDateBR(date: string | Date | null | undefined): string {
 }
 
 /**
- * Formata o horário para exibição em pt-BR (HH:MM).
- *
- * @deprecated Não informa timeZone, portanto usa o fuso do processo — UTC em
- * produção. Use formatInstantTimeBR para horários reais (aulas, check-in).
+ * Formata o horário para exibição em pt-BR (HH:MM) no fuso de Brasília.
+ * Usa formatInstantTimeBR para garantir que o fuso do servidor (UTC) não distorça a exibição.
  */
 export function formatTimeBR(date: string | Date | null | undefined): string {
-  if (!date) return '--:--';
-  const d = new Date(date);
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return formatInstantTimeBR(date);
 }
 
 /** "YYYY-MM-DD" para <input type="date"> a partir de um campo de DATA CIVIL. */

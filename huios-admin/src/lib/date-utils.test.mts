@@ -12,6 +12,7 @@ import {
   endOfBRDay,
   toCivilDateInput,
   formatDateBR,
+  formatTimeBR,
 } from './date-utils.ts';
 
 // Estes testes DEVEM passar sob qualquer TZ (UTC, America/Sao_Paulo, Asia/Tokyo).
@@ -106,4 +107,12 @@ test('DST histórica: horário de verão brasileiro pré-2019 usava -02:00', () 
     parseBRLocal('2018-01-15T19:30')?.toISOString(),
     '2018-01-15T21:30:00.000Z',
   );
+});
+
+test('formatTimeBR formata o horário no fuso de Brasília sem desvio de +3h', () => {
+  // 22:30:00 UTC deve ser formatado como 19:30 BRT
+  const instant = new Date('2026-08-04T22:30:00.000Z');
+  assert.equal(formatTimeBR(instant), '19:30');
+  assert.equal(formatInstantTimeBR(instant), '19:30');
+  assert.equal(formatTimeBR(null), '--:--');
 });

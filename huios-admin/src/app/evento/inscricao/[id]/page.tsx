@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
-import { formatDateBR } from '@/lib/date-utils';
+import { formatDateBR, formatInstantTimeBR } from '@/lib/date-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +16,10 @@ export default async function ComprovanteInscricaoPage({ params }: { params: Pro
 
   const registration = await (prisma as any).eventRegistration.findUnique({
     where: { id },
-    include: { event: { select: { title: true, date: true } }, ticket: { select: { name: true } } },
+    include: {
+      event: { select: { title: true, date: true, startTime: true, endTime: true } },
+      ticket: { select: { name: true } },
+    },
   });
   if (!registration) notFound();
 
@@ -27,7 +30,10 @@ export default async function ComprovanteInscricaoPage({ params }: { params: Pro
           <span className="material-symbols-outlined text-4xl">confirmation_number</span>
         </div>
         <h1 className="text-xl font-black text-slate-900">{registration.event.title}</h1>
-        <p className="text-slate-500 text-sm">{formatDateBR(registration.event.date)} · {registration.ticket.name}</p>
+        <p className="text-slate-500 text-sm">
+          {formatDateBR(registration.event.date)}
+          {registration.event.startTime ? ` · ${formatInstantTimeBR(registration.event.startTime)}${registration.event.endTime ? ` às ${formatInstantTimeBR(registration.event.endTime)}` : ''}` : ''} · {registration.ticket.name}
+        </p>
         <p className="text-2xl font-black text-slate-900">{registration.amount > 0 ? fmtBRL(registration.amount) : 'Gratuito'}</p>
         <p className="text-sm font-bold uppercase text-primary">{statusLabel[registration.status] || registration.status}</p>
         {registration.status === 'PENDENTE' && (

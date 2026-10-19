@@ -35,7 +35,7 @@ export async function GET() {
       const hasAvailableTicket = tickets.some((t: any) => t.available);
       const registrationOpen = isRegistrationOpen(evento, { now, totalOccupied, hasAvailableTicket });
       return {
-        id: evento.id, title: evento.title, date: evento.date, bannerUrl: evento.bannerUrl,
+        id: evento.id, title: evento.title, date: evento.date, startTime: evento.startTime, endTime: evento.endTime, bannerUrl: evento.bannerUrl,
         registrationOpen, tickets,
       };
     })
@@ -45,7 +45,7 @@ export async function GET() {
     evento.registrations
       .filter((r: any) => r.studentId === studentId)
       .map((r: any) => ({
-        id: r.id, eventTitle: evento.title, eventDate: evento.date,
+        id: r.id, eventTitle: evento.title, eventDate: evento.date, eventStartTime: evento.startTime, eventEndTime: evento.endTime,
         status: r.status, amount: r.amount, createdAt: r.createdAt,
       })));
 

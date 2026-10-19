@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { toLocalDate } from '@/lib/date-utils';
+import { toLocalDate, formatInstantTimeBR } from '@/lib/date-utils';
 
 const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 interface Ticket { id: string; name: string; price: number; available: boolean }
-interface OpenEvent { id: string; title: string; date: string; bannerUrl: string | null; tickets: Ticket[] }
-interface MyRegistration { id: string; eventTitle: string; eventDate: string; status: string; amount: number; createdAt: string }
+interface OpenEvent { id: string; title: string; date: string; startTime?: string | null; endTime?: string | null; bannerUrl: string | null; tickets: Ticket[] }
+interface MyRegistration { id: string; eventTitle: string; eventDate: string; eventStartTime?: string | null; eventEndTime?: string | null; status: string; amount: number; createdAt: string }
 
 const statusLabel: Record<string, string> = {
   PENDENTE: 'Pagamento pendente', CONFIRMADA: 'Confirmada', CANCELADA: 'Cancelada', EXPIRADA: 'Expirada',
@@ -74,7 +74,10 @@ export default function PortalEventosPage() {
           {open.map((evento) => (
             <div key={evento.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-3">
               <h3 className="font-bold text-slate-900 dark:text-white">{evento.title}</h3>
-              <p className="text-sm text-slate-500">{toLocalDate(evento.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+              <p className="text-sm text-slate-500">
+                {toLocalDate(evento.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                {evento.startTime ? ` · ${formatInstantTimeBR(evento.startTime)}` : ''}
+              </p>
               <div className="space-y-2">
                 {evento.tickets.map((t) => (
                   <div key={t.id} className="flex items-center justify-between rounded-xl border border-slate-100 dark:border-slate-800 p-3">
@@ -104,7 +107,10 @@ export default function PortalEventosPage() {
             <div key={r.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
               <div>
                 <p className="font-bold text-slate-900 dark:text-white">{r.eventTitle}</p>
-                <p className="text-xs text-slate-500">{toLocalDate(r.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })} · {r.amount > 0 ? fmtBRL(r.amount) : 'Gratuito'}</p>
+                <p className="text-xs text-slate-500">
+                  {toLocalDate(r.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                  {r.eventStartTime ? ` · ${formatInstantTimeBR(r.eventStartTime)}` : ''} · {r.amount > 0 ? fmtBRL(r.amount) : 'Gratuito'}
+                </p>
               </div>
               <span className="text-xs font-bold uppercase text-primary">{statusLabel[r.status] || r.status}</span>
             </div>
