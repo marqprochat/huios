@@ -286,3 +286,113 @@ export async function getLessonMaterials(lessonId: string) {
     return [];
   }
 }
+
+export async function searchAvailableStudentsForLesson(lessonId: string, query: string) {
+  await requirePermission('presenca.visualizar');
+  try {
+    const term = (query || '').trim();
+    if (term.length < 2) return [];
+
+    const existingAttendances = await prisma.attendance.findMany({
+      where: { lessonId },
+      select: { studentId: true }
+    });
+    const existingStudentIds = existingAttendances.map(a => a.studentId);
+
+    const students = await prisma.student.findMany({
+      where: {
+        id: { notIn: existingStudentIds },
+        OR: [
+          { name: { contains: term, mode: 'insensitive' } },
+          { email: { contains: term, mode: 'insensitive' } },
+          { cpf: { contains: term } }
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        enrollments: {
+          select: {
+            status: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+                course: { select: { name: true } }
+              }
+            }
+          }
+        }
+      },
+      take: 15,
+      orderBy: { name: 'asc' }
+    });
+
+    return students.map(s => ({
+      id: s.id,
+      name: s.name,
+      email: s.email,
+      turmas: s.enrollments.map(e => `${e.class.name} (${e.status})`).join(', ') || 'Sem Turma'
+    }));
+  } catch (error) {
+    console.error('Error searching students for lesson:', error);
+    return [];
+  }
+}
+
+export async function addStudentToLesson(lessonId: string, studentId: string, notes?: string) {
+  await requirePermission('presenca.editar');
+  try {
+    const defaultNotes = notes || 'Reposição de disciplina';
+
+    const attendance = await prisma.attendance.upsert({
+      where: {
+        lessonId_studentId: {
+          lessonId,
+          studentId
+        }
+      },
+      update: {
+        notes: defaultNotes
+      },
+      create: {
+        lessonId,
+        studentId,
+        status: 'PENDING',
+        notes: defaultNotes
+      }
+    });
+
+    revalidatePath(`/aulas/${lessonId}/presenca`);
+    revalidatePath('/aulas');
+    return { success: true, attendance };
+  } catch (error: any) {
+    console.error('Error adding student to lesson:', error);
+    throw new Error(error.message || 'Erro ao adicionar aluno na aula');
+  }
+}
+
+export async function removeStudentFromLesson(lessonId: string, attendanceId: string) {
+  await requirePermission('presenca.editar');
+  try {
+    const attendance = await prisma.attendance.findUnique({
+      where: { id: attendanceId }
+    });
+
+    if (!attendance || attendance.lessonId !== lessonId) {
+      throw new Error('Presença não encontrada');
+    }
+
+    await prisma.attendance.delete({
+      where: { id: attendanceId }
+    });
+
+    revalidatePath(`/aulas/${lessonId}/presenca`);
+    revalidatePath('/aulas');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error removing student from lesson:', error);
+    throw new Error(error.message || 'Erro ao remover aluno da aula');
+  }
+}

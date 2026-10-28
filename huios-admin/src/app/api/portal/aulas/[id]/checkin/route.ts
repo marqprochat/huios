@@ -55,8 +55,24 @@ export async function POST(
             }
         });
 
-        if (!isEnrolled) {
-             return NextResponse.json({ error: 'Aluno não matriculado nesta turma' }, { status: 403 });
+        // Se o aluno não for da turma regular, verifica se o coordenador o incluiu na aula (ex: reposição)
+        let isAuthorized = !!isEnrolled;
+        if (!isAuthorized) {
+            const assignedAttendance = await prisma.attendance.findUnique({
+                where: {
+                    lessonId_studentId: {
+                        lessonId,
+                        studentId
+                    }
+                }
+            });
+            if (assignedAttendance) {
+                isAuthorized = true;
+            }
+        }
+
+        if (!isAuthorized) {
+             return NextResponse.json({ error: 'Aluno não matriculado nesta turma e nem alocado para esta aula' }, { status: 403 });
         }
 
         // Check time limits

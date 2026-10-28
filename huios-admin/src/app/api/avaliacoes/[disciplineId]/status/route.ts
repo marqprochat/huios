@@ -18,9 +18,14 @@ export async function GET(
         const discipline = await prisma.discipline.findUnique({
             where: { id: disciplineId },
             include: {
-                lessons: true,
+                lessons: {
+                    include: {
+                        attendances: true
+                    }
+                },
                 courseClasses: {
                     include: {
+                        course: { select: { modality: true } },
                         enrollments: {
                             where: { status: { in: ['CURSANDO', 'APROVADO'] } },
                             include: { student: true }
@@ -43,10 +48,11 @@ export async function GET(
             return now > end;
         });
 
-        const studentsMap = new Map<string, string>();
+        const studentsMap = new Map<string, { name: string; modality: string }>();
         for (const courseClass of discipline.courseClasses) {
+            const modality = courseClass.course?.modality ?? 'POR_NOTA';
             for (const enrollment of courseClass.enrollments) {
-                studentsMap.set(enrollment.studentId, enrollment.student.name);
+                studentsMap.set(enrollment.studentId, { name: enrollment.student.name, modality });
             }
         }
 
@@ -58,9 +64,24 @@ export async function GET(
         const feito: { studentId: string; studentName: string }[] = [];
         const pendente: { studentId: string; studentName: string }[] = [];
         const naoLiberado: { studentId: string; studentName: string }[] = [];
+        const isentoPorFalta: { studentId: string; studentName: string }[] = [];
 
-        for (const [studentId, studentName] of studentsMap) {
-            const entry = { studentId, studentName };
+        for (const [studentId, info] of studentsMap) {
+            const entry = { studentId, studentName: info.name };
+            
+            // Se modalidade for POR_PRESENCA e o aluno faltou a todas as aulas (zero presenças),
+            // ele não deve ser cobrado por avaliação do professor.
+            if (info.modality === 'POR_PRESENCA') {
+                const presentCount = discipline.lessons.filter(lesson =>
+                    lesson.attendances.some(att => att.studentId === studentId && att.status === 'PRESENT')
+                ).length;
+
+                if (presentCount === 0) {
+                    isentoPorFalta.push(entry);
+                    continue;
+                }
+            }
+
             if (submittedIds.has(studentId)) {
                 feito.push(entry);
             } else if (liberado) {
@@ -74,6 +95,7 @@ export async function GET(
         feito.sort(byName);
         pendente.sort(byName);
         naoLiberado.sort(byName);
+        isentoPorFalta.sort(byName);
 
         return NextResponse.json({
             disciplineId,
@@ -81,7 +103,8 @@ export async function GET(
             liberado,
             feito,
             pendente,
-            naoLiberado
+            naoLiberado,
+            isentoPorFalta
         });
     } catch (error) {
         console.error('Discipline evaluation status error:', error);

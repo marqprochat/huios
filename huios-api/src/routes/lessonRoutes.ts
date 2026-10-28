@@ -13,7 +13,10 @@ import {
   updateAttendance,
   bulkUpdateAttendances,
   requestAttendanceSummary,
-  cancelAttendanceSummaryRequest
+  cancelAttendanceSummaryRequest,
+  addStudentToLesson,
+  removeStudentFromLesson,
+  searchAvailableStudentsForLesson
 } from '../controllers/attendanceController';
 import {
   uploadMaterial,
@@ -67,6 +70,9 @@ router.post('/:lessonId/checkout', authenticateToken, requireApiPermission('pres
 
 // Attendance routes (nested under lesson)
 router.get('/:lessonId/attendances', authenticateToken, requireApiPermission('presenca.visualizar'), getAttendancesByLesson);
+router.get('/:lessonId/available-students', authenticateToken, requireApiPermission('presenca.registrar'), searchAvailableStudentsForLesson);
+router.post('/:lessonId/attendances/add-student', authenticateToken, requireApiPermission('presenca.registrar'), addStudentToLesson);
+router.delete('/:lessonId/attendances/:attendanceId', authenticateToken, requireApiPermission('presenca.registrar'), removeStudentFromLesson);
 router.put('/:lessonId/attendances/bulk', authenticateToken, requireApiPermission('presenca.registrar'), bulkUpdateAttendances);
 router.post('/:lessonId/attendances/:id/solicitar-resumo', authenticateToken, requireApiPermission('presenca.registrar'), requestAttendanceSummary);
 router.delete('/:lessonId/attendances/:id/solicitar-resumo', authenticateToken, requireApiPermission('presenca.registrar'), cancelAttendanceSummaryRequest);

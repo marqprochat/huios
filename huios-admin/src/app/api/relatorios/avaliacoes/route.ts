@@ -38,12 +38,18 @@ export async function GET() {
       prisma.discipline.findMany({
         include: {
           teacher: { select: { id: true, name: true, email: true, phone: true, city: true } },
-          lessons: { select: { date: true, endTime: true } },
+          lessons: {
+            select: {
+              date: true,
+              endTime: true,
+              attendances: { select: { studentId: true, status: true } }
+            }
+          },
           courseClasses: {
             select: {
               id: true,
               name: true,
-              course: { select: { name: true } },
+              course: { select: { name: true, modality: true } },
               enrollments: {
                 where: { status: { in: ['CURSANDO', 'APROVADO'] } },
                 select: { studentId: true },
@@ -92,7 +98,16 @@ export async function GET() {
 
       const eligibleStudents = new Set<string>();
       for (const courseClass of discipline.courseClasses) {
-        for (const enrollment of courseClass.enrollments) eligibleStudents.add(enrollment.studentId);
+        const isPorPresenca = courseClass.course.modality === 'POR_PRESENCA';
+        for (const enrollment of courseClass.enrollments) {
+          if (isPorPresenca) {
+            const hasPresence = discipline.lessons.some(l =>
+              l.attendances.some(a => a.studentId === enrollment.studentId && a.status === 'PRESENT')
+            );
+            if (!hasPresence) continue; // Faltou a todas as aulas: isento
+          }
+          eligibleStudents.add(enrollment.studentId);
+        }
       }
 
       const submitted = submissionsByDiscipline.get(discipline.id) ?? new Set<string>();

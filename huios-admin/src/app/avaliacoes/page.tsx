@@ -237,6 +237,15 @@ export default function AdminAvaliacoesPage() {
                   students={statusModal.naoLiberado}
                   emptyLabel="Todos os alunos já estão liberados para avaliar."
                 />
+
+                {statusModal.isentoPorFalta && statusModal.isentoPorFalta.length > 0 && (
+                  <StatusSection
+                    title="Isentos por Falta Integral"
+                    color="text-slate-500"
+                    students={statusModal.isentoPorFalta}
+                    emptyLabel=""
+                  />
+                )}
               </div>
             )}
 

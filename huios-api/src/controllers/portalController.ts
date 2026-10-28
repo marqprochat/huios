@@ -30,9 +30,22 @@ function coordinates(body: unknown): { latitude: number; longitude: number } | n
 
 async function authorizedLesson(req: AuthRequest) {
   const studentContext = await context(req);
-  const lesson = await prisma.lesson.findFirst({
+  let lesson = await prisma.lesson.findFirst({
     where: { id: req.params.id, disciplines: { some: { id: { in: studentContext.disciplineIds } } } }
   });
+  if (!lesson) {
+    const assignedAttendance = await prisma.attendance.findUnique({
+      where: {
+        lessonId_studentId: {
+          lessonId: req.params.id,
+          studentId: studentContext.studentId
+        }
+      }
+    });
+    if (assignedAttendance) {
+      lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
+    }
+  }
   return { ...studentContext, lesson };
 }
 
@@ -242,7 +255,7 @@ export const listStudentLessons: PortalHandler = async (req, res) => {
 
 export const getStudentLesson: PortalHandler = async (req, res) => {
   const { studentId, disciplineIds } = await context(req);
-  const lesson = await prisma.lesson.findFirst({
+  let lesson = await prisma.lesson.findFirst({
     where: { id: req.params.id, disciplines: { some: { id: { in: disciplineIds } } } },
     include: {
       disciplines: { include: { courseClasses: true } },
@@ -250,6 +263,16 @@ export const getStudentLesson: PortalHandler = async (req, res) => {
       materials: true
     }
   });
+  if (!lesson) {
+    lesson = await prisma.lesson.findFirst({
+      where: { id: req.params.id, attendances: { some: { studentId } } },
+      include: {
+        disciplines: { include: { courseClasses: true } },
+        attendances: { where: { studentId } },
+        materials: true
+      }
+    });
+  }
   if (!lesson) return res.status(404).json({ message: 'Aula não encontrada' });
   const { disciplines, attendances, ...rest } = lesson;
   return res.json({

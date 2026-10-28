@@ -20,9 +20,14 @@ export async function POST(
         const discipline = await prisma.discipline.findUnique({
             where: { id: disciplineId },
             include: {
-                lessons: true,
+                lessons: {
+                    include: {
+                        attendances: true
+                    }
+                },
                 courseClasses: {
                     include: {
+                        course: { select: { modality: true } },
                         enrollments: {
                             where: { status: { in: ['CURSANDO', 'APROVADO'] } },
                             include: { student: true }
@@ -49,10 +54,11 @@ export async function POST(
             return NextResponse.json({ error: 'Avaliação ainda não liberada para esta disciplina' }, { status: 400 });
         }
 
-        const studentsMap = new Map<string, string>();
+        const studentsMap = new Map<string, { name: string; modality: string }>();
         for (const courseClass of discipline.courseClasses) {
+            const modality = courseClass.course?.modality ?? 'POR_NOTA';
             for (const enrollment of courseClass.enrollments) {
-                studentsMap.set(enrollment.studentId, enrollment.student.name);
+                studentsMap.set(enrollment.studentId, { name: enrollment.student.name, modality });
             }
         }
 
@@ -61,7 +67,20 @@ export async function POST(
         });
         const submittedIds = new Set(submissions.map(s => s.studentId));
 
-        let targetIds = [...studentsMap.keys()].filter(id => !submittedIds.has(id));
+        let targetIds = [...studentsMap.keys()].filter(id => {
+            if (submittedIds.has(id)) return false;
+
+            const info = studentsMap.get(id);
+            // Se modalidade for POR_PRESENCA e o aluno faltou a todas as aulas (zero presenças), não notificar
+            if (info?.modality === 'POR_PRESENCA') {
+                const presentCount = discipline.lessons.filter(lesson =>
+                    lesson.attendances.some(att => att.studentId === id && att.status === 'PRESENT')
+                ).length;
+                if (presentCount === 0) return false;
+            }
+
+            return true;
+        });
 
         if (studentId) {
             if (!targetIds.includes(studentId)) {

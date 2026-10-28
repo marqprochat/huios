@@ -32,10 +32,17 @@ export async function GET() {
             include: {
                 class: {
                     include: {
+                        course: { select: { modality: true } },
                         disciplines: {
                             include: {
                                 teacher: true,
-                                lessons: true
+                                lessons: {
+                                    include: {
+                                        attendances: {
+                                            where: { studentId }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -48,9 +55,22 @@ export async function GET() {
         const processedDisciplineIds = new Set<string>();
 
         for (const enrollment of enrollments) {
+            const courseModality = enrollment.class.course?.modality ?? 'POR_NOTA';
+
             for (const discipline of enrollment.class.disciplines) {
                 if (processedDisciplineIds.has(discipline.id)) continue;
                 processedDisciplineIds.add(discipline.id);
+
+                // Na modalidade POR_PRESENCA: se o aluno faltou a todas as aulas do professor (zero presenças),
+                // ele está isento da avaliação e ela não deve aparecer como pendente/obrigatória.
+                if (courseModality === 'POR_PRESENCA') {
+                    const presentCount = discipline.lessons.filter(lesson =>
+                        lesson.attendances.some(att => att.status === 'PRESENT')
+                    ).length;
+                    if (presentCount === 0) {
+                        continue;
+                    }
+                }
 
                 // Check if already evaluated
                 const alreadyEvaluated = await prisma.teacherEvaluationSubmission.findUnique({

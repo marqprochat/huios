@@ -57,6 +57,19 @@ export async function GET() {
             }
         });
 
+        // Busca todas as presenças confirmadas (PRESENT) do aluno em qualquer aula
+        const allPresentAttendances = await prisma.attendance.findMany({
+            where: { studentId, status: 'PRESENT' },
+            include: {
+                lesson: {
+                    select: {
+                        id: true,
+                        disciplines: { select: { id: true, name: true } }
+                    }
+                }
+            }
+        });
+
         // Enrich each discipline with modality and attendance summary
         const enriched = disciplines.map(disc => {
             const modality = disc.courseClasses[0]?.course?.modality ?? 'POR_NOTA';
@@ -74,9 +87,29 @@ export async function GET() {
                 { present: 0, absent: 0, excused: 0, pending: 0, total: disc.lessons.length }
             );
 
+            // Identifica presenças em reposições de outras turmas para esta disciplina
+            const regularLessonIds = new Set(disc.lessons.map(l => l.id));
+            const normalizedName = disc.name.trim().toLowerCase();
+            const repositionCount = allPresentAttendances.filter(att => {
+                if (regularLessonIds.has(att.lesson.id)) return false;
+                return att.lesson.disciplines.some(d =>
+                    d.id === disc.id || d.name.trim().toLowerCase() === normalizedName
+                );
+            }).length;
+
+            const compensatedAbsent = Math.max(0, attendance.absent - repositionCount);
+            const effectivePresent = attendance.present + Math.min(attendance.absent, repositionCount);
+            const adjustedAttendance = {
+                ...attendance,
+                present: effectivePresent,
+                absent: compensatedAbsent,
+                repositionCount,
+                originalAbsent: attendance.absent
+            };
+
             // Remove lesson details from response (not needed by client)
             const { lessons: _, ...discWithoutLessons } = disc;
-            return { ...discWithoutLessons, modality, attendance };
+            return { ...discWithoutLessons, modality, attendance: adjustedAttendance };
         });
 
         const grades = await prisma.grade.findMany({

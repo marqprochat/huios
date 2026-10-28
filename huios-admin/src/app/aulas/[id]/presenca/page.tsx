@@ -6,10 +6,13 @@ import { useParams } from 'next/navigation';
 import { formatDateBR } from '@/lib/date-utils';
 import { API_URL } from '@/lib/api';
 import { useToast } from '@/app/components/Toast/useToast';
+import { addStudentToLesson, removeStudentFromLesson, searchAvailableStudentsForLesson } from '@/app/aulas/actions';
 
 interface Attendance {
   id: string;
   status: 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'PENDING';
+  isReposition?: boolean;
+  notes?: string | null;
   student: {
     id: string;
     name: string;
@@ -62,10 +65,65 @@ export default function PresencaPage() {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [requestingSummary, setRequestingSummary] = useState<string | null>(null);
 
+  // Estados para inclusão de alunos em reposição
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
   useEffect(() => {
     fetchLesson();
     fetchAttendances();
   }, [lessonId]);
+
+  const handleSearchStudents = async (term: string) => {
+    setSearchQuery(term);
+    if (term.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const results = await searchAvailableStudentsForLesson(lessonId, term);
+      setSearchResults(results);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleAddStudent = async (studentId: string) => {
+    setAddingId(studentId);
+    try {
+      await addStudentToLesson(lessonId, studentId);
+      toast('success', 'Aluno incluído na aula para reposição!');
+      setShowAddModal(false);
+      setSearchQuery('');
+      setSearchResults([]);
+      fetchAttendances();
+    } catch (error: any) {
+      toast('error', 'Erro ao incluir aluno', error.message || 'Tente novamente');
+    } finally {
+      setAddingId(null);
+    }
+  };
+
+  const handleRemoveStudent = async (attendanceId: string, studentName: string) => {
+    if (!confirm(`Deseja remover ${studentName} desta aula?`)) return;
+    setRemovingId(attendanceId);
+    try {
+      await removeStudentFromLesson(lessonId, attendanceId);
+      toast('success', 'Aluno removido da aula.');
+      fetchAttendances();
+    } catch (error: any) {
+      toast('error', 'Erro ao remover aluno', error.message || 'Tente novamente');
+    } finally {
+      setRemovingId(null);
+    }
+  };
 
   const fetchLesson = async () => {
     try {
@@ -96,29 +154,36 @@ export default function PresencaPage() {
   // Group attendances by turma (CourseClass)
   const groupedAttendances = useMemo<GroupedAttendances>(() => {
     const groups: GroupedAttendances = {};
+    const lessonTurmaNames = new Set(
+      lesson?.disciplines.flatMap(d => d.courseClasses.map(cc => cc.name)) || []
+    );
 
     attendances.forEach(att => {
       const enrollments = att.student.enrollments || [];
-      if (enrollments.length > 0) {
-        // Student may belong to multiple turmas linked to this lesson's disciplines
+      const belongsToLessonTurma = enrollments.some(e => lessonTurmaNames.has(e.class.name));
+
+      if (belongsToLessonTurma) {
         enrollments.forEach(enrollment => {
-          const turmaName = enrollment.class.name;
-          const turmaId = enrollment.class.id;
-          if (!groups[turmaName]) {
-            groups[turmaName] = { turmaId, attendances: [] };
-          }
-          // Avoid duplicates if a student appears in the same turma multiple times
-          if (!groups[turmaName].attendances.find(a => a.id === att.id)) {
-            groups[turmaName].attendances.push(att);
+          if (lessonTurmaNames.has(enrollment.class.name)) {
+            const turmaName = enrollment.class.name;
+            const turmaId = enrollment.class.id;
+            if (!groups[turmaName]) {
+              groups[turmaName] = { turmaId, attendances: [] };
+            }
+            if (!groups[turmaName].attendances.find(a => a.id === att.id)) {
+              groups[turmaName].attendances.push(att);
+            }
           }
         });
       } else {
-        // No enrollment linked — put in "Sem Turma"
-        const key = 'Sem Turma';
+        // Aluno em Reposição / de outra turma
+        const key = 'Alunos em Reposição / Outra Turma';
         if (!groups[key]) {
-          groups[key] = { turmaId: 'none', attendances: [] };
+          groups[key] = { turmaId: 'reposition', attendances: [] };
         }
-        groups[key].attendances.push(att);
+        if (!groups[key].attendances.find(a => a.id === att.id)) {
+          groups[key].attendances.push({ ...att, isReposition: true });
+        }
       }
     });
 
@@ -128,14 +193,13 @@ export default function PresencaPage() {
     });
 
     return groups;
-  }, [attendances]);
+  }, [attendances, lesson]);
 
   const sortedGroupNames = useMemo(() => {
     const names = Object.keys(groupedAttendances);
-    // Put "Sem Turma" at the end
     return names.sort((a, b) => {
-      if (a === 'Sem Turma') return 1;
-      if (b === 'Sem Turma') return -1;
+      if (a === 'Alunos em Reposição / Outra Turma') return 1;
+      if (b === 'Alunos em Reposição / Outra Turma') return -1;
       return a.localeCompare(b);
     });
   }, [groupedAttendances]);
@@ -276,16 +340,26 @@ export default function PresencaPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 lg:p-8 space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/aulas" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
-          <span className="material-symbols-outlined">arrow_back</span>
-        </Link>
-        <div className="flex-1">
-          <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Lançar Presença</h2>
-          <p className="text-slate-500 dark:text-slate-400">
-            {lesson?.disciplines.map(d => d.name).join(' / ')} • {formatDateBR(lesson?.date)}
-          </p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
+          <Link href="/aulas" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </Link>
+          <div>
+            <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Lançar Presença</h2>
+            <p className="text-slate-500 dark:text-slate-400">
+              {lesson?.disciplines.map(d => d.name).join(' / ')} • {formatDateBR(lesson?.date)}
+            </p>
+          </div>
         </div>
+
+        <button
+          onClick={() => { setShowAddModal(true); setSearchQuery(''); setSearchResults([]); }}
+          className="bg-primary/10 text-primary hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
+        >
+          <span className="material-symbols-outlined text-lg">person_add</span>
+          Incluir Aluno (Reposição)
+        </button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -381,8 +455,20 @@ export default function PresencaPage() {
                     {group.attendances.map((attendance) => (
                       <tr key={attendance.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                         <td className="px-6 py-4">
-                          <div className="font-medium">{attendance.student.name}</div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium">{attendance.student.name}</span>
+                            {attendance.isReposition && (
+                              <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                                Reposição
+                              </span>
+                            )}
+                          </div>
                           <div className="text-sm text-slate-500">{attendance.student.email}</div>
+                          {attendance.isReposition && attendance.student.enrollments?.[0]?.class?.name && (
+                            <div className="text-xs text-purple-600 dark:text-purple-400 font-medium mt-0.5">
+                              Turma: {attendance.student.enrollments[0].class.name}
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm">
                           {attendance.checkInAt ? (
@@ -449,6 +535,21 @@ export default function PresencaPage() {
                                 </button>
                               )
                             )}
+
+                            {attendance.isReposition && (
+                              <button
+                                onClick={() => handleRemoveStudent(attendance.id, attendance.student.name)}
+                                disabled={removingId === attendance.id}
+                                title="Remover aluno de reposição desta aula"
+                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors ml-1 disabled:opacity-50"
+                              >
+                                {removingId === attendance.id ? (
+                                  <span className="material-symbols-outlined text-base animate-spin">refresh</span>
+                                ) : (
+                                  <span className="material-symbols-outlined text-base">person_remove</span>
+                                )}
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -484,6 +585,103 @@ export default function PresencaPage() {
           Salvar Presenças
         </button>
       </div>
+      {/* Modal para Incluir Aluno em Reposição */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">person_add</span>
+                  Incluir Aluno na Aula
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Adicione um aluno de outra turma que precisa refazer esta matéria.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Buscar Aluno
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => handleSearchStudents(e.target.value)}
+                  placeholder="Digite nome ou e-mail do aluno..."
+                  autoFocus
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/50 outline-none dark:text-white"
+                />
+                <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-lg">
+                  search
+                </span>
+                {searching && (
+                  <span className="material-symbols-outlined absolute right-3 top-2.5 text-primary text-lg animate-spin">
+                    refresh
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Resultados da busca */}
+            <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl">
+              {searchResults.length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400">
+                  {searchQuery.trim().length < 2
+                    ? 'Digite ao menos 2 caracteres para buscar alunos.'
+                    : 'Nenhum aluno encontrado para inclusão.'}
+                </div>
+              ) : (
+                searchResults.map((student) => (
+                  <div
+                    key={student.id}
+                    className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center justify-between gap-3 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">
+                        {student.name}
+                      </div>
+                      <div className="text-xs text-slate-500 truncate">{student.email}</div>
+                      <div className="text-[11px] text-primary dark:text-primary-light font-medium truncate mt-0.5">
+                        {student.turmas}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleAddStudent(student.id)}
+                      disabled={addingId === student.id}
+                      className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-1 flex-shrink-0"
+                    >
+                      {addingId === student.id ? (
+                        <span className="material-symbols-outlined text-sm animate-spin">refresh</span>
+                      ) : (
+                        <span className="material-symbols-outlined text-sm">add</span>
+                      )}
+                      Adicionar
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

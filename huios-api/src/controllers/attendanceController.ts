@@ -25,14 +25,31 @@ async function applyAttendanceRules(studentId: string, disciplineId: string) {
 
   const absentCount = attendances.filter(a => a.status === 'ABSENT').length;
   const totalLessons = lessons.length;
-  const absenceRate = totalLessons > 0 ? absentCount / totalLessons : 0;
 
-  if (absentCount >= ABSENT_FOR_FAIL) {
-    // Excesso de faltas na disciplina — notifica coordenador e aluno sem reprovar a matrícula inteira
-    const discipline = await prisma.discipline.findUnique({
-      where: { id: disciplineId },
-      select: { name: true }
+  const discipline = await prisma.discipline.findUnique({
+    where: { id: disciplineId },
+    select: { name: true }
+  });
+
+  // Busca aulas de reposição da mesma matéria feitas pelo aluno em outra turma
+  let repositionCount = 0;
+  if (discipline) {
+    const repositions = await prisma.attendance.findMany({
+      where: {
+        studentId,
+        status: 'PRESENT',
+        lessonId: { notIn: lessonIds },
+        lesson: { disciplines: { some: { name: { equals: discipline.name, mode: 'insensitive' } } } }
+      }
     });
+    repositionCount = repositions.length;
+  }
+
+  const effectiveAbsentCount = Math.max(0, absentCount - repositionCount);
+  const absenceRate = totalLessons > 0 ? effectiveAbsentCount / totalLessons : 0;
+
+  if (effectiveAbsentCount >= ABSENT_FOR_FAIL) {
+    // Excesso de faltas na disciplina — notifica coordenador e aluno sem reprovar a matrícula inteira
 
     const student = await prisma.student.findUnique({
       where: { id: studentId },
@@ -135,8 +152,8 @@ export const getAttendancesByLesson = async (req: Request, res: Response) => {
             name: true,
             email: true,
             enrollments: {
-              where: { classId: { in: courseClassIds }, status: 'CURSANDO' },
-              select: { class: { select: { id: true, name: true } } }
+              where: { status: { in: ['CURSANDO', 'APROVADO', 'REPROVADO'] } },
+              select: { class: { select: { id: true, name: true } }, status: true }
             }
           }
         }
@@ -144,7 +161,17 @@ export const getAttendancesByLesson = async (req: Request, res: Response) => {
       orderBy: { student: { name: 'asc' } }
     });
 
-    res.json(attendances);
+    // Mapeia adicionando flag de reposição caso o aluno não seja da turma regular da aula
+    const enrichedAttendances = attendances.map(att => {
+      const studentClassIds = att.student.enrollments.map(e => e.class.id);
+      const isRegular = studentClassIds.some(cid => courseClassIds.includes(cid));
+      return {
+        ...att,
+        isReposition: !isRegular
+      };
+    });
+
+    res.json(enrichedAttendances);
   } catch (error) {
     console.error('Error fetching attendances:', error);
     res.status(500).json({ error: 'Failed to fetch attendances' });
@@ -423,5 +450,161 @@ export const getDisciplineAttendanceReport = async (req: Request, res: Response)
   } catch (error) {
     console.error('Error fetching discipline attendance report:', error);
     res.status(500).json({ error: 'Failed to fetch discipline attendance report' });
+  }
+};
+
+// Adiciona aluno em aula de outra turma (Reposição de disciplina)
+export const addStudentToLesson = async (req: Request, res: Response) => {
+  try {
+    const { lessonId } = req.params;
+    const { studentId, status = 'PENDING', notes } = req.body;
+    const userId = (req as any).user?.id || 'system';
+
+    if (!studentId) {
+      return res.status(400).json({ error: 'studentId é obrigatório' });
+    }
+
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      include: {
+        disciplines: {
+          select: { id: true, name: true, courseClasses: { select: { id: true } } }
+        }
+      }
+    });
+
+    if (!lesson) {
+      return res.status(404).json({ error: 'Aula não encontrada' });
+    }
+
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { id: true, name: true, email: true }
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: 'Aluno não encontrado' });
+    }
+
+    const defaultNotes = notes || 'Reposição de disciplina';
+
+    const attendance = await prisma.attendance.upsert({
+      where: {
+        lessonId_studentId: {
+          lessonId,
+          studentId
+        }
+      },
+      update: {
+        notes: defaultNotes,
+        markedById: userId,
+        status: status as any
+      },
+      create: {
+        lessonId,
+        studentId,
+        status: status as any,
+        notes: defaultNotes,
+        markedById: userId,
+        markedAt: status !== 'PENDING' ? new Date() : null
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            enrollments: {
+              where: { status: { in: ['CURSANDO', 'APROVADO', 'REPROVADO'] } },
+              select: { class: { select: { id: true, name: true } }, status: true }
+            }
+          }
+        }
+      }
+    });
+
+    const courseClassIds = lesson.disciplines.flatMap(d => d.courseClasses.map(cc => cc.id));
+    const studentClassIds = attendance.student.enrollments.map(e => e.class.id);
+    const isRegular = studentClassIds.some(cid => courseClassIds.includes(cid));
+
+    res.status(201).json({
+      ...attendance,
+      isReposition: !isRegular
+    });
+  } catch (error) {
+    console.error('Error adding student to lesson:', error);
+    res.status(500).json({ error: 'Erro ao incluir aluno na aula' });
+  }
+};
+
+// Remove aluno da chamada da aula
+export const removeStudentFromLesson = async (req: Request, res: Response) => {
+  try {
+    const { lessonId, attendanceId } = req.params;
+
+    const attendance = await prisma.attendance.findUnique({
+      where: { id: attendanceId }
+    });
+
+    if (!attendance || attendance.lessonId !== lessonId) {
+      return res.status(404).json({ error: 'Registro de presença não encontrado para esta aula' });
+    }
+
+    await prisma.attendance.delete({
+      where: { id: attendanceId }
+    });
+
+    res.json({ success: true, message: 'Aluno removido da aula com sucesso' });
+  } catch (error) {
+    console.error('Error removing student from lesson:', error);
+    res.status(500).json({ error: 'Erro ao remover aluno da aula' });
+  }
+};
+
+// Busca alunos disponíveis para adicionar na aula
+export const searchAvailableStudentsForLesson = async (req: Request, res: Response) => {
+  try {
+    const { lessonId } = req.params;
+    const query = ((req.query.q as string) || '').trim();
+
+    if (!query || query.length < 2) {
+      return res.json([]);
+    }
+
+    // Busca IDs dos alunos que já estão nesta aula
+    const existingAttendances = await prisma.attendance.findMany({
+      where: { lessonId },
+      select: { studentId: true }
+    });
+    const existingStudentIds = existingAttendances.map(a => a.studentId);
+
+    const students = await prisma.student.findMany({
+      where: {
+        id: { notIn: existingStudentIds },
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { email: { contains: query, mode: 'insensitive' } },
+          { cpf: { contains: query } }
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        enrollments: {
+          select: {
+            status: true,
+            class: { select: { id: true, name: true, course: { select: { name: true } } } }
+          }
+        }
+      },
+      take: 15,
+      orderBy: { name: 'asc' }
+    });
+
+    res.json(students);
+  } catch (error) {
+    console.error('Error searching students for lesson:', error);
+    res.status(500).json({ error: 'Erro ao buscar alunos' });
   }
 };

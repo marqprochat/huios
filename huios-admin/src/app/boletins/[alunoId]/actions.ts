@@ -53,6 +53,22 @@ export async function getReportCardData(studentId: string) {
       }
     });
 
+    // Todas as presenças confirmadas (PRESENT) do aluno em qualquer aula no sistema
+    const allPresentAttendances = await prisma.attendance.findMany({
+      where: {
+        studentId,
+        status: 'PRESENT'
+      },
+      include: {
+        lesson: {
+          select: {
+            id: true,
+            disciplines: { select: { id: true, name: true } }
+          }
+        }
+      }
+    });
+
     const reportCard: any[] = [];
     const seenDisciplines = new Set<string>();
     enrollments.forEach(enrollment => {
@@ -77,9 +93,30 @@ export async function getReportCardData(studentId: string) {
             { present: 0, absent: 0, excused: 0, pending: 0, total: (discipline.lessons || []).length }
           );
 
+          // Identifica aulas de reposição feitas em outras turmas para esta matéria
+          const regularLessonIds = new Set((discipline.lessons || []).map((l: any) => l.id));
+          const normalizedName = discipline.name.trim().toLowerCase();
+          const repositionCount = allPresentAttendances.filter(att => {
+            if (regularLessonIds.has(att.lesson.id)) return false;
+            return att.lesson.disciplines.some(d =>
+              d.id === discipline.id || d.name.trim().toLowerCase() === normalizedName
+            );
+          }).length;
+
+          // Se realizou reposições de aula em outra turma, cada presença compensa uma falta
+          const compensatedAbsent = Math.max(0, attendance.absent - repositionCount);
+          const effectivePresent = attendance.present + Math.min(attendance.absent, repositionCount);
+          const adjustedAttendance = {
+            ...attendance,
+            present: effectivePresent,
+            absent: compensatedAbsent,
+            repositionCount,
+            originalAbsent: attendance.absent
+          };
+
           if (modality === 'POR_PRESENCA') {
             // Attendance-based: no grades, approval depends on frequency
-            const status = getAttendanceApprovalStatus(attendance, ABSENT_FOR_FAIL);
+            const status = getAttendanceApprovalStatus(adjustedAttendance, ABSENT_FOR_FAIL);
 
             reportCard.push({
               discipline: {
@@ -90,7 +127,7 @@ export async function getReportCardData(studentId: string) {
               },
               modality,
               grades: [],
-              attendance,
+              attendance: adjustedAttendance,
               average: 0,
               status
             });
@@ -119,7 +156,7 @@ export async function getReportCardData(studentId: string) {
             },
             modality,
             grades: serializedGrades,
-            attendance,
+            attendance: adjustedAttendance,
             average: Math.round(average * 100) / 100,
             status: disciplineGrades.length === 0 ? 'Aguardando' : average >= 7 ? 'Aprovado' : 'Reprovado'
           });

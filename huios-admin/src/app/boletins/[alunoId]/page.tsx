@@ -24,6 +24,8 @@ interface Attendance {
   excused: number;
   pending: number;
   total: number;
+  repositionCount?: number;
+  originalAbsent?: number;
 }
 
 interface DisciplineData {
@@ -570,6 +572,19 @@ export default function BoletimAlunoPage() {
                         <p className="text-xl font-bold text-blue-600 mt-0.5">{att.excused}</p>
                       </div>
                     </div>
+                    {att.repositionCount !== undefined && att.repositionCount > 0 && (
+                      <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl flex items-center justify-between text-xs text-purple-700 dark:text-purple-300">
+                        <span className="flex items-center gap-1 font-semibold">
+                          <span className="material-symbols-outlined text-sm">sync</span>
+                          Reposição em outra turma: {att.repositionCount} aula(s) assistida(s)
+                        </span>
+                        {att.originalAbsent !== undefined && att.originalAbsent !== att.absent && (
+                          <span className="text-[11px] text-purple-600 dark:text-purple-400 font-bold">
+                            Faltas compensadas: {att.originalAbsent} ➔ {att.absent}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {att.absent >= ABSENT_FOR_FAIL && (
                       <p className="text-xs text-red-600 mt-4 flex items-center gap-1">
                         <span className="material-symbols-outlined text-sm">warning</span>
