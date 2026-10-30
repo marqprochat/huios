@@ -105,7 +105,13 @@ const slugify = (value: string) =>
     .replace(/-+$/, '')
     .toLowerCase() || 'relatorio';
 
-const loadLogo = (): Promise<string | null> =>
+interface LoadedLogo {
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+const loadLogo = (): Promise<LoadedLogo | null> =>
   new Promise(resolve => {
     if (typeof window === 'undefined') {
       resolve(null);
@@ -113,16 +119,22 @@ const loadLogo = (): Promise<string | null> =>
     }
     const image = new Image();
     image.onload = () => {
+      const naturalWidth = image.naturalWidth || 1;
+      const naturalHeight = image.naturalHeight || 1;
       const canvas = window.document.createElement('canvas');
-      canvas.width = image.naturalWidth;
-      canvas.height = image.naturalHeight;
+      canvas.width = naturalWidth;
+      canvas.height = naturalHeight;
       const context = canvas.getContext('2d');
       if (!context) {
         resolve(null);
         return;
       }
       context.drawImage(image, 0, 0);
-      resolve(canvas.toDataURL('image/png'));
+      resolve({
+        dataUrl: canvas.toDataURL('image/png'),
+        width: naturalWidth,
+        height: naturalHeight,
+      });
     };
     image.onerror = () => resolve(null);
     image.src = '/logo.png';
@@ -143,9 +155,26 @@ export async function exportReportPDF(options: ReportPDFOptions): Promise<void> 
   // --- Cabeçalho ---
   doc.setFillColor(...REPORT_COLORS.brand);
   doc.rect(0, 0, pageWidth, HEADER_HEIGHT, 'F');
-  if (logo) doc.addImage(logo, 'PNG', MARGIN, 7, 34, 18);
 
-  const headerX = logo ? MARGIN + 40 : MARGIN;
+  const maxLogoWidth = 28;
+  const maxLogoHeight = 18;
+  let logoRenderWidth = 0;
+  let logoRenderHeight = 0;
+
+  if (logo && logo.width > 0 && logo.height > 0) {
+    const aspect = logo.width / logo.height;
+    if (aspect > maxLogoWidth / maxLogoHeight) {
+      logoRenderWidth = maxLogoWidth;
+      logoRenderHeight = maxLogoWidth / aspect;
+    } else {
+      logoRenderHeight = maxLogoHeight;
+      logoRenderWidth = maxLogoHeight * aspect;
+    }
+    const logoRenderY = 7 + (maxLogoHeight - logoRenderHeight) / 2;
+    doc.addImage(logo.dataUrl, 'PNG', MARGIN, logoRenderY, logoRenderWidth, logoRenderHeight);
+  }
+
+  const headerX = logoRenderWidth > 0 ? MARGIN + logoRenderWidth + 6 : MARGIN;
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
