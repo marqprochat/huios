@@ -43,6 +43,13 @@ const reports = [
     title: 'Inscritos em Eventos',
     description: 'Participantes por evento com nome completo, CPF e data de nascimento.',
   },
+  {
+    href: '/financeiro/relatorios',
+    icon: 'payments',
+    color: 'bg-emerald-50 text-emerald-600',
+    title: 'Financeiro',
+    description: 'Resumo mensal de receitas e despesas, inadimplência e análise por categoria.',
+  },
 ];
 
 export default function RelatoriosPage() {
@@ -69,7 +76,7 @@ export default function RelatoriosPage() {
                 <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">arrow_forward</span>
               </div>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{r.description}</p>
-              <p className="text-xs text-primary font-semibold mt-3">Filtros • Exportar CSV • Clique na linha para detalhes</p>
+              <p className="text-xs text-primary font-semibold mt-3">Filtros • Exportar CSV e PDF • Detalhamento completo</p>
             </div>
           </Link>
         ))}

@@ -4,6 +4,11 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { exportCSV } from '@/lib/exportCSV';
 import { formatDateBR } from '@/lib/date-utils';
+import {
+  exportMonthlyFinancialReportPDF,
+  exportDefaultersReportPDF,
+  exportCategoryFinancialReportPDF,
+} from '@/lib/exportFinancialReportsPDF';
 
 interface Row {
   month: string;
@@ -36,6 +41,7 @@ export default function RelatoriosFinanceiroPage() {
   const [defaultRows, setDefaultRows] = useState<DefaultRow[]>([]);
   const [catRows, setCatRows] = useState<CatRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
   const [startMonth, setStartMonth] = useState('');
   const [endMonth, setEndMonth] = useState('');
 
@@ -63,6 +69,19 @@ export default function RelatoriosFinanceiroPage() {
     );
   };
 
+  const handleExportMensalPDF = async () => {
+    setExportingPDF(true);
+    try {
+      await exportMonthlyFinancialReportPDF({
+        startMonth,
+        endMonth,
+        rows: monthlyRows,
+      });
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
   const handleExportInadimplencia = () => {
     exportCSV('inadimplencia',
       ['Aluno', 'Descrição', 'Valor', 'Vencimento', 'Dias em Atraso'],
@@ -70,11 +89,37 @@ export default function RelatoriosFinanceiroPage() {
     );
   };
 
+  const handleExportInadimplenciaPDF = async () => {
+    setExportingPDF(true);
+    try {
+      await exportDefaultersReportPDF({
+        startMonth,
+        endMonth,
+        rows: defaultRows,
+      });
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
   const handleExportCategorias = () => {
     exportCSV('por-categoria',
       ['Categoria', 'Tipo', 'Total'],
       catRows.map(r => [r.category, r.type === 'RECEITA' ? 'Receita' : 'Despesa', fmt(r.total)])
     );
+  };
+
+  const handleExportCategoriasPDF = async () => {
+    setExportingPDF(true);
+    try {
+      await exportCategoryFinancialReportPDF({
+        startMonth,
+        endMonth,
+        rows: catRows,
+      });
+    } finally {
+      setExportingPDF(false);
+    }
   };
 
   const TABS = [
@@ -139,9 +184,14 @@ export default function RelatoriosFinanceiroPage() {
               <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <h3 className="font-bold text-slate-800 dark:text-white">Resumo por Mês</h3>
                 {monthlyRows.length > 0 && (
-                  <button onClick={handleExportMensal} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:border-primary hover:text-primary transition-colors">
-                    <span className="material-symbols-outlined text-sm">download</span>CSV
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleExportMensal} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-primary hover:text-primary transition-colors">
+                      <span className="material-symbols-outlined text-sm">download</span>CSV
+                    </button>
+                    <button onClick={handleExportMensalPDF} disabled={exportingPDF} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold hover:opacity-90 transition-all disabled:cursor-not-allowed disabled:opacity-60">
+                      <span className="material-symbols-outlined text-sm">picture_as_pdf</span>{exportingPDF ? 'Gerando PDF...' : 'Exportar PDF'}
+                    </button>
+                  </div>
                 )}
               </div>
               {monthlyRows.length === 0 ? (
@@ -181,9 +231,14 @@ export default function RelatoriosFinanceiroPage() {
                   <p className="text-xs text-slate-400">Alunos com cobranças vencidas</p>
                 </div>
                 {defaultRows.length > 0 && (
-                  <button onClick={handleExportInadimplencia} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:border-primary hover:text-primary transition-colors">
-                    <span className="material-symbols-outlined text-sm">download</span>CSV
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleExportInadimplencia} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-primary hover:text-primary transition-colors">
+                      <span className="material-symbols-outlined text-sm">download</span>CSV
+                    </button>
+                    <button onClick={handleExportInadimplenciaPDF} disabled={exportingPDF} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold hover:opacity-90 transition-all disabled:cursor-not-allowed disabled:opacity-60">
+                      <span className="material-symbols-outlined text-sm">picture_as_pdf</span>{exportingPDF ? 'Gerando PDF...' : 'Exportar PDF'}
+                    </button>
+                  </div>
                 )}
               </div>
               {defaultRows.length === 0 ? (
@@ -228,9 +283,14 @@ export default function RelatoriosFinanceiroPage() {
               <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <h3 className="font-bold text-slate-800 dark:text-white">Por Categoria</h3>
                 {catRows.length > 0 && (
-                  <button onClick={handleExportCategorias} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:border-primary hover:text-primary transition-colors">
-                    <span className="material-symbols-outlined text-sm">download</span>CSV
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleExportCategorias} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-primary hover:text-primary transition-colors">
+                      <span className="material-symbols-outlined text-sm">download</span>CSV
+                    </button>
+                    <button onClick={handleExportCategoriasPDF} disabled={exportingPDF} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold hover:opacity-90 transition-all disabled:cursor-not-allowed disabled:opacity-60">
+                      <span className="material-symbols-outlined text-sm">picture_as_pdf</span>{exportingPDF ? 'Gerando PDF...' : 'Exportar PDF'}
+                    </button>
+                  </div>
                 )}
               </div>
               {catRows.length === 0 ? (

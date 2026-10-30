@@ -7,6 +7,7 @@ import { markAsPaid, deleteTransaction } from '../actions';
 import { TransactionForm } from '../TransactionForm';
 import { exportCSV } from '@/lib/exportCSV';
 import { formatDateBR } from '@/lib/date-utils';
+import { exportReceivablesReportPDF } from '@/lib/exportFinancialReportsPDF';
 
 interface Category { id: string; name: string; color: string | null }
 interface Student { id: string; name: string }
@@ -57,6 +58,7 @@ export function ContasReceberClient({ transactions: initial, categories, student
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [exportingPDF, setExportingPDF] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
@@ -113,6 +115,23 @@ export function ContasReceberClient({ transactions: initial, categories, student
     );
   };
 
+  const handleExportPDF = async () => {
+    setExportingPDF(true);
+    try {
+      await exportReceivablesReportPDF({
+        filters: {
+          status: statusFilter,
+          month: monthFilter,
+          search,
+        },
+        totals,
+        rows: filtered,
+      });
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
   const onSaved = () => {
     setShowForm(false);
     setEditingTx(null);
@@ -133,11 +152,16 @@ export function ContasReceberClient({ transactions: initial, categories, student
             <p className="text-slate-500 dark:text-slate-400 text-sm">Cobranças e mensalidades dos alunos</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {filtered.length > 0 && (
-            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:border-primary hover:text-primary transition-colors">
-              <span className="material-symbols-outlined text-sm">download</span>CSV
-            </button>
+            <>
+              <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-600 dark:text-slate-300 hover:border-primary hover:text-primary transition-colors">
+                <span className="material-symbols-outlined text-sm">download</span>CSV
+              </button>
+              <button onClick={handleExportPDF} disabled={exportingPDF} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all disabled:cursor-not-allowed disabled:opacity-60">
+                <span className="material-symbols-outlined text-sm">picture_as_pdf</span>{exportingPDF ? 'Gerando PDF...' : 'Exportar PDF'}
+              </button>
+            </>
           )}
           <button onClick={() => { setEditingTx(null); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all">
             <span className="material-symbols-outlined text-sm">add</span>
