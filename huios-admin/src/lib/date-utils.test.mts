@@ -13,6 +13,9 @@ import {
   toCivilDateInput,
   formatDateBR,
   formatTimeBR,
+  parseCivilDate,
+  addCivilMonths,
+  addCivilDays,
 } from './date-utils.ts';
 
 // Estes testes DEVEM passar sob qualquer TZ (UTC, America/Sao_Paulo, Asia/Tokyo).
@@ -115,4 +118,26 @@ test('formatTimeBR formata o horário no fuso de Brasília sem desvio de +3h', (
   assert.equal(formatTimeBR(instant), '19:30');
   assert.equal(formatInstantTimeBR(instant), '19:30');
   assert.equal(formatTimeBR(null), '--:--');
+});
+
+test('addCivilMonths preserves day and adjusts for shorter months', () => {
+  const d1 = parseCivilDate('2026-01-15')!;
+  const d2 = addCivilMonths(d1, 1);
+  assert.equal(toCivilDateInput(d2), '2026-02-15');
+
+  const jan31 = parseCivilDate('2026-01-31')!;
+  const feb = addCivilMonths(jan31, 1);
+  assert.equal(toCivilDateInput(feb), '2026-02-28');
+
+  const mar = addCivilMonths(jan31, 2);
+  assert.equal(toCivilDateInput(mar), '2026-03-31');
+
+  const rollYear = addCivilMonths(parseCivilDate('2026-11-10')!, 3);
+  assert.equal(toCivilDateInput(rollYear), '2027-02-10');
+});
+
+test('addCivilDays adds days preserving civil midday UTC', () => {
+  const d = parseCivilDate('2026-05-10')!;
+  const nextWeek = addCivilDays(d, 7);
+  assert.equal(toCivilDateInput(nextWeek), '2026-05-17');
 });

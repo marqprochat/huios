@@ -25,6 +25,7 @@ interface Transaction {
   notes: string | null;
   category: Category | null;
   teacher: Teacher | null;
+  reference?: string | null;
 }
 
 interface NamedItem { id: string; name: string }
@@ -71,7 +72,13 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
       if (search) {
         const q = search.trim().toLocaleLowerCase('pt-BR');
         if (!q) return true;
-        if (!t.description.toLowerCase().includes(q) && !t.teacher?.name.toLowerCase().includes(q)) return false;
+        const matchesDesc = t.description.toLowerCase().includes(q);
+        const matchesTeacher = t.teacher?.name.toLowerCase().includes(q) ?? false;
+        const matchesRef = t.reference?.toLowerCase().includes(q) ?? false;
+        const matchesType =
+          (q === 'parcelada' && !!t.reference?.startsWith('PARC-')) ||
+          (q === 'recorrente' && !!t.reference?.startsWith('REC-'));
+        if (!matchesDesc && !matchesTeacher && !matchesRef && !matchesType) return false;
       }
       return true;
     });
@@ -256,7 +263,21 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
                   return (
                     <Fragment key={t.id}>
                     <tr className={`${isEditing ? 'bg-primary/5' : isOverdue ? 'bg-red-50/50 dark:bg-red-950/20' : ''} hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors`}>
-                      <td className="px-5 py-3.5 text-sm font-medium text-slate-700 dark:text-slate-300">{t.description}</td>
+                      <td className="px-5 py-3.5 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span>{t.description}</span>
+                          {t.reference?.startsWith('PARC-') && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                              Parcelada
+                            </span>
+                          )}
+                          {t.reference?.startsWith('REC-') && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
+                              Recorrente
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-5 py-3.5">
                         {t.category ? (
                           <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600">

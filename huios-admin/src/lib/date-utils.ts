@@ -227,3 +227,27 @@ export function parseCivilDate(input: string | null | undefined): Date | null {
   const d = new Date(`${input}T12:00:00.000Z`);
   return isNaN(d.getTime()) ? null : d;
 }
+
+/**
+ * Adiciona meses a uma DATA CIVIL preservando o dia do mês e a âncora meio-dia UTC.
+ * Ajusta para o último dia do mês quando o mês seguinte tem menos dias (ex: 31/jan -> 28/fev).
+ */
+export function addCivilMonths(date: Date, months: number): Date {
+  const d = new Date(date);
+  const targetDay = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + months);
+  const nextMonthZero = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0));
+  const maxDay = nextMonthZero.getUTCDate();
+  d.setUTCDate(Math.min(targetDay, maxDay));
+  return d;
+}
+
+/**
+ * Adiciona dias a uma DATA CIVIL preservando a âncora meio-dia UTC.
+ */
+export function addCivilDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d;
+}

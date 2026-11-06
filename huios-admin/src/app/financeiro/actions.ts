@@ -6,6 +6,12 @@ import { gerarMensalidades } from '@/lib/enrollment';
 import { resolveMonthlyPrice } from '@/lib/pricing';
 import { validateCoupon, redeemCoupon, type CouponEffect } from '@/lib/coupons';
 import { requirePermission } from '@/lib/permissions/server';
+import {
+  generateExpenseInstallments,
+  type ExpenseMode,
+  type ExpenseAmountMode,
+  type ExpenseFrequency,
+} from './expense-generator';
 
 // ─── Categories ─────────────────────────────────────────────────────────────
 
@@ -168,6 +174,78 @@ export async function createTransaction(prevState: any, formData: FormData) {
     return { success: true, message: 'Lançamento criado com sucesso!' };
   } catch (error: any) {
     return { success: false, message: 'Erro ao criar lançamento: ' + error.message };
+  }
+}
+
+/**
+ * Lançamento de despesas (Contas a Pagar):
+ * Suporta despesa única, parcelada em N vezes ou recorrente (fixa mensal, etc).
+ */
+export async function createExpenseTransactions(prevState: any, formData: FormData) {
+  await requirePermission('financeiro.criar');
+  const description = (formData.get('description') as string)?.trim();
+  const amountRaw = formData.get('amount') as string;
+  const dueDate = formData.get('dueDate') as string;
+  const expenseMode = ((formData.get('expenseMode') as string) || 'unica') as ExpenseMode;
+  const installmentsRaw = formData.get('installments') as string;
+  const amountMode = ((formData.get('amountMode') as string) || 'total') as ExpenseAmountMode;
+  const frequency = ((formData.get('frequency') as string) || 'mensal') as ExpenseFrequency;
+  const firstInstallmentPaid = formData.get('firstInstallmentPaid') === 'true';
+  const status = (formData.get('status') as string) || 'PENDENTE';
+  const paidAt = formData.get('paidAt') as string;
+  const paymentMethod = formData.get('paymentMethod') as string;
+  const paymentFormId = formData.get('paymentFormId') as string;
+  const accountId = formData.get('accountId') as string;
+  const categoryId = formData.get('categoryId') as string;
+  const teacherId = formData.get('teacherId') as string;
+  const notes = (formData.get('notes') as string)?.trim();
+
+  if (!description || !amountRaw || !dueDate) {
+    return { success: false, message: 'Descrição, valor e vencimento são obrigatórios' };
+  }
+
+  const amount = parseFloat(amountRaw);
+  if (isNaN(amount) || amount <= 0) {
+    return { success: false, message: 'Valor deve ser maior que zero' };
+  }
+
+  const installments = Math.max(1, parseInt(installmentsRaw, 10) || 1);
+
+  try {
+    const rows = generateExpenseInstallments({
+      description,
+      amount,
+      dueDate,
+      mode: expenseMode,
+      installments,
+      amountMode,
+      frequency,
+      firstInstallmentPaid,
+      status,
+      paidAt,
+      paymentMethod,
+      paymentFormId,
+      accountId,
+      categoryId,
+      teacherId,
+      notes,
+    });
+
+    await (prisma as any).financialTransaction.createMany({
+      data: rows,
+    });
+
+    revalidatePath('/financeiro/contas-a-pagar');
+    revalidatePath('/financeiro');
+
+    const msg =
+      rows.length === 1
+        ? 'Despesa cadastrada com sucesso!'
+        : `${rows.length} despesas cadastradas com sucesso!`;
+
+    return { success: true, message: msg };
+  } catch (error: any) {
+    return { success: false, message: 'Erro ao cadastrar despesa: ' + error.message };
   }
 }
 
