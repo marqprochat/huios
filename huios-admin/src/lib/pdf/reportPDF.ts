@@ -111,8 +111,14 @@ interface LoadedLogo {
   height: number;
 }
 
+let cachedLogo: LoadedLogo | null = null;
+
 const loadLogo = (): Promise<LoadedLogo | null> =>
   new Promise(resolve => {
+    if (cachedLogo) {
+      resolve(cachedLogo);
+      return;
+    }
     if (typeof window === 'undefined') {
       resolve(null);
       return;
@@ -121,20 +127,45 @@ const loadLogo = (): Promise<LoadedLogo | null> =>
     image.onload = () => {
       const naturalWidth = image.naturalWidth || 1;
       const naturalHeight = image.naturalHeight || 1;
+
+      // Otimização de tamanho sem perda de qualidade visual:
+      // No cabeçalho do PDF, o logo ocupa no máximo 28mm x 18mm.
+      // Em 300 DPI (padrão de impressão de alta qualidade):
+      // 28mm corresponde a ~330px e 18mm a ~212px.
+      // Limitamos a dimensão do canvas em 350px com interpolação de alta qualidade
+      // (imageSmoothingQuality = 'high'). Isso preserva 100% da nitidez em monitores
+      // e em impressões físicas, eliminando o inchaço de dezenas de megabytes gerado
+      // por imagens em resolução crua (como 4000x4000).
+      const MAX_CANVAS_DIMENSION = 350;
+      let targetWidth = naturalWidth;
+      let targetHeight = naturalHeight;
+      if (targetWidth > MAX_CANVAS_DIMENSION || targetHeight > MAX_CANVAS_DIMENSION) {
+        const scale = Math.min(
+          MAX_CANVAS_DIMENSION / targetWidth,
+          MAX_CANVAS_DIMENSION / targetHeight
+        );
+        targetWidth = Math.max(1, Math.round(targetWidth * scale));
+        targetHeight = Math.max(1, Math.round(targetHeight * scale));
+      }
+
       const canvas = window.document.createElement('canvas');
-      canvas.width = naturalWidth;
-      canvas.height = naturalHeight;
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
       const context = canvas.getContext('2d');
       if (!context) {
         resolve(null);
         return;
       }
-      context.drawImage(image, 0, 0);
-      resolve({
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(image, 0, 0, targetWidth, targetHeight);
+      const loaded: LoadedLogo = {
         dataUrl: canvas.toDataURL('image/png'),
-        width: naturalWidth,
-        height: naturalHeight,
-      });
+        width: targetWidth,
+        height: targetHeight,
+      };
+      cachedLogo = loaded;
+      resolve(loaded);
     };
     image.onerror = () => resolve(null);
     image.src = '/logo.png';
@@ -146,6 +177,7 @@ export async function exportReportPDF(options: ReportPDFOptions): Promise<void> 
     orientation: options.orientation ?? 'landscape',
     unit: 'mm',
     format: 'a4',
+    compress: true,
   });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -171,7 +203,16 @@ export async function exportReportPDF(options: ReportPDFOptions): Promise<void> 
       logoRenderWidth = maxLogoHeight * aspect;
     }
     const logoRenderY = 7 + (maxLogoHeight - logoRenderHeight) / 2;
-    doc.addImage(logo.dataUrl, 'PNG', MARGIN, logoRenderY, logoRenderWidth, logoRenderHeight);
+    doc.addImage(
+      logo.dataUrl,
+      'PNG',
+      MARGIN,
+      logoRenderY,
+      logoRenderWidth,
+      logoRenderHeight,
+      'HUIOS_LOGO',
+      'FAST'
+    );
   }
 
   const headerX = logoRenderWidth > 0 ? MARGIN + logoRenderWidth + 6 : MARGIN;

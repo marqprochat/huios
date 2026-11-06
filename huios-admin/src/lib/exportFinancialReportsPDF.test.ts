@@ -115,3 +115,36 @@ test('exportReceivablesReportPDF executes without crashing with receivables data
     });
   });
 });
+
+test('large financial reports generate compressed and lightweight PDF files', async () => {
+  const generatedAt = new Date(2026, 6, 1, 10, 0, 0);
+  const rows = Array.from({ length: 150 }, (_, i) => ({
+    student: { name: `Aluno Teste Sobrenome Longo ${i}` },
+    enrollment: { class: { course: { name: 'Curso de Liderança e Teologia Pastoral Avançada' } } },
+    description: `Mensalidade Parcela ${i + 1}/12 - Ano Letivo 2026`,
+    category: { name: 'Mensalidades Regulares' },
+    amount: 350 + (i % 50),
+    dueDate: '2026-07-10T00:00:00.000Z',
+    status: i % 3 === 0 ? 'PAGO' : i % 3 === 1 ? 'PENDENTE' : 'VENCIDO',
+    paidAt: i % 3 === 0 ? '2026-07-09T10:00:00.000Z' : null,
+  }));
+
+  await exportReceivablesReportPDF({
+    filters: { status: 'Todos', month: '2026-07', search: '' },
+    totals: { pendente: 20000, pago: 30000, vencido: 5000 },
+    rows,
+    generatedAt,
+  });
+
+  const expectedFileName = 'relatorio-contas-a-receber-2026-07-01.pdf';
+  const filePath = path.join(process.cwd(), expectedFileName);
+
+  assert.ok(fs.existsSync(filePath), 'O arquivo PDF gerado deve existir');
+  const stats = fs.statSync(filePath);
+  // 150 linhas em múltiplas páginas com streams comprimidos deve ficar bem abaixo de 50KB
+  assert.ok(
+    stats.size < 50 * 1024,
+    `O arquivo PDF com 150 linhas (${stats.size} bytes) deve ser compacto (< 50KB)`
+  );
+  assert.ok(stats.size > 1000, 'O arquivo PDF deve conter dados válidos');
+});
