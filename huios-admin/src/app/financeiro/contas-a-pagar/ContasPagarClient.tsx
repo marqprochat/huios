@@ -84,7 +84,7 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
       }
       return true;
     });
-  }, [transactions, statusFilter, monthFilter, search]);
+  }, [transactions, statusFilter, monthFilter, amountFilter, search]);
 
   const totals = useMemo(() => ({
     pendente: filtered.filter(t => getEffectiveStatus(t) === 'PENDENTE').reduce((s, t) => s + t.amount, 0),
@@ -195,6 +195,26 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+        {(statusFilter || monthFilter || amountFilter || search) && (
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-slate-800 text-xs">
+            <span className="font-bold text-slate-500">
+              Filtros ativos ({filtered.length} {filtered.length === 1 ? 'lançamento encontrado' : 'lançamentos encontrados'})
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter('');
+                setMonthFilter('');
+                setAmountFilter('');
+                setSearch('');
+              }}
+              className="font-bold text-primary hover:underline flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-sm">filter_alt_off</span>
+              Limpar todos os filtros
+            </button>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">Status</label>
@@ -242,9 +262,36 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
             </div>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">Buscar</label>
-            <input type="text" placeholder="Descrição ou professor..." value={search} onChange={e => setSearch(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-500">Buscar</label>
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="text-[10px] font-bold text-primary hover:underline"
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Descrição ou professor..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full px-3 py-2 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
