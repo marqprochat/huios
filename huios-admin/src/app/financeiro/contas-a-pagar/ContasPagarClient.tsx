@@ -8,7 +8,7 @@ import { TransactionForm } from '../TransactionForm';
 import { exportCSV } from '@/lib/exportCSV';
 import { formatDateBR } from '@/lib/date-utils';
 import { exportPayablesReportPDF } from '@/lib/exportFinancialReportsPDF';
-import { getEffectiveStatus, matchesMonth, matchesStatus } from './transaction-filters';
+import { getEffectiveStatus, matchesMonth, matchesStatus, matchesAmount } from './transaction-filters';
 
 interface Category { id: string; name: string; color: string | null }
 interface Teacher { id: string; name: string }
@@ -58,6 +58,7 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
   useEffect(() => { setTransactions(initial); }, [initial]);
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [monthFilter, setMonthFilter] = useState('');
+  const [amountFilter, setAmountFilter] = useState('');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
@@ -69,6 +70,7 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
     return transactions.filter(t => {
       if (!matchesStatus(t, statusFilter, today)) return false;
       if (!matchesMonth(t.dueDate, monthFilter)) return false;
+      if (!matchesAmount(t.amount, amountFilter)) return false;
       if (search) {
         const q = search.trim().toLocaleLowerCase('pt-BR');
         if (!q) return true;
@@ -127,6 +129,7 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
         filters: {
           status: statusFilter,
           month: monthFilter,
+          amount: amountFilter,
           search,
         },
         totals,
@@ -192,7 +195,7 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">Status</label>
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
@@ -205,6 +208,38 @@ export function ContasPagarClient({ transactions: initial, categories, teachers,
             <label className="block text-xs font-bold text-slate-500 mb-1">Mês/Ano</label>
             <input type="month" value={monthFilter} onChange={e => setMonthFilter(e.target.value)}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-500">Valor (R$)</label>
+              {amountFilter && (
+                <button
+                  type="button"
+                  onClick={() => setAmountFilter('')}
+                  className="text-[10px] font-bold text-primary hover:underline"
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Ex: 150, 100-500, >=200"
+                value={amountFilter}
+                onChange={e => setAmountFilter(e.target.value)}
+                className="w-full px-3 py-2 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              {amountFilter && (
+                <button
+                  type="button"
+                  onClick={() => setAmountFilter('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">Buscar</label>

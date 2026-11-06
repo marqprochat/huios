@@ -5,6 +5,7 @@ import {
   getEffectiveStatus,
   matchesMonth,
   matchesStatus,
+  matchesAmount,
 } from './transaction-filters.ts';
 
 const today = new Date(2026, 6, 30, 12);
@@ -37,4 +38,42 @@ test('the open filter includes pending and overdue transactions', () => {
 test('matches the due month by its literal UTC date without timezone shifting', () => {
   assert.equal(matchesMonth('2026-08-01T00:00:00.000Z', '2026-08'), true);
   assert.equal(matchesMonth('2026-08-01T00:00:00.000Z', '2026-07'), false);
+});
+
+test('matchesAmount matches empty filter to all amounts', () => {
+  assert.equal(matchesAmount(150, ''), true);
+  assert.equal(matchesAmount(150, '   '), true);
+});
+
+test('matchesAmount matches exact integer and amounts in the same integer range', () => {
+  assert.equal(matchesAmount(150.0, '150'), true);
+  assert.equal(matchesAmount(150.5, '150'), true);
+  assert.equal(matchesAmount(1500.0, '150'), false);
+});
+
+test('matchesAmount matches formatted amounts with commas and dots', () => {
+  assert.equal(matchesAmount(1500.0, '1500'), true);
+  assert.equal(matchesAmount(1500.0, '1.500'), true);
+  assert.equal(matchesAmount(1500.0, '1500,00'), true);
+  assert.equal(matchesAmount(1500.0, '1.500,00'), true);
+  assert.equal(matchesAmount(1500.0, 'R$ 1.500,00'), true);
+  assert.equal(matchesAmount(33.34, '33,34'), true);
+  assert.equal(matchesAmount(33.34, '33.34'), true);
+  assert.equal(matchesAmount(33.34, '33,3'), true);
+});
+
+test('matchesAmount matches range queries', () => {
+  assert.equal(matchesAmount(250.0, '100 - 300'), true);
+  assert.equal(matchesAmount(100.0, '100 - 300'), true);
+  assert.equal(matchesAmount(300.0, '100 - 300'), true);
+  assert.equal(matchesAmount(301.0, '100 - 300'), false);
+  assert.equal(matchesAmount(250.0, '100 a 300'), true);
+});
+
+test('matchesAmount matches comparison operators', () => {
+  assert.equal(matchesAmount(500.0, '>= 500'), true);
+  assert.equal(matchesAmount(501.0, '>= 500'), true);
+  assert.equal(matchesAmount(499.0, '>= 500'), false);
+  assert.equal(matchesAmount(50.0, '< 100'), true);
+  assert.equal(matchesAmount(150.0, '< 100'), false);
 });

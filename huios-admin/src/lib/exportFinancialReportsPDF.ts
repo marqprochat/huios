@@ -54,6 +54,7 @@ export interface FinancialFilters {
   status?: string;
   month?: string;
   search?: string;
+  amount?: string;
 }
 
 const fmtCurrency = (v: number) =>
@@ -281,6 +282,7 @@ export async function exportPayablesReportPDF(options: {
           : 'Todos',
       },
       { label: 'Mês de Vencimento', value: options.filters?.month || 'Todos' },
+      ...(options.filters?.amount?.trim() ? [{ label: 'Filtro de Valor', value: options.filters.amount.trim() }] : []),
       { label: 'Busca', value: options.filters?.search?.trim() || 'Todas' },
     ],
     metrics: [
@@ -335,6 +337,7 @@ export async function exportReceivablesReportPDF(options: {
           : 'Todos',
       },
       { label: 'Mês de Vencimento', value: options.filters?.month || 'Todos' },
+      ...(options.filters?.amount?.trim() ? [{ label: 'Filtro de Valor', value: options.filters.amount.trim() }] : []),
       { label: 'Busca', value: options.filters?.search?.trim() || 'Todas' },
     ],
     metrics: [
